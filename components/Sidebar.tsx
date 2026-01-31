@@ -17,7 +17,7 @@ export default function Sidebar() {
 
   const mainItems: NavItem[] = [
     { label: "Panel de Control", href: "/dashboard" },
-    { label: "Contabilidad", href: "/contabilidad" },
+    { label: "Contabilidad", href: "/accounting" },
     { label: "Eventos", href: "/events" },
     { label: "Contactos", href: "/contacts" },
     { label: "Redes Sociales", href: "/social" },

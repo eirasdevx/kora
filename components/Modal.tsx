@@ -17,16 +17,16 @@ export default function Modal({
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center">
-      {/* Backdrop – cubre TODO */}
+      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-md"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative z-[1000] w-full max-w-xl bg-white rounded-xl shadow-xl p-6">
+      <div className="relative z-[1000] w-full max-w-4xl bg-white rounded-2xl shadow-xl p-8">
         {title && (
-          <h2 className="text-xl font-bold mb-4">{title}</h2>
+          <h2 className="text-2xl font-bold mb-1">{title}</h2>
         )}
         {children}
       </div>
