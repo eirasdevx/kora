@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Event } from "./event.types";
+import { useContactsStore } from "@/modules/contacts/contacts.store";
+import { Contact } from "@/modules/contacts/contact.types";
 
 interface Props {
   initialData?: Event;
@@ -14,36 +16,41 @@ export default function EventForm({
   onSubmit,
   onCancel,
 }: Props) {
+  const { contacts } = useContactsStore();
+
   const [title, setTitle] = useState(initialData?.title ?? "");
   const [description, setDescription] = useState(
     initialData?.description ?? ""
   );
 
-  // Fecha y hora separadas (UX clara)
-  const [date, setDate] = useState(
-    initialData ? initialData.startDate.slice(0, 10) : ""
+  const [startDate, setStartDate] = useState(
+    initialData ? initialData.startDate.slice(0, 16) : ""
   );
 
-  const [time, setTime] = useState(
-    initialData ? initialData.startDate.slice(11, 16) : "12:00"
+  const [participantIds, setParticipantIds] = useState<string[]>(
+    initialData?.participantIds ?? []
   );
+
+  const toggleParticipant = (contact: Contact) => {
+    setParticipantIds((prev) =>
+      prev.includes(contact.id)
+        ? prev.filter((id) => id !== contact.id)
+        : [...prev, contact.id]
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!title.trim() || !date || !time) return;
-
-    const startDateIso = new Date(
-      `${date}T${time}`
-    ).toISOString();
+    if (!title.trim() || !startDate) return;
 
     const event: Event = {
       id: initialData?.id ?? crypto.randomUUID(),
       title,
       description: description || undefined,
-      startDate: startDateIso,
+      startDate: new Date(startDate).toISOString(),
       endDate: initialData?.endDate,
       location: initialData?.location,
-      participantIds: initialData?.participantIds ?? [],
+      participantIds,
       organizerIds: initialData?.organizerIds ?? [],
       createdAt:
         initialData?.createdAt ?? new Date().toISOString(),
@@ -55,13 +62,12 @@ export default function EventForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-xl p-6 space-y-6"
+      className="bg-white border rounded-xl p-6 space-y-6"
     >
       <h2 className="text-xl font-bold">
         {initialData ? "Editar evento" : "Nuevo evento"}
       </h2>
 
-      {/* Título */}
       <div>
         <label className="block text-sm font-medium mb-1">
           Título *
@@ -70,12 +76,10 @@ export default function EventForm({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="w-full border rounded-lg px-4 py-2"
-          placeholder="Nombre del evento"
           required
         />
       </div>
 
-      {/* Descripción */}
       <div>
         <label className="block text-sm font-medium mb-1">
           Descripción
@@ -85,49 +89,58 @@ export default function EventForm({
           onChange={(e) => setDescription(e.target.value)}
           className="w-full border rounded-lg px-4 py-2"
           rows={3}
-          placeholder="Información adicional del evento"
         />
       </div>
 
-      {/* Fecha y hora */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Fecha *
-          </label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full border rounded-lg px-4 py-2"
-            required
-          />
-        </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Fecha y hora *
+        </label>
+        <input
+          type="datetime-local"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="border rounded-lg px-4 py-2"
+          required
+        />
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Hora *
-          </label>
-          <input
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            className="w-full border rounded-lg px-4 py-2"
-            required
-          />
+      <div>
+        <label className="block text-sm font-medium mb-2">
+          Participantes
+        </label>
+
+        <div className="border rounded-lg max-h-48 overflow-y-auto">
+          {contacts.length === 0 ? (
+            <p className="p-3 text-sm text-gray-500">
+              No hay contactos disponibles
+            </p>
+          ) : (
+            contacts.map((c) => (
+              <label
+                key={c.id}
+                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50"
+              >
+                <input
+                  type="checkbox"
+                  checked={participantIds.includes(c.id)}
+                  onChange={() => toggleParticipant(c)}
+                />
+                <span>{c.fullName}</span>
+              </label>
+            ))
+          )}
         </div>
       </div>
 
-      {/* Acciones */}
-      <div className="flex justify-end gap-2 pt-4">
+      <div className="flex justify-end gap-2">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+          className="px-4 py-2 border rounded-lg"
         >
           Cancelar
         </button>
-
         <button
           type="submit"
           className="bg-primary text-white px-6 py-2 rounded-lg font-bold"

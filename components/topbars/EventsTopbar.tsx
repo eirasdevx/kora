@@ -1,6 +1,6 @@
 "use client";
 
-export type EventsView = "month" | "week" | "day";
+export type EventsView = "month" | "week" | "year";
 
 interface Props {
   view: EventsView;
@@ -12,8 +12,9 @@ interface Props {
 const VIEW_OPTIONS: { label: string; value: EventsView }[] = [
   { label: "Mes", value: "month" },
   { label: "Semana", value: "week" },
-  { label: "Día", value: "day" },
+  { label: "Año", value: "year" },
 ];
+
 
 export default function EventsTopbar({
   view,
