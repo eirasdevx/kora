@@ -37,10 +37,10 @@ export default function WeeklyCalendar({
   const weekEnd = addDays(weekStart, 6);
 
   return (
-    <div className="bg-white border rounded-xl p-4">
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-bold">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-900">
           {weekStart.toLocaleDateString("es-ES")} –{" "}
           {weekEnd.toLocaleDateString("es-ES")}
         </h2>
@@ -48,13 +48,13 @@ export default function WeeklyCalendar({
         <div className="flex gap-2">
           <button
             onClick={onPrevWeek}
-            className="px-2 py-1 border rounded"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50"
           >
             ←
           </button>
           <button
             onClick={onNextWeek}
-            className="px-2 py-1 border rounded"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50"
           >
             →
           </button>
@@ -62,18 +62,18 @@ export default function WeeklyCalendar({
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-7 gap-2">
+      <div className="mt-4 grid grid-cols-7 gap-2">
         {days.map((day, idx) => {
           const isToday = isSameDay(day, today);
 
           return (
             <div
               key={idx}
-              className={`border rounded-lg p-2 ${
+              className={`rounded-xl border border-gray-200 p-2 ${
                 isToday ? "bg-primary/5 border-primary" : ""
               }`}
             >
-              <div className="text-sm font-medium mb-2">
+              <div className="text-sm font-semibold text-gray-700 mb-2">
                 {WEEK_DAYS[idx]} {day.getDate()}
               </div>
 

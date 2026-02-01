@@ -1,65 +1,47 @@
 import { create } from "zustand";
 import { Transaction } from "./transaction.types";
+import { db } from "@/core/storage/kora.db";
 
 interface TransactionsState {
   transactions: Transaction[];
-
-  loadTransactions: () => void;
-  addTransaction: (tx: Transaction) => void;
-  updateTransaction: (tx: Transaction) => void;
-  deleteTransaction: (id: string) => void;
-}
-
-const STORAGE_KEY = "kora.transactions";
-
-function canUseStorage() {
-  return typeof window !== "undefined";
-}
-
-function readTransactions(): Transaction[] {
-  if (!canUseStorage()) return [];
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw) as Transaction[];
-  } catch {
-    return [];
-  }
-}
-
-function writeTransactions(data: Transaction[]) {
-  if (!canUseStorage()) return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  loadTransactions: () => Promise<void>;
+  addTransaction: (tx: Transaction) => Promise<void>;
+  updateTransaction: (tx: Transaction) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
 }
 
 export const useTransactionsStore = create<TransactionsState>(
-  (set, get) => ({
+  (set) => ({
     transactions: [],
 
-    loadTransactions: () => {
-      set({ transactions: readTransactions() });
+    loadTransactions: async () => {
+      const all = await db.transactions.toArray();
+      set({ transactions: all });
     },
 
-    addTransaction: (tx) => {
-      const updated = [...get().transactions, tx];
-      writeTransactions(updated);
-      set({ transactions: updated });
+    addTransaction: async (tx) => {
+      await db.transactions.put(tx);
+      set((state) => ({
+        transactions: [...state.transactions, tx],
+      }));
     },
 
-    updateTransaction: (tx) => {
-      const updated = get().transactions.map((t) =>
-        t.id === tx.id ? tx : t
-      );
-      writeTransactions(updated);
-      set({ transactions: updated });
+    updateTransaction: async (tx) => {
+      await db.transactions.put(tx);
+      set((state) => ({
+        transactions: state.transactions.map((t) =>
+          t.id === tx.id ? tx : t
+        ),
+      }));
     },
 
-    deleteTransaction: (id) => {
-      const updated = get().transactions.filter(
-        (t) => t.id !== id
-      );
-      writeTransactions(updated);
-      set({ transactions: updated });
+    deleteTransaction: async (id) => {
+      await db.transactions.delete(id);
+      set((state) => ({
+        transactions: state.transactions.filter(
+          (t) => t.id !== id
+        ),
+      }));
     },
   })
 );

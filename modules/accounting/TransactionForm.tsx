@@ -386,11 +386,17 @@ export default function TransactionForm({
                     <option value="">
                       — Sin contacto —
                     </option>
-                    {contacts.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.fullName}
-                      </option>
-                    ))}
+                    {contacts.map((c) => {
+                      const displayName =
+                        `${c.firstName} ${c.lastName}`.trim() ||
+                        c.fullName ||
+                        "Sin nombre";
+                      return (
+                        <option key={c.id} value={c.id}>
+                          {displayName}
+                        </option>
+                      );
+                    })}
                   </select>
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                     <svg

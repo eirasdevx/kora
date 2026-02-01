@@ -16,12 +16,43 @@ export const useContactsStore = create<ContactsState>((set) => ({
   // Cargar todos los contactos desde IndexedDB
   loadContacts: async () => {
     const all = await db.contacts.toArray();
-    set({ contacts: all });
+    const normalized = all.map((c) => {
+      const fullName = c.fullName ?? `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim();
+      const nameParts = fullName.split(" ").filter(Boolean);
+      const types = Array.isArray(c.types)
+        ? c.types.filter(
+            (t) =>
+              t === "member" ||
+              t === "provider" ||
+              t === "collaborator"
+          )
+        : [];
+      return {
+        ...c,
+        firstName: c.firstName ?? nameParts[0] ?? "",
+        lastName: c.lastName ?? nameParts.slice(1).join(" "),
+        dni: c.dni ?? "",
+        fullName,
+        types,
+      };
+    });
+    set({ contacts: normalized });
   },
 
   // Crear o actualizar contacto (UPSERT)
   addContact: async (contact) => {
-    await db.contacts.put(contact);
+    const fullName =
+      contact.fullName ??
+      `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
+    const normalized = {
+      ...contact,
+      fullName,
+      types: contact.types.filter(
+        (t) =>
+          t === "member" || t === "provider" || t === "collaborator"
+      ),
+    };
+    await db.contacts.put(normalized);
 
     set((state) => {
       const exists = state.contacts.some(
@@ -31,9 +62,9 @@ export const useContactsStore = create<ContactsState>((set) => ({
       return {
         contacts: exists
           ? state.contacts.map((c) =>
-              c.id === contact.id ? contact : c
+              c.id === contact.id ? normalized : c
             )
-          : [...state.contacts, contact],
+          : [...state.contacts, normalized],
       };
     });
   },

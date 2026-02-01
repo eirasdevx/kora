@@ -56,40 +56,69 @@ export default function MonthlyCalendar({
   }, [year, month, events]);
 
   return (
-    <div className="bg-white border rounded-xl p-4">
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold capitalize">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold capitalize text-gray-900">
           {monthLabel}
         </h2>
 
-        <div className="flex gap-2">
-          <button
-            onClick={onPrevMonth}
-            className="px-2 py-1 border rounded hover:bg-gray-50"
-          >
-            ←
-          </button>
-          <button
-            onClick={onNextMonth}
-            className="px-2 py-1 border rounded hover:bg-gray-50"
-          >
-            →
-          </button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">
+            {Object.values(eventsByDay).reduce(
+              (acc, curr) => acc + curr.length,
+              0
+            )}{" "}
+            eventos programados
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={onPrevMonth}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <button
+              onClick={onNextMonth}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Días */}
-      <div className="grid grid-cols-7 text-sm font-medium text-gray-500 mb-2">
+      <div className="mt-4 grid grid-cols-7 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
         {WEEK_DAYS.map((d) => (
-          <div key={d} className="text-center">
+          <div key={d} className="text-center py-2">
             {d}
           </div>
         ))}
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-7 gap-px bg-gray-200 rounded overflow-hidden">
+      <div className="grid grid-cols-7 gap-px rounded-2xl bg-gray-200 overflow-hidden">
         {days.map((day, idx) => {
           const isToday =
             day &&
@@ -100,24 +129,25 @@ export default function MonthlyCalendar({
           return (
             <div
               key={idx}
-              className={`h-28 bg-white p-2 text-sm
-                ${isToday ? "ring-2 ring-primary ring-inset" : ""}
-              `}
+              className={`h-28 bg-white p-2 text-sm ${
+                isToday ? "ring-2 ring-primary ring-inset" : ""
+              }`}
             >
               {day && (
                 <>
-                  <div className="font-medium mb-1">{day}</div>
+                  <div className="font-semibold text-gray-600 mb-1">
+                    {day}
+                  </div>
                   <div className="space-y-1">
                     {(eventsByDay[day] ?? []).map((e) => (
                       <button
                         key={e.id}
                         onClick={() => onSelectEvent(e)}
-                        className={`block w-full text-left text-xs rounded px-2 py-1 truncate
-                          ${
-                            e.id === selectedEventId
-                              ? "bg-primary text-white"
-                              : "bg-primary/10 text-primary hover:bg-primary/20"
-                          }`}
+                        className={`block w-full truncate rounded px-2 py-1 text-left text-xs font-semibold ${
+                          e.id === selectedEventId
+                            ? "bg-primary text-white"
+                            : "bg-primary/10 text-primary hover:bg-primary/20"
+                        }`}
                         title={e.title}
                       >
                         {e.title}

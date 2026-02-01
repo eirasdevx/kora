@@ -1,18 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import EventsTopbar, { EventsView } from "@/components/topbars/EventsTopbar";
 import MonthlyCalendar from "@/components/events/MonthlyCalendar";
 import WeeklyCalendar from "@/components/events/WeeklyCalendar";
-import YearCalendar from "@/components/events/YearCalendar";
+import DayAgenda from "@/components/events/DayAgenda";
 import EventDetailsPanel from "@/components/events/EventDetailsPanel";
-import EventForm from "@/modules/events/EventForm";
-import Modal from "@/components/Modal";
 
 import { Event } from "@/modules/events/event.types";
 import { useEventsStore } from "@/modules/events/events.store";
-import { useContactsStore } from "@/modules/contacts/contacts.store";
 
 /* =======================
    Helpers de fechas
@@ -39,20 +37,14 @@ function addDays(date: Date, days: number): Date {
 
 export default function EventsPage() {
   /* -------- stores -------- */
-  const { events, loadEvents, addOrUpdateEvent } =
-    useEventsStore();
-  const loadContacts = useContactsStore(
-    (s) => s.loadContacts
-  );
+  const { events, loadEvents } = useEventsStore();
 
   useEffect(() => {
     loadEvents();
-    loadContacts();
-  }, [loadEvents, loadContacts]);
+  }, [loadEvents]);
 
   /* -------- vista -------- */
-  const [view, setView] =
-    useState<EventsView>("month");
+  const [view, setView] = useState<EventsView>("month");
   const [search, setSearch] = useState("");
 
   /* -------- selección -------- */
@@ -62,24 +54,11 @@ export default function EventsPage() {
   const selectedEvent = useMemo<Event | null>(() => {
     if (!selectedEventId) return null;
     return (
-      events.find((e) => e.id === selectedEventId) ??
-      null
+      events.find((e) => e.id === selectedEventId) ?? null
     );
   }, [events, selectedEventId]);
 
-  /* -------- edición -------- */
-  const [editingEventId, setEditingEventId] =
-    useState<string | null>(null);
-
-  const editingEvent = useMemo<Event | null>(() => {
-    if (!editingEventId) return null;
-    return (
-      events.find((e) => e.id === editingEventId) ??
-      null
-    );
-  }, [events, editingEventId]);
-
-  const [showForm, setShowForm] = useState(false);
+  const router = useRouter();
 
   /* -------- fechas -------- */
   const [monthDate, setMonthDate] = useState(() => {
@@ -90,6 +69,7 @@ export default function EventsPage() {
   const [weekStart, setWeekStart] = useState(() =>
     getMonday(new Date())
   );
+  const [dayDate] = useState(() => new Date());
 
   /* -------- filtros -------- */
   const filteredEvents = useMemo(() => {
@@ -113,8 +93,7 @@ export default function EventsPage() {
           onChangeView={setView}
           onSearch={setSearch}
           onCreate={() => {
-            setEditingEventId(null);
-            setShowForm(true);
+            router.push("/events/new");
           }}
         />
 
@@ -125,9 +104,7 @@ export default function EventsPage() {
             month={monthDate.month}
             events={filteredEvents}
             selectedEventId={selectedEventId ?? undefined}
-            onSelectEvent={(e) =>
-              setSelectedEventId(e.id)
-            }
+            onSelectEvent={(e) => setSelectedEventId(e.id)}
             onPrevMonth={() =>
               setMonthDate((d) =>
                 d.month === 0
@@ -151,9 +128,7 @@ export default function EventsPage() {
             weekStart={weekStart}
             events={filteredEvents}
             selectedEventId={selectedEventId ?? undefined}
-            onSelectEvent={(e) =>
-              setSelectedEventId(e.id)
-            }
+            onSelectEvent={(e) => setSelectedEventId(e.id)}
             onPrevWeek={() =>
               setWeekStart((d) => addDays(d, -7))
             }
@@ -163,14 +138,12 @@ export default function EventsPage() {
           />
         )}
 
-        {/* AÑO */}
-        {view === "year" && (
-          <YearCalendar
-            year={monthDate.year}
+        {/* DÍA */}
+        {view === "day" && (
+          <DayAgenda
+            date={dayDate}
             events={filteredEvents}
-            onSelectEvent={(e) =>
-              setSelectedEventId(e.id)
-            }
+            onSelectEvent={(e) => setSelectedEventId(e.id)}
           />
         )}
       </div>
@@ -182,35 +155,10 @@ export default function EventsPage() {
           event={selectedEvent}
           onClose={() => setSelectedEventId(null)}
           onEdit={(e) => {
-            setEditingEventId(e.id);
-            setShowForm(true);
+            router.push(`/events/${e.id}/edit`);
           }}
         />
       )}
-
-      {/* Modal crear / editar */}
-      <Modal
-        isOpen={showForm}
-        onClose={() => {
-          setShowForm(false);
-          setEditingEventId(null);
-        }}
-      >
-        <EventForm
-          key={editingEvent?.id ?? "new"}
-          initialData={editingEvent ?? undefined}
-          onSubmit={(ev) => {
-            addOrUpdateEvent(ev);
-            setShowForm(false);
-            setEditingEventId(null);
-            setSelectedEventId(ev.id);
-          }}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingEventId(null);
-          }}
-        />
-      </Modal>
     </div>
   );
 }
