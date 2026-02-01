@@ -25,7 +25,11 @@ export default function ContactForm({
   onSubmit,
   onCancel,
 }: Props) {
-  const [fullName, setFullName] = useState(initialData?.fullName ?? "");
+  const isEditing = Boolean(initialData);
+
+  const [fullName, setFullName] = useState(
+    initialData?.fullName ?? ""
+  );
   const [email, setEmail] = useState(initialData?.email ?? "");
   const [phone, setPhone] = useState(initialData?.phone ?? "");
   const [types, setTypes] = useState<ContactType[]>(
@@ -59,89 +63,126 @@ export default function ContactForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Nombre */}
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Nombre completo *
-        </label>
-        <input
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          className="w-full border rounded-lg px-4 py-2"
-          required
-        />
-      </div>
-
-      {/* Email */}
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Email
-        </label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full border rounded-lg px-4 py-2"
-        />
-      </div>
-
-      {/* Teléfono */}
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Teléfono
-        </label>
-        <input
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className="w-full border rounded-lg px-4 py-2"
-        />
-      </div>
-
-      {/* Tipos */}
-      <div>
-        <label className="block text-sm font-medium mb-2">
-          Tipo de contacto
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {CONTACT_TYPE_ORDER.map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => toggleType(type)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium border
-                ${
-                  types.includes(type)
-                    ? "bg-primary text-white border-primary"
-                    : "bg-white text-gray-600 border-gray-200"
-                }`}
-            >
-              {ContactTypeLabels[type]}
-            </button>
-          ))}
+    <form
+      onSubmit={handleSubmit}
+      className="w-full max-w-4xl mx-auto overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm"
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between border-b border-gray-100 bg-gray-50 px-6 py-5">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">
+            {isEditing ? "Editar contacto" : "Nuevo contacto"}
+          </h2>
+          <p className="text-sm text-gray-500">
+            Registra y organiza la información del contacto.
+          </p>
         </div>
-      </div>
-
-      {/* Notas */}
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Notas
-        </label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="w-full border rounded-lg px-4 py-2"
-          rows={3}
-        />
-      </div>
-
-      {/* Acciones */}
-      <div className="flex justify-end gap-2">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-6 py-2 rounded-lg border text-gray-700 hover:bg-gray-50"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-100"
+            aria-label="Cerrar"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6 6l12 12M18 6l-12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="space-y-3 bg-white px-6 py-5">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium text-gray-700">
+              Nombre completo
+            </label>
+            <input
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700">
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+              placeholder="correo@ejemplo.com"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700">
+              Teléfono
+            </label>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+              placeholder="+34 600 000 000"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-700">
+            Tipo de contacto
+          </label>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {CONTACT_TYPE_ORDER.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => toggleType(type)}
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  types.includes(type)
+                    ? "border-primary bg-primary text-white shadow-sm"
+                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {ContactTypeLabels[type]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-700">
+            Notas
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+            rows={3}
+            placeholder="Añade información relevante sobre este contacto..."
+          />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex flex-col-reverse gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4 sm:flex-row sm:items-center sm:justify-end">
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-xl px-6 py-2 text-sm font-medium text-gray-600 transition hover:bg-white"
           >
             Cancelar
           </button>
@@ -149,9 +190,9 @@ export default function ContactForm({
 
         <button
           type="submit"
-          className="bg-primary text-white px-6 py-2 rounded-lg font-bold"
+          className="rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
         >
-          Guardar contacto
+          {isEditing ? "Guardar cambios" : "Guardar contacto"}
         </button>
       </div>
     </form>

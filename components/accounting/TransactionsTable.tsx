@@ -145,7 +145,6 @@ export default function TransactionsTable({ transactions }: Props) {
       <Modal
         isOpen={!!editingTx}
         onClose={() => setEditingTx(null)}
-        title="Editar transacción"
       >
         {editingTx && (
           <TransactionForm

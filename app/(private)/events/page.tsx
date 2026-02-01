@@ -195,7 +195,6 @@ export default function EventsPage() {
           setShowForm(false);
           setEditingEventId(null);
         }}
-        title={editingEvent ? "Editar evento" : "Nuevo evento"}
       >
         <EventForm
           key={editingEvent?.id ?? "new"}

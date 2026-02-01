@@ -95,7 +95,6 @@ export default function ContactsPage() {
                     setShowForm(false);
                     setEditingContact(null);
                 }}
-                title={editingContact ? "Editar contacto" : "Nuevo contacto"}
             >
                 <ContactForm
                     key={editingContact?.id ?? "new"}

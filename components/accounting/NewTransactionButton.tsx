@@ -9,12 +9,12 @@ import { Transaction } from "@/modules/accounting/transaction.types";
 export default function NewTransactionButton() {
   const [open, setOpen] = useState(false);
 
-  const updateTransaction = useTransactionsStore(
-    (s) => s.updateTransaction
+  const addTransaction = useTransactionsStore(
+    (s) => s.addTransaction
   );
 
   const handleSubmit = async (tx: Transaction) => {
-    updateTransaction(tx);
+    addTransaction(tx);
     setOpen(false);
   };
 
