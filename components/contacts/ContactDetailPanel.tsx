@@ -37,7 +37,12 @@ export default function ContactDetailPanel({
   }
 
   const displayName = getDisplayName(contact);
-  const addressLine = [contact.address, contact.postalCode, contact.city]
+  const addressLine = [
+    contact.address,
+    contact.postalCode,
+    contact.city,
+    contact.region,
+  ]
     .filter(Boolean)
     .join(", ");
 
@@ -95,26 +100,9 @@ export default function ContactDetailPanel({
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Teléfono secundario
-          </p>
-          <p className="mt-1">{contact.secondaryPhone || "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
             Dirección
           </p>
-          <p className="mt-1">
-            {addressLine || "—"}
-          </p>
-          <p className="text-xs text-gray-500">
-            {contact.region || ""}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Web / Portfolio
-          </p>
-          <p className="mt-1">{contact.website || "—"}</p>
+          <p className="mt-1">{addressLine || "—"}</p>
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">

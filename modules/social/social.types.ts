@@ -8,6 +8,7 @@ export interface SocialPost {
   content: string;
   channels: string[];
   status: SocialPostStatus;
+  mediaUrls?: string[];
   scheduledAt?: string;
   createdAt: string;
 }
