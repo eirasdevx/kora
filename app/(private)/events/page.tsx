@@ -8,6 +8,7 @@ import MonthlyCalendar from "@/components/events/MonthlyCalendar";
 import WeeklyCalendar from "@/components/events/WeeklyCalendar";
 import DayAgenda from "@/components/events/DayAgenda";
 import EventDetailsPanel from "@/components/events/EventDetailsPanel";
+import PageTopbar from "@/components/PageTopbar";
 
 import { Event } from "@/modules/events/event.types";
 import { useEventsStore } from "@/modules/events/events.store";
@@ -88,14 +89,16 @@ export default function EventsPage() {
     <div className="flex gap-6">
       {/* Columna principal */}
       <div className="flex-1 space-y-6">
-        <EventsTopbar
-          view={view}
-          onChangeView={setView}
-          onSearch={setSearch}
-          onCreate={() => {
-            router.push("/events/new");
-          }}
-        />
+        <PageTopbar>
+          <EventsTopbar
+            view={view}
+            onChangeView={setView}
+            onSearch={setSearch}
+            onCreate={() => {
+              router.push("/events/new");
+            }}
+          />
+        </PageTopbar>
 
         {/* MES */}
         {view === "month" && (

@@ -1,23 +1,27 @@
+import PageTopbar from "@/components/PageTopbar";
+
 export default function ProfileSettingsPage() {
   return (
     <div className="space-y-8">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-            Configuración &nbsp;›&nbsp; Perfil de Asociación
-          </p>
-          <h1 className="text-3xl font-semibold text-gray-900">
-            Perfil de Asociación
-          </h1>
-          <p className="text-sm text-gray-500">
-            Configura la información pública y legal que identifica a tu
-            organización.
-          </p>
+      <PageTopbar>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+              Configuración &nbsp;›&nbsp; Perfil de Asociación
+            </p>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Perfil de Asociación
+            </h1>
+            <p className="text-sm text-gray-500">
+              Configura la información pública y legal que identifica a tu
+              organización.
+            </p>
+          </div>
+          <button className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm">
+            ← Volver al Panel
+          </button>
         </div>
-        <button className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm">
-          ← Volver al Panel
-        </button>
-      </header>
+      </PageTopbar>
 
       <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
         <div>

@@ -1,3 +1,5 @@
+import PageTopbar from "@/components/PageTopbar";
+
 const users = [
   {
     name: "Admin Kora",
@@ -37,24 +39,26 @@ const statusStyles: Record<string, string> = {
 export default function UsersSettingsPage() {
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-          Configuración &nbsp;›&nbsp; Gestión de Usuarios
-        </p>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold text-gray-900">
-              Gestión de Usuarios
-            </h1>
-            <p className="text-sm text-gray-500">
-              Administra los accesos y roles de los miembros de tu equipo.
-            </p>
+      <PageTopbar>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+            Configuración &nbsp;›&nbsp; Gestión de Usuarios
+          </p>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                Gestión de Usuarios
+              </h1>
+              <p className="text-sm text-gray-500">
+                Administra los accesos y roles de los miembros de tu equipo.
+              </p>
+            </div>
+            <button className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow">
+              + Invitar Usuario
+            </button>
           </div>
-          <button className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow">
-            + Invitar Usuario
-          </button>
         </div>
-      </header>
+      </PageTopbar>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full lg:max-w-md">

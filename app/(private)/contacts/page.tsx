@@ -9,6 +9,7 @@ import ContactsHeader from "@/components/contacts/ContactsHeader";
 import ContactsFilters from "@/components/contacts/ContactsFilters";
 import ContactsTable from "@/components/contacts/ContactsTable";
 import ContactDetailPanel from "@/components/contacts/ContactDetailPanel";
+import PageTopbar from "@/components/PageTopbar";
 
 import Modal from "@/components/Modal";
 
@@ -61,12 +62,13 @@ export default function ContactsPage() {
 
     return (
         <div className="flex flex-col gap-6">
-            {/* Header */}
-            <ContactsHeader
-                onAdd={() => {
-                    router.push("/contacts/new");
-                }}
-            />
+            <PageTopbar>
+                <ContactsHeader
+                    onAdd={() => {
+                        router.push("/contacts/new");
+                    }}
+                />
+            </PageTopbar>
 
             {/* Filtros */}
             <ContactsFilters

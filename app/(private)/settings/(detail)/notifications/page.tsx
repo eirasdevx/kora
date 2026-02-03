@@ -1,3 +1,5 @@
+import PageTopbar from "@/components/PageTopbar";
+
 const sections = [
   {
     title: "Tesorería",
@@ -50,15 +52,17 @@ function Toggle({ defaultChecked }: { defaultChecked?: boolean }) {
 export default function NotificationsSettingsPage() {
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-          Configuración &nbsp;›&nbsp; Notificaciones
-        </p>
-        <h1 className="text-3xl font-semibold text-gray-900">Notificaciones</h1>
-        <p className="text-sm text-gray-500">
-          Gestiona cómo y cuándo recibes avisos de la plataforma.
-        </p>
-      </header>
+      <PageTopbar>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+            Configuración &nbsp;›&nbsp; Notificaciones
+          </p>
+          <h1 className="text-2xl font-semibold text-gray-900">Notificaciones</h1>
+          <p className="text-sm text-gray-500">
+            Gestiona cómo y cuándo recibes avisos de la plataforma.
+          </p>
+        </div>
+      </PageTopbar>
 
       {sections.map((section) => (
         <div key={section.title} className="space-y-4">

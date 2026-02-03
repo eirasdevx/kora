@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import PageTopbar from "@/components/PageTopbar";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useEventsStore } from "@/modules/events/events.store";
@@ -44,10 +45,6 @@ export default function DashboardPage() {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-  const last7 = new Date(now);
-  last7.setDate(now.getDate() - 7);
-  const prev7 = new Date(now);
-  prev7.setDate(now.getDate() - 14);
 
   const {
     balance,
@@ -144,11 +141,15 @@ export default function DashboardPage() {
     endOfPrevMonth,
   ]);
 
-  const newMembers = useMemo(() => {
-    return contacts.filter(
-      (c) => new Date(c.createdAt) >= startOfMonth
-    ).length;
-  }, [contacts, startOfMonth]);
+  const totalMembers = useMemo(() => {
+    return contacts.filter((c) => c.types.includes("member")).length;
+  }, [contacts]);
+
+  const totalEvents = events.length;
+
+  const totalFollowers = useMemo(() => {
+    return posts.length;
+  }, [posts]);
 
   const activeEvents = useMemo(() => {
     return events.filter((event) => {
@@ -156,36 +157,6 @@ export default function DashboardPage() {
       return event.status !== "draft" && start >= now;
     });
   }, [events, now]);
-
-  const engagement = useMemo(() => {
-    const total = posts.length || 1;
-    const published = posts.filter((p) => p.status === "published").length;
-    return (published / total) * 100;
-  }, [posts]);
-
-  const engagementDelta = useMemo(() => {
-    const filterRange = (from: Date, to: Date) =>
-      posts.filter((p) => {
-        const date = new Date(p.createdAt);
-        return date >= from && date < to;
-      });
-
-    const last = filterRange(last7, now);
-    const prev = filterRange(prev7, last7);
-    const lastRate =
-      last.length === 0
-        ? 0
-        : (last.filter((p) => p.status === "published").length /
-            last.length) *
-          100;
-    const prevRate =
-      prev.length === 0
-        ? 0
-        : (prev.filter((p) => p.status === "published").length /
-            prev.length) *
-          100;
-    return lastRate - prevRate;
-  }, [posts, last7, prev7, now]);
 
   const upcomingEvents = useMemo(() => {
     return [...activeEvents]
@@ -225,54 +196,13 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <PageTopbar>
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
             Panel Integral 360°
           </h1>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:w-80">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="M21 21l-4.3-4.3" />
-              </svg>
-            </span>
-            <input
-              placeholder="Buscar en Kora..."
-              className="w-full rounded-2xl border border-gray-200 bg-white py-3 pl-11 pr-4 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-500 shadow-sm">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8" />
-                <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-              </svg>
-            </button>
-            <div className="flex items-center gap-3 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 shadow-sm">
-              <div>
-                <p className="text-xs text-gray-400">PLAN PREMIUM</p>
-                <p className="font-semibold text-gray-900">Admin Kora</p>
-              </div>
-              <span className="h-9 w-9 rounded-full bg-emerald-200" />
-            </div>
-          </div>
-        </div>
-      </header>
+      </PageTopbar>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -300,59 +230,37 @@ export default function DashboardPage() {
 
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500">Nuevos Socios (Mes)</p>
+            <p className="text-sm text-gray-500">Total de Socios</p>
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
               +
             </span>
           </div>
           <p className="mt-3 text-2xl font-semibold text-gray-900">
-            {newMembers}
-          </p>
-          <p className="mt-2 text-sm text-gray-500">
-            Meta: 150 (
-            <span className="text-primary font-semibold">
-              {Math.min((newMembers / 150) * 100, 100).toFixed(0)}%
-            </span>
-            )
+            {totalMembers}
           </p>
         </div>
 
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500">Eventos Activos</p>
+            <p className="text-sm text-gray-500">Total de Eventos</p>
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
               !
             </span>
           </div>
           <p className="mt-3 text-2xl font-semibold text-gray-900">
-            {activeEvents.length}
+            {totalEvents}
           </p>
-          <div className="mt-4 h-2 rounded-full bg-gray-100">
-            <div
-              className="h-2 rounded-full bg-orange-500"
-              style={{
-                width: `${
-                  events.length
-                    ? (activeEvents.length / events.length) * 100
-                    : 0
-                }%`,
-              }}
-            />
-          </div>
         </div>
 
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500">Tasa de Engagement</p>
+            <p className="text-sm text-gray-500">Seguidores en redes</p>
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-pink-50 text-pink-500">
               ♥
             </span>
           </div>
           <p className="mt-3 text-2xl font-semibold text-gray-900">
-            {engagement.toFixed(1)}%
-          </p>
-          <p className="mt-2 text-sm text-emerald-600">
-            {formatPercent(engagementDelta)} vs semana pasada
+            {totalFollowers}
           </p>
         </div>
       </section>
@@ -427,7 +335,9 @@ export default function DashboardPage() {
               return (
                 <div key={item.category} className="space-y-2">
                   <div className="flex items-center justify-between text-sm text-gray-600">
-                    <span>{CATEGORY_LABELS[item.category] ?? item.category}</span>
+                    <span>
+                      {CATEGORY_LABELS[item.category] ?? item.category}
+                    </span>
                     <span className="font-semibold">
                       {percent.toFixed(0)}%
                     </span>

@@ -23,10 +23,8 @@ export default function AppLayout({
     <div className="min-h-screen flex bg-background-light">
       <Sidebar />
 
-      {/* Contenido principal SIN topbar global */}
-      <main className="flex-1 p-6">
-        {children}
-      </main>
+      {/* Contenido principal */}
+      <main className="flex-1 p-6">{children}</main>
     </div>
   );
 }

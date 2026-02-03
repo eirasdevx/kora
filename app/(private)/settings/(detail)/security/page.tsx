@@ -1,3 +1,5 @@
+import PageTopbar from "@/components/PageTopbar";
+
 const activity = [
   {
     action: "Inicio de sesión",
@@ -16,15 +18,17 @@ const activity = [
 export default function SecuritySettingsPage() {
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-          Configuración &nbsp;›&nbsp; Seguridad
-        </p>
-        <h1 className="text-3xl font-semibold text-gray-900">Seguridad</h1>
-        <p className="text-sm text-gray-500">
-          Gestiona el acceso a tu cuenta y protege la integridad de los datos.
-        </p>
-      </header>
+      <PageTopbar>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+            Configuración &nbsp;›&nbsp; Seguridad
+          </p>
+          <h1 className="text-2xl font-semibold text-gray-900">Seguridad</h1>
+          <p className="text-sm text-gray-500">
+            Gestiona el acceso a tu cuenta y protege la integridad de los datos.
+          </p>
+        </div>
+      </PageTopbar>
 
       <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1.1fr_1fr]">
         <div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PageTopbar from "@/components/PageTopbar";
 
 const cards = [
   {
@@ -108,59 +109,61 @@ const cards = [
 export default function SettingsPage() {
   return (
     <div className="space-y-10">
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M12 3l8 4v5c0 5-3.6 8.4-8 9-4.4-.6-8-4-8-9V7l8-4z" />
-              </svg>
+      <PageTopbar>
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M12 3l8 4v5c0 5-3.6 8.4-8 9-4.4-.6-8-4-8-9V7l8-4z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                  Kora Management Suite
+                </p>
+                <p className="text-sm text-gray-500">
+                  Administrador Global
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Kora Management Suite
-              </p>
-              <p className="text-sm text-gray-500">
-                Administrador Global
-              </p>
+            <div className="flex items-center gap-3">
+              <button className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 shadow-sm">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M21 21l-4.3-4.3" />
+                </svg>
+              </button>
+              <div className="flex items-center gap-3 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 shadow-sm">
+                <span className="font-semibold text-gray-800">Admin Kora</span>
+                <span className="h-8 w-8 rounded-full bg-emerald-200" />
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 shadow-sm">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="M21 21l-4.3-4.3" />
-              </svg>
-            </button>
-            <div className="flex items-center gap-3 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 shadow-sm">
-              <span className="font-semibold text-gray-800">Admin Kora</span>
-              <span className="h-8 w-8 rounded-full bg-emerald-200" />
-            </div>
-          </div>
-        </div>
 
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">
-            Configuración General
-          </h1>
-          <p className="mt-2 text-base text-gray-500">
-            Gestiona todos los aspectos centrales de tu asociación desde un
-            único lugar. Selecciona una categoría para empezar.
-          </p>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Configuración General
+            </h1>
+            <p className="mt-2 text-sm text-gray-500">
+              Gestiona todos los aspectos centrales de tu asociación desde un
+              único lugar. Selecciona una categoría para empezar.
+            </p>
+          </div>
         </div>
-      </div>
+      </PageTopbar>
 
       <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (

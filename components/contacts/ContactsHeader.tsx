@@ -9,12 +9,11 @@ export default function ContactsHeader({ onAdd }: Props) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-2xl font-semibold text-gray-900">
             Gestión de contactos
           </h1>
-          <p className="text-gray-500">
-            Administra los miembros, proveedores y colaboradores
-            de tu asociación.
+          <p className="text-sm text-gray-500">
+            Administra los miembros, proveedores y colaboradores de tu asociación.
           </p>
         </div>
 

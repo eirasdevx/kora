@@ -26,7 +26,7 @@ export default function EventsTopbar({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-2xl font-semibold text-gray-900">
             Agenda de Eventos
           </h1>
         </div>

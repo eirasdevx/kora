@@ -1,3 +1,5 @@
+import PageTopbar from "@/components/PageTopbar";
+
 const colorSwatches = [
   "#1D4ED8",
   "#0EA5E9",
@@ -10,16 +12,18 @@ const colorSwatches = [
 export default function AppearanceSettingsPage() {
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-          Configuración &nbsp;›&nbsp; Apariencia
-        </p>
-        <h1 className="text-3xl font-semibold text-gray-900">Apariencia</h1>
-        <p className="text-sm text-gray-500">
-          Personaliza el aspecto visual de tu plataforma para adaptarla a tu
-          imagen corporativa.
-        </p>
-      </header>
+      <PageTopbar>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+            Configuración &nbsp;›&nbsp; Apariencia
+          </p>
+          <h1 className="text-2xl font-semibold text-gray-900">Apariencia</h1>
+          <p className="text-sm text-gray-500">
+            Personaliza el aspecto visual de tu plataforma para adaptarla a tu
+            imagen corporativa.
+          </p>
+        </div>
+      </PageTopbar>
 
       <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
         <div>

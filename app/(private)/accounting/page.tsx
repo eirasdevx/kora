@@ -5,19 +5,17 @@ import { useEffect, useMemo } from "react";
 import AccountingKPIs from "@/components/accounting/AccountingKPIs";
 import TransactionsTable from "@/components/accounting/TransactionsTable";
 import NewTransactionButton from "@/components/accounting/NewTransactionButton";
+import PageTopbar from "@/components/PageTopbar";
 
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 
 export default function AccountingPage() {
-  const { transactions, loadTransactions } =
-    useTransactionsStore();
+  const { transactions, loadTransactions } = useTransactionsStore();
 
-  // Cargar transacciones al entrar
   useEffect(() => {
     loadTransactions();
   }, [loadTransactions]);
 
-  // KPIs calculados
   const { income, expense, balance } = useMemo(() => {
     let income = 0;
     let expense = 0;
@@ -41,29 +39,20 @@ export default function AccountingPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">
-            Gestión de Tesorería
-          </h1>
-          <p className="text-gray-500">
-            Supervisa el flujo de caja y mantén al día la
-            salud financiera de tu asociación.
-          </p>
+      <PageTopbar>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Gestión de Tesorería</h1>
+            <p className="text-sm text-gray-500">
+              Supervisa el flujo de caja y mantén al día la salud financiera de tu asociación.
+            </p>
+          </div>
+          <NewTransactionButton />
         </div>
+      </PageTopbar>
 
-        <NewTransactionButton />
-      </div>
+      <AccountingKPIs income={income} expense={expense} balance={balance} />
 
-      {/* KPIs */}
-      <AccountingKPIs
-        income={income}
-        expense={expense}
-        balance={balance}
-      />
-
-      {/* Tabla */}
       <TransactionsTable transactions={transactions} />
     </div>
   );
