@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { SocialPost } from "./social.types";
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
       content: string;
       channels: string[];
       mediaUrls?: string[];
+      scheduledAt?: string;
     },
     action: "draft" | "publish" | "schedule"
   ) => void;
@@ -48,16 +49,21 @@ export default function SocialPostForm({
   const [previewChannel, setPreviewChannel] = useState(
     initialData?.channels?.[0] ?? "Instagram"
   );
+  const [scheduleDate, setScheduleDate] = useState(
+    initialData?.scheduledAt ? initialData.scheduledAt.slice(0, 10) : ""
+  );
+  const [scheduleTime, setScheduleTime] = useState(
+    initialData?.scheduledAt ? initialData.scheduledAt.slice(11, 16) : ""
+  );
   const [mediaUrls, setMediaUrls] = useState<string[]>(
     initialData?.mediaUrls ?? []
   );
 
-  useEffect(() => {
-    if (!selectedChannels.length) return;
-    if (!selectedChannels.includes(previewChannel)) {
-      setPreviewChannel(selectedChannels[0]);
-    }
-  }, [selectedChannels, previewChannel]);
+  const scheduledAt =
+    scheduleDate && scheduleTime
+      ? new Date(`${scheduleDate}T${scheduleTime}`).toISOString()
+      : undefined;
+  const canSchedule = Boolean(scheduledAt);
 
   const isEditing = Boolean(initialData);
   const previewText = content.trim()
@@ -74,13 +80,15 @@ export default function SocialPostForm({
         e.preventDefault();
         const submitter = (e.nativeEvent as SubmitEvent)
           .submitter as HTMLButtonElement | null;
-        const action =
+        let action =
           (submitter?.value as "draft" | "publish" | "schedule") ?? "draft";
+        if (action === "schedule" && !canSchedule) action = "draft";
         onSubmit?.(
           {
             content,
             channels: selectedChannels,
             mediaUrls,
+            scheduledAt,
           },
           action
         );
@@ -109,6 +117,18 @@ export default function SocialPostForm({
             className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
           >
             Guardar Borrador
+          </button>
+          <button
+            type="submit"
+            value="schedule"
+            disabled={!canSchedule}
+            className={`rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold shadow-sm transition ${
+              canSchedule
+                ? "text-gray-600 hover:bg-gray-50"
+                : "cursor-not-allowed text-gray-300 opacity-60"
+            }`}
+          >
+            Programar
           </button>
           <button
             type="submit"
@@ -142,13 +162,29 @@ export default function SocialPostForm({
                   <button
                     key={account.id}
                     type="button"
-                    onClick={() =>
-                      setSelectedChannels((prev) =>
-                        prev.includes(account.id)
-                          ? prev.filter((item) => item !== account.id)
-                          : [...prev, account.id]
-                      )
-                    }
+                    onClick={() => {
+                      const nextSelected = active
+                        ? selectedChannels.filter((item) => item !== account.id)
+                        : [...selectedChannels, account.id];
+
+                      setSelectedChannels(nextSelected);
+
+                      if (nextSelected.length === 0) return;
+
+                      if (active && previewChannel === account.id) {
+                        setPreviewChannel(nextSelected[0]);
+                        return;
+                      }
+
+                      if (!active && nextSelected.length === 1) {
+                        setPreviewChannel(account.id);
+                        return;
+                      }
+
+                      if (!nextSelected.includes(previewChannel)) {
+                        setPreviewChannel(nextSelected[0]);
+                      }
+                    }}
                     className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                       active
                         ? "border-primary bg-primary/10 text-primary"
@@ -177,6 +213,39 @@ export default function SocialPostForm({
                 <span>{content.length} / 2200</span>
               </div>
             </div>
+          </section>
+
+          <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-gray-400">
+              Programación
+            </p>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">
+                  Fecha
+                </label>
+                <input
+                  type="date"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">
+                  Hora
+                </label>
+                <input
+                  type="time"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                />
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-gray-400">
+              Completa fecha y hora para programar la publicación.
+            </p>
           </section>
 
           <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">

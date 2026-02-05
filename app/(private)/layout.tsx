@@ -12,12 +12,18 @@ export default function AppLayout({
 }) {
   const router = useRouter();
   const mode = useSessionStore((s) => s.mode);
+  const hydrated = useSessionStore((s) => s.hydrated);
 
   useEffect(() => {
-    if (!mode) {
-      router.push("/login");
-    }
-  }, [mode, router]);
+    if (!hydrated) return;
+    if (!mode) router.replace("/login");
+  }, [hydrated, mode, router]);
+
+  if (!hydrated || !mode) {
+    return (
+      <div className="min-h-screen bg-background-light" aria-busy="true" />
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-background-light">

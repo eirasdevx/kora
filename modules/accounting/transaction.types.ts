@@ -18,11 +18,12 @@ export interface Transaction {
 
   concept: string;                // título principal
   description?: string;           // texto secundario
+  paymentMethod?: string;
 
   category: TransactionCategory;
   status: TransactionStatus;
 
-  eventId?: string;               // 🔥 OPCIONAL
+  eventId?: string;               // opcional
   contactId?: string;
 
   createdAt: string;

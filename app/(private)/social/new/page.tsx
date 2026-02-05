@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import SocialPostForm from "@/modules/social/SocialPostForm";
-import { SocialPost } from "@/modules/social/social.types";
 import { useSocialPostsStore } from "@/modules/social/social.store";
 
 export default function NewSocialPostPage() {
@@ -10,7 +9,14 @@ export default function NewSocialPostPage() {
   const addPost = useSocialPostsStore((s) => s.addPost);
 
   const handleSubmit = async (
-    data: Omit<SocialPost, "id" | "createdAt"> | undefined,
+    data:
+      | {
+          content: string;
+          channels: string[];
+          mediaUrls?: string[];
+          scheduledAt?: string;
+        }
+      | undefined,
     action: "draft" | "publish" | "schedule"
   ) => {
     if (!data) return;

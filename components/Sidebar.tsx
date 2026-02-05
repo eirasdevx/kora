@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useSessionStore } from "@/core/session/session.store";
 
 type NavItem = {
   label: string;
@@ -14,13 +15,17 @@ function cx(...classes: Array<string | false | undefined | null>) {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const mode = useSessionStore((s) => s.mode);
+  const association = useSessionStore((s) => s.association);
+  const logout = useSessionStore((s) => s.logout);
 
   const mainItems: NavItem[] = [
-    { label: "Panel de Control", href: "/dashboard" },
+    { label: "Panel de control", href: "/dashboard" },
     { label: "Contabilidad", href: "/accounting" },
     { label: "Eventos", href: "/events" },
     { label: "Contactos", href: "/contacts" },
-    { label: "Redes Sociales", href: "/social" },
+    { label: "Redes sociales", href: "/social" },
   ];
 
   const isActive = (href: string) =>
@@ -30,10 +35,15 @@ export default function Sidebar() {
     <aside className="w-72 bg-white border-r min-h-screen flex flex-col">
       {/* Logo */}
       <div className="px-6 py-6">
-        <div className="font-extrabold text-lg">Kora</div>
-        <div className="text-xs text-gray-500">
-          Gestión de Asociaciones
+        <div className="font-heading text-lg font-extrabold text-slate-900">
+          Kora
         </div>
+        <div className="text-xs text-gray-500">Gestión de asociaciones</div>
+        {association?.name ? (
+          <p className="mt-3 line-clamp-2 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+            {association.name}
+          </p>
+        ) : null}
       </div>
 
       {/* Navegación principal */}
@@ -79,8 +89,24 @@ export default function Sidebar() {
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-4 border-t text-sm text-gray-500">
-        Modo invitado
+      <div className="px-6 py-4 border-t">
+        <p className="text-sm text-gray-500">
+          {mode === "guest"
+            ? "Modo invitado"
+            : mode === "authenticated"
+              ? "Sesión iniciada"
+              : "Sin sesión"}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            logout();
+            router.replace("/login");
+          }}
+          className="mt-3 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+        >
+          Cerrar sesión
+        </button>
       </div>
     </aside>
   );

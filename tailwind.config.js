@@ -13,6 +13,10 @@ module.exports = {
         "background-light": "#f6f6f8",
         "background-dark": "#101622",
       },
+      fontFamily: {
+        body: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
+        heading: ["var(--font-heading)", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
     },
   },
   plugins: [],

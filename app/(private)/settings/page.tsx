@@ -104,6 +104,29 @@ const cards = [
       </svg>
     ),
   },
+  {
+    title: "Migración",
+    description:
+      "Exporta e importa los datos de tu asociación en formato JSON o CSV.",
+    href: "/settings/migration",
+    action: "Gestionar datos",
+    tone: "bg-emerald-50 text-emerald-600",
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M12 3v10" />
+        <path d="M7 8l5 5 5-5" />
+        <path d="M5 21h14" />
+      </svg>
+    ),
+  },
 ];
 
 export default function SettingsPage() {
@@ -193,28 +216,6 @@ export default function SettingsPage() {
             </Link>
           </div>
         ))}
-      </section>
-
-      <section className="rounded-3xl bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 p-8 text-white shadow-lg">
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold">
-              ¿Necesitas ayuda con la configuración?
-            </h2>
-            <p className="mt-2 text-sm text-white/70">
-              Consulta nuestra guía interactiva o contacta con el soporte
-              técnico para resolver cualquier duda sobre Kora.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button className="rounded-full bg-white/10 px-5 py-2 text-sm font-semibold text-white">
-              Ver Guía
-            </button>
-            <button className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white shadow">
-              Contactar Soporte
-            </button>
-          </div>
-        </div>
       </section>
 
       <footer className="flex flex-col gap-4 border-t border-gray-200 pt-6 text-sm text-gray-500 md:flex-row md:items-center md:justify-between">

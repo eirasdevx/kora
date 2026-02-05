@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { useMemo } from "react";
 import { useSocialComposerStore } from "../composer.store";
 import {
@@ -7,7 +8,6 @@ import {
   SocialPlatform,
   SocialPostDraft,
 } from "../composer.types";
-import { useSocialComposerStore } from "../composer.store";
 import InstagramPreview from "./previews/InstagramPreview";
 import TikTokPreview from "./previews/TikTokPreview";
 import FacebookPreview from "./previews/FacebookPreview";
@@ -19,7 +19,7 @@ function buildPostText(draft: SocialPostDraft) {
 
 const PREVIEW_MAP: Record<
   SocialPlatform,
-  (props: { draft: SocialPostDraft; text: string }) => JSX.Element
+  (props: { draft: SocialPostDraft; text: string }) => ReactElement
 > = {
   instagram: InstagramPreview,
   tiktok: TikTokPreview,
