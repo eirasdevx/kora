@@ -26,11 +26,11 @@ export default function AppLayout({
   }
 
   return (
-    <div className="min-h-screen flex bg-background-light">
+    <div className="min-h-screen bg-background-light pl-72">
       <Sidebar />
 
       {/* Contenido principal */}
-      <main className="flex-1 p-6">{children}</main>
+      <main className="min-h-screen p-6">{children}</main>
     </div>
   );
 }

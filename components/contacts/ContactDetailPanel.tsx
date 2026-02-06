@@ -6,6 +6,7 @@ interface Props {
   contact: Contact | null;
   onEdit: (contact: Contact) => void;
   onDelete: (contact: Contact) => void;
+  onClose?: () => void;
 }
 
 function getDisplayName(contact: Contact) {
@@ -27,6 +28,7 @@ export default function ContactDetailPanel({
   contact,
   onEdit,
   onDelete,
+  onClose,
 }: Props) {
   if (!contact) {
     return (
@@ -48,24 +50,46 @@ export default function ContactDetailPanel({
 
   return (
     <div className="flex h-full flex-col gap-6 rounded-2xl border border-gray-200 bg-white p-6">
-      <div className="flex items-center gap-4">
-        {contact.photoUrl ? (
-          <img
-            src={contact.photoUrl}
-            alt={displayName}
-            className="h-14 w-14 rounded-full object-cover"
-          />
-        ) : (
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
-            {getInitials(contact)}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-4">
+          {contact.photoUrl ? (
+            <img
+              src={contact.photoUrl}
+              alt={displayName}
+              className="h-14 w-14 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
+              {getInitials(contact)}
+            </div>
+          )}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {displayName}
+            </h2>
+            <p className="text-sm text-gray-500">Detalle del contacto</p>
           </div>
-        )}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            {displayName}
-          </h2>
-          <p className="text-sm text-gray-500">Detalle del contacto</p>
         </div>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50"
+            aria-label="Cerrar panel"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6 6l12 12M18 6l-12 12" />
+            </svg>
+          </button>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap gap-2">

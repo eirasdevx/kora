@@ -13,6 +13,10 @@ import PageTopbar from "@/components/PageTopbar";
 
 import Modal from "@/components/Modal";
 
+function cx(...classes: Array<string | undefined | null | false>) {
+    return classes.filter(Boolean).join(" ");
+}
+
 export default function ContactsPage() {
     const { contacts, loadContacts, removeContact } =
         useContactsStore();
@@ -79,7 +83,12 @@ export default function ContactsPage() {
 
             {/* Contenido principal */}
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                <div className="xl:col-span-8 space-y-4">
+                <div
+                    className={cx(
+                        "space-y-4",
+                        selected ? "xl:col-span-8" : "xl:col-span-12"
+                    )}
+                >
                     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
                         <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center">
                             <div className="relative flex-1">
@@ -173,15 +182,18 @@ export default function ContactsPage() {
                     </div>
                 </div>
 
-                <div className="xl:col-span-4 hidden xl:block">
-                    <ContactDetailPanel
-                        contact={selected}
-                        onEdit={(c) => {
-                            router.push(`/contacts/${c.id}/edit`);
-                        }}
-                        onDelete={(c) => setConfirmDelete(c)}
-                    />
-                </div>
+                {selected && (
+                    <div className="xl:col-span-4 hidden xl:block">
+                        <ContactDetailPanel
+                            contact={selected}
+                            onEdit={(c) => {
+                                router.push(`/contacts/${c.id}/edit`);
+                            }}
+                            onDelete={(c) => setConfirmDelete(c)}
+                            onClose={() => setSelected(null)}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Confirmación eliminar (1) */}

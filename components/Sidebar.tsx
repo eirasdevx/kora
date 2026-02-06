@@ -25,6 +25,7 @@ export default function Sidebar() {
     { label: "Contabilidad", href: "/accounting" },
     { label: "Eventos", href: "/events" },
     { label: "Contactos", href: "/contacts" },
+    { label: "Documentos", href: "/documents" },
     { label: "Redes sociales", href: "/social" },
   ];
 
@@ -32,7 +33,7 @@ export default function Sidebar() {
     pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <aside className="w-72 bg-white border-r min-h-screen flex flex-col">
+    <aside className="fixed left-0 top-0 h-screen w-72 bg-white border-r flex flex-col overflow-y-auto z-40">
       {/* Logo */}
       <div className="px-6 py-6">
         <div className="font-heading text-lg font-extrabold text-slate-900">
