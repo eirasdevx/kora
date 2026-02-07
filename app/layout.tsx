@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Inter, Sora } from "next/font/google";
+import AppearanceSync from "@/components/AppearanceSync";
 
 const bodyFont = Inter({
   subsets: ["latin"],
@@ -26,7 +27,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={`${bodyFont.variable} ${headingFont.variable}`}>
-      <body>{children}</body>
+      <body>
+        <AppearanceSync />
+        {children}
+      </body>
     </html>
   );
 }

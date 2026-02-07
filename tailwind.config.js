@@ -9,9 +9,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: "#1152d4",
-        "background-light": "#f6f6f8",
-        "background-dark": "#101622",
+        primary: "rgb(var(--color-primary) / <alpha-value>)",
+        "background-light": "rgb(var(--color-bg-light) / <alpha-value>)",
+        "background-dark": "rgb(var(--color-bg-dark) / <alpha-value>)",
       },
       fontFamily: {
         body: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],

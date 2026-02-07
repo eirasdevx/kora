@@ -5,6 +5,17 @@
 :root {
   --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-heading: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-scale: 1;
+  --color-primary: 17 82 212;
+  --color-bg-light: 246 246 248;
+  --color-bg-dark: 16 22 34;
+  --color-surface: 255 255 255;
+  --color-surface-muted: 248 250 252;
+  --color-surface-soft: 241 245 249;
+  --color-border: 226 232 240;
+  --color-text: 15 23 42;
+  --color-text-muted: 71 85 105;
+  --color-text-subtle: 148 163 184;
 }
 
 html,
@@ -12,9 +23,71 @@ body {
   height: 100%;
 }
 
+html {
+  font-size: calc(16px * var(--font-scale));
+}
+
 body {
-  background-color: #f6f6f8;
+  background-color: rgb(var(--color-bg-light));
   font-family: var(--font-body);
+  color: rgb(var(--color-text));
+}
+
+:root[data-theme="dark"] {
+  --color-bg-light: 16 22 34;
+  --color-bg-dark: 16 22 34;
+  --color-surface: 24 31 46;
+  --color-surface-muted: 30 38 53;
+  --color-surface-soft: 37 46 63;
+  --color-border: 51 65 85;
+  --color-text: 226 232 240;
+  --color-text-muted: 148 163 184;
+  --color-text-subtle: 94 104 121;
+}
+
+:root[data-theme="dark"] .bg-white {
+  background-color: rgb(var(--color-surface)) !important;
+}
+
+:root[data-theme="dark"] .bg-gray-50,
+:root[data-theme="dark"] .bg-slate-50 {
+  background-color: rgb(var(--color-surface-muted)) !important;
+}
+
+:root[data-theme="dark"] .bg-gray-100,
+:root[data-theme="dark"] .bg-slate-100 {
+  background-color: rgb(var(--color-surface-soft)) !important;
+}
+
+:root[data-theme="dark"] .bg-slate-200 {
+  background-color: rgb(var(--color-surface-soft)) !important;
+}
+
+:root[data-theme="dark"] .border-gray-200,
+:root[data-theme="dark"] .border-gray-100,
+:root[data-theme="dark"] .border-slate-200 {
+  border-color: rgb(var(--color-border)) !important;
+}
+
+:root[data-theme="dark"] .text-gray-900,
+:root[data-theme="dark"] .text-gray-800,
+:root[data-theme="dark"] .text-slate-900,
+:root[data-theme="dark"] .text-slate-800 {
+  color: rgb(var(--color-text)) !important;
+}
+
+:root[data-theme="dark"] .text-gray-700,
+:root[data-theme="dark"] .text-gray-600,
+:root[data-theme="dark"] .text-slate-700,
+:root[data-theme="dark"] .text-slate-600 {
+  color: rgb(var(--color-text-muted)) !important;
+}
+
+:root[data-theme="dark"] .text-gray-500,
+:root[data-theme="dark"] .text-gray-400,
+:root[data-theme="dark"] .text-slate-500,
+:root[data-theme="dark"] .text-slate-400 {
+  color: rgb(var(--color-text-subtle)) !important;
 }
 
 h1,
