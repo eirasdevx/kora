@@ -27,6 +27,7 @@ export const useContactsStore = create<ContactsState>((set) => ({
               t === "collaborator"
           )
         : [];
+      const createdAt = c.createdAt ?? new Date().toISOString();
       return {
         ...c,
         firstName: c.firstName ?? nameParts[0] ?? "",
@@ -34,6 +35,8 @@ export const useContactsStore = create<ContactsState>((set) => ({
         dni: c.dni ?? "",
         fullName,
         types,
+        createdAt,
+        deactivatedAt: c.deactivatedAt ?? undefined,
       };
     });
     set({ contacts: normalized });
@@ -51,6 +54,8 @@ export const useContactsStore = create<ContactsState>((set) => ({
         (t) =>
           t === "member" || t === "provider" || t === "collaborator"
       ),
+      createdAt: contact.createdAt ?? new Date().toISOString(),
+      deactivatedAt: contact.deactivatedAt ?? undefined,
     };
     await db.contacts.put(normalized);
 

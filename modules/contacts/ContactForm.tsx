@@ -70,6 +70,21 @@ const REGION_OPTIONS = [
   "Melilla",
 ];
 
+function toInputDate(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function fromInputDate(value?: string) {
+  if (!value) return undefined;
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toISOString();
+}
+
 function TypeIcon({ type }: { type: ContactType }) {
   if (type === "provider") {
     return (
@@ -164,6 +179,13 @@ export default function ContactForm({
   const [photoUrl, setPhotoUrl] = useState(
     initialData?.photoUrl ?? ""
   );
+  const [registeredDate, setRegisteredDate] = useState(
+    toInputDate(initialData?.createdAt) ||
+      toInputDate(new Date().toISOString())
+  );
+  const [deactivatedDate, setDeactivatedDate] = useState(
+    toInputDate(initialData?.deactivatedAt)
+  );
 
   const [errors, setErrors] = useState<{
     firstName?: string;
@@ -191,6 +213,13 @@ export default function ContactForm({
     reader.readAsDataURL(file);
   };
 
+  const handleRemovePhoto = () => {
+    setPhotoUrl("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -210,6 +239,11 @@ export default function ContactForm({
     if (Object.keys(nextErrors).length > 0) return;
 
     const fullName = `${trimmedFirst} ${trimmedLast}`.trim();
+    const createdAt =
+      fromInputDate(registeredDate) ??
+      initialData?.createdAt ??
+      new Date().toISOString();
+    const deactivatedAt = fromInputDate(deactivatedDate);
 
     const contact: Contact = {
       id: initialData?.id ?? crypto.randomUUID(),
@@ -229,8 +263,8 @@ export default function ContactForm({
       region: region || undefined,
       notes: notes || undefined,
       photoUrl: photoUrl || undefined,
-      createdAt:
-        initialData?.createdAt ?? new Date().toISOString(),
+      createdAt,
+      deactivatedAt,
     };
 
     await onSubmit(contact);
@@ -344,6 +378,15 @@ export default function ContactForm({
                   </svg>
                 </span>
               </button>
+              {photoUrl && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-500 shadow-sm transition hover:bg-gray-50"
+                >
+                  Quitar foto
+                </button>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -569,6 +612,28 @@ export default function ContactForm({
                     </svg>
                   </span>
                 </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase text-gray-400">
+                  Fecha de registro
+                </label>
+                <input
+                  type="date"
+                  value={registeredDate}
+                  onChange={(e) => setRegisteredDate(e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase text-gray-400">
+                  Fecha de baja
+                </label>
+                <input
+                  type="date"
+                  value={deactivatedDate}
+                  onChange={(e) => setDeactivatedDate(e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                />
               </div>
             </div>
           </section>

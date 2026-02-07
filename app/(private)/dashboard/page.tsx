@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import PageTopbar from "@/components/PageTopbar";
+import { useSessionStore } from "@/core/session/session.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useEventsStore } from "@/modules/events/events.store";
@@ -29,6 +30,7 @@ const toMonthLabel = (date: Date) =>
   date.toLocaleDateString("es-ES", { month: "short" }).toUpperCase();
 
 export default function DashboardPage() {
+  const association = useSessionStore((s) => s.association);
   const { transactions, loadTransactions } = useTransactionsStore();
   const { contacts, loadContacts } = useContactsStore();
   const { events, loadEvents } = useEventsStore();
@@ -194,13 +196,38 @@ export default function DashboardPage() {
     1
   );
 
+  const associationName =
+    association?.name?.trim() || "Panel Integral 360°";
+  const logoUrl = association?.logoUrl;
+  const logoInitials = associationName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
   return (
     <div className="space-y-8">
       <PageTopbar>
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Panel Integral 360°
-          </h1>
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={associationName}
+                className="h-10 w-10 rounded-xl object-cover"
+              />
+            ) : (
+              <span className="text-sm font-semibold text-gray-600">
+                {logoInitials || "KA"}
+              </span>
+            )}
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              {associationName}
+            </h1>
+          </div>
         </div>
       </PageTopbar>
 

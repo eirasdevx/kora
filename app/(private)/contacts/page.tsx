@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { Contact, ContactType } from "@/modules/contacts/contact.types";
 
 import ContactsHeader from "@/components/contacts/ContactsHeader";
-import ContactsFilters from "@/components/contacts/ContactsFilters";
 import ContactsTable from "@/components/contacts/ContactsTable";
 import ContactDetailPanel from "@/components/contacts/ContactDetailPanel";
 import PageTopbar from "@/components/PageTopbar";
@@ -17,13 +16,51 @@ function cx(...classes: Array<string | undefined | null | false>) {
     return classes.filter(Boolean).join(" ");
 }
 
+function toStartOfDay(value: string) {
+    const date = new Date(`${value}T00:00:00`);
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+function toEndOfDay(value: string) {
+    const date = new Date(`${value}T00:00:00`);
+    date.setHours(23, 59, 59, 999);
+    return date;
+}
+
+function matchesDateRange(
+    iso: string | undefined,
+    from: string,
+    to: string
+) {
+    if (!from && !to) return true;
+    if (!iso) return false;
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return false;
+    if (from) {
+        const start = toStartOfDay(from);
+        if (date < start) return false;
+    }
+    if (to) {
+        const end = toEndOfDay(to);
+        if (date > end) return false;
+    }
+    return true;
+}
+
 export default function ContactsPage() {
     const { contacts, loadContacts, removeContact } =
         useContactsStore();
 
-    const [filter, setFilter] = useState<ContactType | "all">("all");
+    const [typeFilter, setTypeFilter] = useState<ContactType | "all">("all");
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState<Contact | null>(null);
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [registeredFrom, setRegisteredFrom] = useState("");
+    const [registeredTo, setRegisteredTo] = useState("");
+    const [deactivatedFrom, setDeactivatedFrom] = useState("");
+    const [deactivatedTo, setDeactivatedTo] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
 
     const router = useRouter();
 
@@ -36,27 +73,100 @@ export default function ContactsPage() {
         loadContacts();
     }, [loadContacts]);
 
-    const filteredContacts = contacts.filter((c) => {
-        const matchesType =
-            filter === "all" || c.types.includes(filter);
+    const filteredContacts = useMemo(() => {
+        const query = search.trim().toLowerCase();
 
-        const query = search.toLowerCase();
-        const displayName = `${c.firstName} ${c.lastName}`.trim();
-        const matchesSearch =
-            displayName.toLowerCase().includes(query) ||
-            (c.fullName?.toLowerCase().includes(query) ?? false) ||
-            (c.email?.toLowerCase().includes(query) ?? false) ||
-            c.dni.toLowerCase().includes(query);
+        return contacts.filter((c) => {
+            const matchesType =
+                typeFilter === "all" || c.types.includes(typeFilter);
 
-        return matchesType && matchesSearch;
-    });
+            if (!matchesType) return false;
 
-    const filterCounts = {
-        all: contacts.length,
-        member: contacts.filter((c) => c.types.includes("member")).length,
-        provider: contacts.filter((c) => c.types.includes("provider")).length,
-        collaborator: contacts.filter((c) => c.types.includes("collaborator")).length,
-    };
+            const matchesRegistered = matchesDateRange(
+                c.createdAt,
+                registeredFrom,
+                registeredTo
+            );
+            if (!matchesRegistered) return false;
+
+            const matchesDeactivated = matchesDateRange(
+                c.deactivatedAt,
+                deactivatedFrom,
+                deactivatedTo
+            );
+            if (!matchesDeactivated) return false;
+
+            if (!query) return true;
+
+            const displayName = `${c.firstName} ${c.lastName}`.trim();
+            const matchesSearch =
+                displayName.toLowerCase().includes(query) ||
+                (c.fullName?.toLowerCase().includes(query) ?? false) ||
+                (c.email?.toLowerCase().includes(query) ?? false) ||
+                c.dni.toLowerCase().includes(query);
+
+            return matchesSearch;
+        });
+    }, [
+        contacts,
+        typeFilter,
+        search,
+        registeredFrom,
+        registeredTo,
+        deactivatedFrom,
+        deactivatedTo,
+    ]);
+
+    const pageSize = 10;
+
+    const totalPages = useMemo(
+        () => Math.max(1, Math.ceil(filteredContacts.length / pageSize)),
+        [filteredContacts.length, pageSize]
+    );
+    const currentPageSafe = Math.min(currentPage, totalPages);
+    const pagedContacts = useMemo(() => {
+        const start = (currentPageSafe - 1) * pageSize;
+        return filteredContacts.slice(start, start + pageSize);
+    }, [filteredContacts, currentPageSafe, pageSize]);
+
+    useEffect(() => {
+        if (currentPage !== currentPageSafe) {
+            setCurrentPage(currentPageSafe);
+        }
+    }, [currentPage, currentPageSafe]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [
+        search,
+        typeFilter,
+        registeredFrom,
+        registeredTo,
+        deactivatedFrom,
+        deactivatedTo,
+    ]);
+
+    const pageNumbers = useMemo(() => {
+        if (totalPages <= 3) {
+            return Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+        let start = Math.max(1, currentPageSafe - 1);
+        let end = Math.min(totalPages, start + 2);
+        if (end - start < 2) {
+            start = Math.max(1, end - 2);
+        }
+        return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+    }, [currentPageSafe, totalPages]);
+
+    const canPrev = currentPageSafe > 1;
+    const canNext = currentPageSafe < totalPages;
+
+    useEffect(() => {
+        if (!selected) return;
+        if (!filteredContacts.some((c) => c.id === selected.id)) {
+            setSelected(null);
+        }
+    }, [filteredContacts, selected]);
 
     const confirmDeleteName = confirmDelete
         ? `${confirmDelete.firstName} ${confirmDelete.lastName}`.trim() ||
@@ -73,13 +183,6 @@ export default function ContactsPage() {
                     }}
                 />
             </PageTopbar>
-
-            {/* Filtros */}
-            <ContactsFilters
-                value={filter}
-                onChange={setFilter}
-                counts={filterCounts}
-            />
 
             {/* Contenido principal */}
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
@@ -109,34 +212,155 @@ export default function ContactsPage() {
                                 <input
                                     type="text"
                                     placeholder="Buscar contactos por nombre o email..."
+                                    value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                                 />
                             </div>
-                            <button
-                                type="button"
-                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
-                            >
-                                <svg
-                                    viewBox="0 0 24 24"
-                                    className="h-4 w-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setFiltersOpen((prev) => !prev)}
+                                    aria-expanded={filtersOpen}
+                                    aria-controls="contacts-filters-panel"
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
                                 >
-                                    <path d="M3 6h18" />
-                                    <path d="M7 12h10" />
-                                    <path d="M10 18h4" />
-                                </svg>
-                                Filtros
-                            </button>
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        className="h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <path d="M3 6h18" />
+                                        <path d="M7 12h10" />
+                                        <path d="M10 18h4" />
+                                    </svg>
+                                    Filtros
+                                </button>
+                                {filtersOpen && (
+                                    <div
+                                        id="contacts-filters-panel"
+                                        className="absolute right-0 z-20 mt-2 w-80 rounded-2xl border border-gray-200 bg-white p-4 shadow-lg"
+                                    >
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="text-xs font-semibold uppercase text-gray-400">
+                                                    Tipo
+                                                </label>
+                                                <select
+                                                    value={typeFilter}
+                                                    onChange={(e) =>
+                                                        setTypeFilter(
+                                                            e.target.value as
+                                                                | ContactType
+                                                                | "all"
+                                                        )
+                                                    }
+                                                    className="mt-2 w-full appearance-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                                >
+                                                    <option value="all">Todos</option>
+                                                    <option value="member">Socio</option>
+                                                    <option value="provider">Proveedor</option>
+                                                    <option value="collaborator">
+                                                        Colaborador
+                                                    </option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-xs font-semibold uppercase text-gray-400">
+                                                    Fecha de registro
+                                                </p>
+                                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                                    <input
+                                                        type="date"
+                                                        value={registeredFrom}
+                                                        onChange={(e) =>
+                                                            setRegisteredFrom(
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                                        aria-label="Registro desde"
+                                                    />
+                                                    <input
+                                                        type="date"
+                                                        value={registeredTo}
+                                                        onChange={(e) =>
+                                                            setRegisteredTo(
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                                        aria-label="Registro hasta"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-xs font-semibold uppercase text-gray-400">
+                                                    Fecha de baja
+                                                </p>
+                                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                                    <input
+                                                        type="date"
+                                                        value={deactivatedFrom}
+                                                        onChange={(e) =>
+                                                            setDeactivatedFrom(
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                                        aria-label="Baja desde"
+                                                    />
+                                                    <input
+                                                        type="date"
+                                                        value={deactivatedTo}
+                                                        onChange={(e) =>
+                                                            setDeactivatedTo(
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                                        aria-label="Baja hasta"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between pt-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTypeFilter("all");
+                                                        setRegisteredFrom("");
+                                                        setRegisteredTo("");
+                                                        setDeactivatedFrom("");
+                                                        setDeactivatedTo("");
+                                                    }}
+                                                    className="text-xs font-semibold text-gray-500 hover:text-gray-700"
+                                                >
+                                                    Limpiar
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFiltersOpen(false)}
+                                                    className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow"
+                                                >
+                                                    Cerrar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="overflow-hidden">
                             <ContactsTable
-                                contacts={filteredContacts}
+                                contacts={pagedContacts}
                                 selectedId={selected?.id}
                                 onSelect={setSelected}
                             />
@@ -144,36 +368,54 @@ export default function ContactsPage() {
 
                         <div className="flex flex-col gap-3 border-t border-gray-100 px-6 py-4 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
                             <span>
-                                Mostrando {filteredContacts.length} de {contacts.length} contactos
+                                Mostrando {pagedContacts.length} de {filteredContacts.length} contactos
                             </span>
                             <div className="flex items-center gap-2">
                                 <button
                                     type="button"
-                                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500"
+                                    onClick={() =>
+                                        canPrev && setCurrentPage(currentPageSafe - 1)
+                                    }
+                                    className={cx(
+                                        "rounded-lg border px-3 py-1.5 text-sm",
+                                        canPrev
+                                            ? "border-gray-200 text-gray-500 hover:bg-gray-50"
+                                            : "cursor-not-allowed border-gray-100 text-gray-300"
+                                    )}
+                                    disabled={!canPrev}
                                 >
                                     Anterior
                                 </button>
+                                {pageNumbers.map((page) => {
+                                    const isActive = page === currentPageSafe;
+                                    return (
+                                        <button
+                                            key={page}
+                                            type="button"
+                                            onClick={() => setCurrentPage(page)}
+                                            className={cx(
+                                                "rounded-lg border px-3 py-1.5 text-sm",
+                                                isActive
+                                                    ? "border-primary bg-primary/5 font-semibold text-primary"
+                                                    : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                                            )}
+                                        >
+                                            {page}
+                                        </button>
+                                    );
+                                })}
                                 <button
                                     type="button"
-                                    className="rounded-lg border border-primary bg-primary/5 px-3 py-1.5 text-sm font-semibold text-primary"
-                                >
-                                    1
-                                </button>
-                                <button
-                                    type="button"
-                                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500"
-                                >
-                                    2
-                                </button>
-                                <button
-                                    type="button"
-                                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500"
-                                >
-                                    3
-                                </button>
-                                <button
-                                    type="button"
-                                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500"
+                                    onClick={() =>
+                                        canNext && setCurrentPage(currentPageSafe + 1)
+                                    }
+                                    className={cx(
+                                        "rounded-lg border px-3 py-1.5 text-sm",
+                                        canNext
+                                            ? "border-gray-200 text-gray-500 hover:bg-gray-50"
+                                            : "cursor-not-allowed border-gray-100 text-gray-300"
+                                    )}
+                                    disabled={!canNext}
                                 >
                                     Siguiente
                                 </button>

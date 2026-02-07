@@ -23,6 +23,7 @@ export interface Contact {
   tags?: string[];
   notes?: string;
   createdAt: string;
+  deactivatedAt?: string;
 }
 
 export const ContactTypeLabels: Record<ContactType, string> = {

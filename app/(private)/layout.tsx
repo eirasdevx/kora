@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/core/session/session.store";
 import Sidebar from "@/components/Sidebar";
 
@@ -11,13 +11,19 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const mode = useSessionStore((s) => s.mode);
   const hydrated = useSessionStore((s) => s.hydrated);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!hydrated) return;
     if (!mode) router.replace("/login");
   }, [hydrated, mode, router]);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   if (!hydrated || !mode) {
     return (
@@ -26,11 +32,38 @@ export default function AppLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background-light pl-72">
-      <Sidebar />
+    <div className="min-h-screen bg-background-light lg:pl-72">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Contenido principal */}
-      <main className="min-h-screen p-6">{children}</main>
+      <main className="min-h-screen p-6">
+        <div className="mb-4 flex items-center gap-3 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            aria-controls="app-sidebar"
+            aria-expanded={sidebarOpen}
+            aria-label="Abrir menú"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 6h18" />
+              <path d="M3 12h18" />
+              <path d="M3 18h18" />
+            </svg>
+          </button>
+          <span className="text-sm font-semibold text-gray-600">Menú</span>
+        </div>
+        {children}
+      </main>
     </div>
   );
 }

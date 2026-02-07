@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import { useSessionStore } from "@/core/session/session.store";
 
 type ProfileFormState = {
   name: string;
+  logoUrl: string;
   taxId: string;
   phone: string;
   contactEmail: string;
@@ -23,6 +24,7 @@ function getAssociationFormState(
 ): ProfileFormState {
   return {
     name: association?.name ?? "",
+    logoUrl: association?.logoUrl ?? "",
     taxId: association?.taxId ?? "",
     phone: association?.phone ?? "",
     contactEmail: association?.contactEmail ?? "",
@@ -45,10 +47,12 @@ function ProfileSettingsForm({
   onSave,
 }: ProfileSettingsFormProps) {
   const [form, setForm] = useState<ProfileFormState>(initialForm);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const hasChanges = useMemo(() => {
     return (
       normalize(form.name) !== normalize(initialForm.name) ||
+      normalize(form.logoUrl) !== normalize(initialForm.logoUrl) ||
       normalize(form.taxId) !== normalize(initialForm.taxId) ||
       normalize(form.phone) !== normalize(initialForm.phone) ||
       normalize(form.contactEmail) !== normalize(initialForm.contactEmail) ||
@@ -58,6 +62,17 @@ function ProfileSettingsForm({
   }, [form, initialForm]);
 
   const canSave = normalize(form.name).length > 0 && hasChanges;
+
+  const handleLogoChange = (file?: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setForm((prev) => ({ ...prev, logoUrl: reader.result }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div className="space-y-8">
@@ -93,28 +108,63 @@ function ProfileSettingsForm({
             facturas, documentos PDF y en el portal de socios.
           </p>
         </div>
-        <div className="flex items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-500">
-          <div>
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-sm">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-8 w-8 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+        <label className="group flex cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-500 transition hover:border-primary/40">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml"
+            className="sr-only"
+            onChange={(e) => handleLogoChange(e.target.files?.[0])}
+          />
+          {form.logoUrl ? (
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                <img
+                  src={form.logoUrl}
+                  alt={form.name || "Logo asociacion"}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <div className="text-xs text-gray-500">
+                Haz clic para reemplazar el logo
+              </div>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  setForm((prev) => ({ ...prev, logoUrl: "" }));
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                  }
+                }}
+                className="rounded-xl border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-500 shadow-sm hover:bg-gray-50"
               >
-                <path d="M3 5h18v14H3z" />
-                <path d="M8 10l4 4 4-4" />
-              </svg>
+                Quitar logo
+              </button>
             </div>
-            <p className="mt-4 font-semibold text-primary">
-              Haz clic para subir un logo
-            </p>
-            <p className="text-xs text-gray-400">
-              Formatos recomendados: SVG, PNG de alta calidad (Máx. 5MB)
-            </p>
-          </div>
-        </div>
+          ) : (
+            <div>
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-sm">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-8 w-8 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M3 5h18v14H3z" />
+                  <path d="M8 10l4 4 4-4" />
+                </svg>
+              </div>
+              <p className="mt-4 font-semibold text-primary">
+                Haz clic para subir un logo
+              </p>
+              <p className="text-xs text-gray-400">
+                Formatos recomendados: SVG, PNG de alta calidad (Max. 5MB)
+              </p>
+            </div>
+          )}
+        </label>
       </section>
 
       <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
@@ -319,6 +369,7 @@ export default function ProfileSettingsPage() {
 
         setAssociation({
           name,
+          logoUrl: form.logoUrl || undefined,
           taxId: normalize(form.taxId) || undefined,
           phone: normalize(form.phone) || undefined,
           contactEmail: normalize(form.contactEmail) || undefined,

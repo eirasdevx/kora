@@ -27,6 +27,7 @@ export default function ContactsFilters({
       {FILTERS.map((f) => (
         <button
           key={f.value}
+          type="button"
           onClick={() => onChange(f.value)}
           className={`relative -mb-px flex items-center gap-2 px-2 pb-3 text-sm font-semibold transition
             ${

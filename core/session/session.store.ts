@@ -7,6 +7,7 @@ export type SessionMode = "guest" | "authenticated";
 
 export type AssociationProfile = {
   name: string;
+  logoUrl?: string;
   taxId?: string;
   contactEmail?: string;
   phone?: string;

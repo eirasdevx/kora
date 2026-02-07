@@ -25,6 +25,8 @@ export interface Transaction {
 
   eventId?: string;               // opcional
   contactId?: string;
+  contactIds?: string[];
+  attachments?: File[];
 
   createdAt: string;
 }

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import PageTopbar from "@/components/PageTopbar";
+import { useSessionStore } from "@/core/session/session.store";
 
 const cards = [
   {
@@ -130,6 +133,13 @@ const cards = [
 ];
 
 export default function SettingsPage() {
+  const mode = useSessionStore((s) => s.mode);
+
+  const visibleCards =
+    mode === "guest"
+      ? cards.filter((card) => card.href !== "/settings/users")
+      : cards;
+
   return (
     <div className="space-y-10">
       <PageTopbar>
@@ -189,7 +199,7 @@ export default function SettingsPage() {
       </PageTopbar>
 
       <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {cards.map((card) => (
+        {visibleCards.map((card) => (
           <div
             key={card.title}
             className="flex h-full flex-col justify-between rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"

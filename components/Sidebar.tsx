@@ -13,7 +13,12 @@ function cx(...classes: Array<string | false | undefined | null>) {
   return classes.filter(Boolean).join(" ");
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const mode = useSessionStore((s) => s.mode);
@@ -32,83 +37,130 @@ export default function Sidebar() {
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
 
+  const closeSidebar = () => onClose?.();
+
+  const associationName = association?.name?.trim();
+  const showAssociationName =
+    !!associationName && associationName.toLowerCase() !== "invitado";
+
   return (
-    <aside className="fixed left-0 top-0 h-screen w-72 bg-white border-r flex flex-col overflow-y-auto z-40">
-      {/* Logo */}
-      <div className="px-6 py-6">
-        <div className="font-heading text-lg font-extrabold text-slate-900">
-          Kora
+    <>
+      <div
+        className={cx(
+          "fixed inset-0 z-30 bg-black/40 transition lg:hidden",
+          isOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        )}
+        onClick={closeSidebar}
+        aria-hidden="true"
+      />
+      <aside
+        id="app-sidebar"
+        className={cx(
+          "fixed left-0 top-0 z-40 h-screen w-72 border-r bg-white flex flex-col overflow-y-auto transition-transform duration-300 ease-out",
+          isOpen ? "translate-x-0" : "-translate-x-full",
+          "lg:translate-x-0"
+        )}
+      >
+        {/* Logo */}
+        <div className="flex items-start justify-between gap-3 px-6 py-6">
+          <div>
+            <div className="font-heading text-lg font-extrabold text-slate-900">
+              Kora
+            </div>
+            <div className="text-xs text-gray-500">Gestión de asociaciones</div>
+            {showAssociationName ? (
+              <p className="mt-3 line-clamp-2 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                {associationName}
+              </p>
+            ) : null}
+          </div>
+          {onClose ? (
+            <button
+              type="button"
+              onClick={closeSidebar}
+              className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 lg:hidden"
+              aria-label="Cerrar menú"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M6 6l12 12M18 6l-12 12" />
+              </svg>
+            </button>
+          ) : null}
         </div>
-        <div className="text-xs text-gray-500">Gestión de asociaciones</div>
-        {association?.name ? (
-          <p className="mt-3 line-clamp-2 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-            {association.name}
+
+        {/* Navegación principal */}
+        <nav className="flex-1 px-4">
+          <ul className="space-y-1">
+            {mainItems.map((item) => {
+              const active = isActive(item.href);
+
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={closeSidebar}
+                    className={cx(
+                      "block px-4 py-3 rounded-xl font-medium transition",
+                      active
+                        ? "bg-primary/10 text-primary"
+                        : "text-gray-700 hover:bg-gray-50"
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        {/* Configuración */}
+        <div className="px-4 pb-4">
+          <div className="border-t pt-4">
+            <Link
+              href="/settings"
+              onClick={closeSidebar}
+              className={cx(
+                "block px-4 py-3 rounded-xl font-medium transition",
+                isActive("/settings")
+                  ? "bg-primary/10 text-primary"
+                  : "text-gray-700 hover:bg-gray-50"
+              )}
+            >
+              Configuración
+            </Link>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t">
+          <p className="text-sm text-gray-500">
+            {mode === "guest"
+              ? "Modo invitado"
+              : mode === "authenticated"
+                ? "Sesión iniciada"
+                : "Sin sesión"}
           </p>
-        ) : null}
-      </div>
-
-      {/* Navegación principal */}
-      <nav className="flex-1 px-4">
-        <ul className="space-y-1">
-          {mainItems.map((item) => {
-            const active = isActive(item.href);
-
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={cx(
-                    "block px-4 py-3 rounded-xl font-medium transition",
-                    active
-                      ? "bg-primary/10 text-primary"
-                      : "text-gray-700 hover:bg-gray-50"
-                  )}
-                >
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
-      {/* Configuración */}
-      <div className="px-4 pb-4">
-        <div className="border-t pt-4">
-          <Link
-            href="/settings"
-            className={cx(
-              "block px-4 py-3 rounded-xl font-medium transition",
-              isActive("/settings")
-                ? "bg-primary/10 text-primary"
-                : "text-gray-700 hover:bg-gray-50"
-            )}
+          <button
+            type="button"
+            onClick={() => {
+              logout();
+              router.replace("/login");
+            }}
+            className="mt-3 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
           >
-            Configuración
-          </Link>
+            Cerrar sesión
+          </button>
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="px-6 py-4 border-t">
-        <p className="text-sm text-gray-500">
-          {mode === "guest"
-            ? "Modo invitado"
-            : mode === "authenticated"
-              ? "Sesión iniciada"
-              : "Sin sesión"}
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            logout();
-            router.replace("/login");
-          }}
-          className="mt-3 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
-        >
-          Cerrar sesión
-        </button>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

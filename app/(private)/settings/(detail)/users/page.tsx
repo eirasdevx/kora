@@ -1,4 +1,8 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
+import { useSessionStore } from "@/core/session/session.store";
 
 const users = [
   {
@@ -37,6 +41,64 @@ const statusStyles: Record<string, string> = {
 };
 
 export default function UsersSettingsPage() {
+  const router = useRouter();
+  const mode = useSessionStore((s) => s.mode);
+
+  if (mode === "guest") {
+    return (
+      <div className="space-y-8">
+        <PageTopbar>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+              Configuracion &nbsp;›&nbsp; Gestion de Usuarios
+            </p>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">
+                  Gestion de Usuarios
+                </h1>
+                <p className="text-sm text-gray-500">
+                  Esta seccion solo estara disponible en cuentas autenticadas.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push("/settings")}
+                className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
+              >
+                Volver a configuracion
+              </button>
+            </div>
+          </div>
+        </PageTopbar>
+
+        <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 6v6" />
+              <path d="M12 18h.01" />
+              <circle cx="12" cy="12" r="9" />
+            </svg>
+          </div>
+          <h2 className="mt-4 text-lg font-semibold text-gray-900">
+            Gestion no disponible en modo invitado
+          </h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Activa una cuenta para administrar accesos y roles del equipo.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <PageTopbar>

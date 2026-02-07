@@ -24,6 +24,13 @@ function getInitials(contact: Contact) {
     .join("");
 }
 
+function formatDate(value?: string) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString();
+}
+
 export default function ContactDetailPanel({
   contact,
   onEdit,
@@ -142,11 +149,15 @@ export default function ContactDetailPanel({
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Registro
+            Fecha de registro
           </p>
-          <p className="mt-1">
-            {new Date(contact.createdAt).toLocaleDateString()}
+          <p className="mt-1">{formatDate(contact.createdAt)}</p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Fecha de baja
           </p>
+          <p className="mt-1">{formatDate(contact.deactivatedAt)}</p>
         </div>
       </div>
 
