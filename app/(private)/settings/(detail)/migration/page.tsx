@@ -4,7 +4,11 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import { db } from "@/core/storage/kora.db";
-import { type AssociationProfile, useSessionStore } from "@/core/session/session.store";
+import {
+  type AssociationProfile,
+  type AssociationRepresentative,
+  useSessionStore,
+} from "@/core/session/session.store";
 import type { Contact, ContactType } from "@/modules/contacts/contact.types";
 import type { Event, EventStatus } from "@/modules/events/event.types";
 import type {
@@ -61,6 +65,7 @@ const ASSOCIATION_PROFILE_COLUMNS = [
   "phone",
   "location",
   "address",
+  "representatives",
 ] as const;
 
 const CONTACTS_COLUMNS = [
@@ -181,6 +186,83 @@ function parseBoolean(value: unknown): boolean | undefined {
   return undefined;
 }
 
+function normalizeRepresentativeEntry(
+  value: unknown
+): AssociationRepresentative | null {
+  if (!value) return null;
+  if (typeof value === "string") {
+    const raw = value.trim();
+    if (!raw) return null;
+    const [role, name, email, phone] = raw
+      .split("|")
+      .map((part) => part.trim());
+    if (!role && !name && !email && !phone) return null;
+    return {
+      id: createId(),
+      role,
+      name,
+      email: email || undefined,
+      phone: phone || undefined,
+    };
+  }
+  if (typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  const role =
+    safeString(obj.role).trim() ||
+    safeString(obj.position).trim() ||
+    safeString(obj.title).trim();
+  const name =
+    safeString(obj.name).trim() ||
+    safeString(obj.fullName).trim() ||
+    safeString(obj.contactName).trim();
+  const email = safeString(obj.email).trim();
+  const phone = safeString(obj.phone).trim();
+  const id = safeString(obj.id).trim() || createId();
+  if (!role && !name && !email && !phone) return null;
+  return {
+    id,
+    role,
+    name,
+    email: email || undefined,
+    phone: phone || undefined,
+  };
+}
+
+function normalizeRepresentatives(value: unknown): AssociationRepresentative[] {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => normalizeRepresentativeEntry(entry))
+      .filter((entry): entry is AssociationRepresentative => !!entry);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(";")
+      .map((entry) => normalizeRepresentativeEntry(entry))
+      .filter((entry): entry is AssociationRepresentative => !!entry);
+  }
+  const entry = normalizeRepresentativeEntry(value);
+  return entry ? [entry] : [];
+}
+
+function serializeRepresentativesForCsv(
+  representatives: AssociationRepresentative[] | undefined
+) {
+  if (!representatives || representatives.length === 0) return "";
+  return representatives
+    .map((rep) => {
+      const role = safeString(rep.role).trim();
+      const name = safeString(rep.name).trim();
+      const email = safeString(rep.email).trim();
+      const phone = safeString(rep.phone).trim();
+      const fields = [role, name, email, phone];
+      const hasData = fields.some((value) => value.length > 0);
+      return hasData ? fields.join("|") : "";
+    })
+    .filter((entry) => entry.length > 0)
+    .join(";");
+}
+
 function normalizeAssociationProfile(value: unknown): AssociationProfile | null {
   if (!value || typeof value !== "object") return null;
   const obj = value as Record<string, unknown>;
@@ -215,6 +297,10 @@ function normalizeAssociationProfile(value: unknown): AssociationProfile | null 
     if (!location) location = city || country;
   }
 
+  const representatives = normalizeRepresentatives(
+    obj.representatives ?? obj.boardMembers ?? obj.committee
+  );
+
   return {
     name,
     taxId: taxId || undefined,
@@ -222,6 +308,7 @@ function normalizeAssociationProfile(value: unknown): AssociationProfile | null 
     phone: phone || undefined,
     location: location || undefined,
     address: address || undefined,
+    representatives: representatives.length ? representatives : undefined,
   };
 }
 
@@ -439,6 +526,18 @@ function toCsv<T extends Record<string, unknown>>(
     columns.map((col) => escapeCsv(stringifyCell(row[col]))).join(",")
   );
   return [header, ...lines].join("\r\n");
+}
+
+function associationProfileToCsvRows(association: AssociationProfile | null) {
+  if (!association) return [];
+  return [
+    {
+      ...association,
+      representatives: serializeRepresentativesForCsv(
+        association.representatives
+      ),
+    },
+  ] as Record<string, unknown>[];
 }
 
 function detectDelimiter(text: string) {
@@ -688,7 +787,7 @@ export default function MigrationSettingsPage() {
       "kora-associationProfile.csv",
       toCsv(
         ASSOCIATION_PROFILE_COLUMNS,
-        association ? ([association] as unknown as Record<string, unknown>[]) : []
+        associationProfileToCsvRows(association)
       ),
       "text/csv"
     );
@@ -726,7 +825,7 @@ export default function MigrationSettingsPage() {
         "kora-associationProfile.csv",
         toCsv(
           ASSOCIATION_PROFILE_COLUMNS,
-          association ? ([association] as unknown as Record<string, unknown>[]) : []
+          associationProfileToCsvRows(association)
         ),
         "text/csv"
       );

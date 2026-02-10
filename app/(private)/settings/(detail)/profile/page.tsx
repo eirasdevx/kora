@@ -3,7 +3,10 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
-import { useSessionStore } from "@/core/session/session.store";
+import {
+  type AssociationRepresentative,
+  useSessionStore,
+} from "@/core/session/session.store";
 
 type ProfileFormState = {
   name: string;
@@ -13,10 +16,63 @@ type ProfileFormState = {
   contactEmail: string;
   location: string;
   address: string;
+  representatives: AssociationRepresentative[];
 };
+
+type RepresentativeField = "role" | "name" | "email" | "phone";
 
 function normalize(value: string) {
   return value.trim();
+}
+
+function createRepresentativeId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function createRepresentative(): AssociationRepresentative {
+  return {
+    id: createRepresentativeId(),
+    role: "",
+    name: "",
+    email: "",
+    phone: "",
+  };
+}
+
+function normalizeRepresentative(rep: AssociationRepresentative) {
+  return {
+    id: rep.id,
+    role: normalize(rep.role),
+    name: normalize(rep.name),
+    email: normalize(rep.email ?? ""),
+    phone: normalize(rep.phone ?? ""),
+  };
+}
+
+function serializeRepresentatives(reps: AssociationRepresentative[]) {
+  return JSON.stringify(reps.map(normalizeRepresentative));
+}
+
+function cleanRepresentatives(reps: AssociationRepresentative[]) {
+  return reps
+    .map((rep) => ({
+      id: rep.id || createRepresentativeId(),
+      role: normalize(rep.role),
+      name: normalize(rep.name),
+      email: normalize(rep.email ?? ""),
+      phone: normalize(rep.phone ?? ""),
+    }))
+    .filter((rep) => rep.role || rep.name || rep.email || rep.phone)
+    .map((rep) => ({
+      id: rep.id,
+      role: rep.role,
+      name: rep.name,
+      email: rep.email || undefined,
+      phone: rep.phone || undefined,
+    }));
 }
 
 function getAssociationFormState(
@@ -30,6 +86,14 @@ function getAssociationFormState(
     contactEmail: association?.contactEmail ?? "",
     location: association?.location ?? "",
     address: association?.address ?? "",
+    representatives:
+      association?.representatives?.map((rep) => ({
+        id: rep.id || createRepresentativeId(),
+        role: rep.role ?? "",
+        name: rep.name ?? "",
+        email: rep.email ?? "",
+        phone: rep.phone ?? "",
+      })) ?? [],
   };
 }
 
@@ -57,7 +121,9 @@ function ProfileSettingsForm({
       normalize(form.phone) !== normalize(initialForm.phone) ||
       normalize(form.contactEmail) !== normalize(initialForm.contactEmail) ||
       normalize(form.location) !== normalize(initialForm.location) ||
-      normalize(form.address) !== normalize(initialForm.address)
+      normalize(form.address) !== normalize(initialForm.address) ||
+      serializeRepresentatives(form.representatives) !==
+        serializeRepresentatives(initialForm.representatives)
     );
   }, [form, initialForm]);
 
@@ -72,6 +138,33 @@ function ProfileSettingsForm({
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleRepresentativeChange = (
+    id: string,
+    field: RepresentativeField,
+    value: string
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      representatives: prev.representatives.map((rep) =>
+        rep.id === id ? { ...rep, [field]: value } : rep
+      ),
+    }));
+  };
+
+  const handleAddRepresentative = () => {
+    setForm((prev) => ({
+      ...prev,
+      representatives: [...prev.representatives, createRepresentative()],
+    }));
+  };
+
+  const handleRemoveRepresentative = (id: string) => {
+    setForm((prev) => ({
+      ...prev,
+      representatives: prev.representatives.filter((rep) => rep.id !== id),
+    }));
   };
 
   return (
@@ -264,6 +357,115 @@ function ProfileSettingsForm({
       <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">
+            Representantes de la asociacion
+          </h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Registra los cargos principales de la junta directiva para tenerlos
+            siempre disponibles en documentos y comunicados.
+          </p>
+        </div>
+        <div className="space-y-4">
+          {form.representatives.length > 0 ? (
+            form.representatives.map((rep, index) => (
+              <div
+                key={rep.id}
+                className="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                    Representante {index + 1}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveRepresentative(rep.id)}
+                    className="rounded-xl border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-500 shadow-sm hover:bg-red-50"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">
+                      Cargo
+                    </label>
+                    <input
+                      list="association-representative-roles"
+                      value={rep.role}
+                      onChange={(e) =>
+                        handleRepresentativeChange(rep.id, "role", e.target.value)
+                      }
+                      placeholder="Presidente"
+                      className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">
+                      Nombre completo
+                    </label>
+                    <input
+                      value={rep.name}
+                      onChange={(e) =>
+                        handleRepresentativeChange(rep.id, "name", e.target.value)
+                      }
+                      placeholder="Ana Perez"
+                      className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">
+                      Correo electronico (opcional)
+                    </label>
+                    <input
+                      value={rep.email ?? ""}
+                      onChange={(e) =>
+                        handleRepresentativeChange(rep.id, "email", e.target.value)
+                      }
+                      placeholder="presidencia@asociacion.org"
+                      className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">
+                      Telefono (opcional)
+                    </label>
+                    <input
+                      value={rep.phone ?? ""}
+                      onChange={(e) =>
+                        handleRepresentativeChange(rep.id, "phone", e.target.value)
+                      }
+                      placeholder="+34 600 000 000"
+                      className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
+              Todavia no hay representantes registrados.
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleAddRepresentative}
+            className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-50"
+          >
+            + Anadir representante
+          </button>
+          <datalist id="association-representative-roles">
+            <option value="Presidente" />
+            <option value="Vicepresidente" />
+            <option value="Secretario" />
+            <option value="Tesorero" />
+            <option value="Vocal" />
+            <option value="Coordinador" />
+          </datalist>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">
             Preferencias locales
           </h2>
           <p className="mt-2 text-sm text-gray-500">
@@ -366,6 +568,7 @@ export default function ProfileSettingsPage() {
       onSave={(form) => {
         const name = normalize(form.name);
         if (!name) return;
+        const representatives = cleanRepresentatives(form.representatives);
 
         setAssociation({
           name,
@@ -375,6 +578,7 @@ export default function ProfileSettingsPage() {
           contactEmail: normalize(form.contactEmail) || undefined,
           location: normalize(form.location) || undefined,
           address: normalize(form.address) || undefined,
+          representatives: representatives.length ? representatives : undefined,
         });
         setLastSavedAt(Date.now());
       }}

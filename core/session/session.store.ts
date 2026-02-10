@@ -5,6 +5,14 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 export type SessionMode = "guest" | "authenticated";
 
+export type AssociationRepresentative = {
+  id: string;
+  role: string;
+  name: string;
+  email?: string;
+  phone?: string;
+};
+
 export type AssociationProfile = {
   name: string;
   logoUrl?: string;
@@ -13,6 +21,7 @@ export type AssociationProfile = {
   phone?: string;
   location?: string;
   address?: string;
+  representatives?: AssociationRepresentative[];
 };
 
 interface SessionState {
