@@ -100,6 +100,7 @@ function getAssociationFormState(
 type ProfileSettingsFormProps = {
   initialForm: ProfileFormState;
   lastSavedAt: number | null;
+  companyCode: string | null;
   onBack: () => void;
   onSave: (form: ProfileFormState) => void;
 };
@@ -107,6 +108,7 @@ type ProfileSettingsFormProps = {
 function ProfileSettingsForm({
   initialForm,
   lastSavedAt,
+  companyCode,
   onBack,
   onSave,
 }: ProfileSettingsFormProps) {
@@ -266,11 +268,20 @@ function ProfileSettingsForm({
             Información general
           </h2>
           <p className="mt-2 text-sm text-gray-500">
-            Estos datos se sincronizan con la información introducida al iniciar
-            sesión como invitado.
+            Estos datos se sincronizan con la información registrada al crear la asociación.
           </p>
         </div>
         <div className="space-y-4">
+          <div>
+            <label className="text-sm font-semibold text-gray-700">
+              Código de asociación
+            </label>
+            <input
+              value={companyCode ?? "No disponible"}
+              readOnly
+              className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm outline-none"
+            />
+          </div>
           <div>
             <label className="text-sm font-semibold text-gray-700">
               Nombre de la asociación
@@ -545,6 +556,7 @@ export default function ProfileSettingsPage() {
   const router = useRouter();
   const hydrated = useSessionStore((s) => s.hydrated);
   const association = useSessionStore((s) => s.association);
+  const companyCode = useSessionStore((s) => s.companyCode);
   const setAssociation = useSessionStore((s) => s.setAssociation);
 
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -564,6 +576,7 @@ export default function ProfileSettingsPage() {
       key={associationKey}
       initialForm={initialForm}
       lastSavedAt={lastSavedAt}
+      companyCode={companyCode}
       onBack={() => router.push("/settings")}
       onSave={(form) => {
         const name = normalize(form.name);

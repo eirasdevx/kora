@@ -37,3 +37,9 @@ export class KoraDB extends Dexie {
 }
 
 export const db = new KoraDB();
+
+export const resetKoraData = async () => {
+  await db.transaction("rw", db.tables, async () => {
+    await Promise.all(db.tables.map((table) => table.clear()));
+  });
+};

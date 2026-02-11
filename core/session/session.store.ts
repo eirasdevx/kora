@@ -5,6 +5,14 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 export type SessionMode = "guest" | "authenticated";
 
+export type AdminAccount = {
+  firstName: string;
+  lastName: string;
+  dni: string;
+  email: string;
+  password: string;
+};
+
 export type AssociationRepresentative = {
   id: string;
   role: string;
@@ -27,10 +35,17 @@ export type AssociationProfile = {
 interface SessionState {
   mode: SessionMode | null;
   association: AssociationProfile | null;
+  admin: AdminAccount | null;
+  companyCode: string | null;
   hydrated: boolean;
   setHydrated: (hydrated: boolean) => void;
   setAssociation: (association: AssociationProfile | null) => void;
-  setGuest: (association?: AssociationProfile) => void;
+  registerAdmin: (payload: {
+    admin: AdminAccount;
+    association: AssociationProfile;
+    companyCode: string;
+  }) => void;
+  setGuest: () => void;
   setAuthenticated: () => void;
   logout: () => void;
 }
@@ -40,16 +55,21 @@ export const useSessionStore = create<SessionState>()(
     (set) => ({
       mode: null,
       association: null,
+      admin: null,
+      companyCode: null,
       hydrated: false,
       setHydrated: (hydrated) => set({ hydrated }),
       setAssociation: (association) => set({ association }),
-      setGuest: (association) =>
-        set((state) => ({
-          mode: "guest",
-          association: association ?? state.association,
-        })),
-      setAuthenticated: () => set({ mode: "authenticated", association: null }),
-      logout: () => set({ mode: null, association: null }),
+      registerAdmin: ({ admin, association, companyCode }) =>
+        set({
+          admin,
+          association,
+          companyCode,
+          mode: null,
+        }),
+      setGuest: () => set({ mode: "guest" }),
+      setAuthenticated: () => set({ mode: "authenticated" }),
+      logout: () => set({ mode: null }),
     }),
     {
       name: "kora-session",
@@ -57,6 +77,8 @@ export const useSessionStore = create<SessionState>()(
       partialize: (state) => ({
         mode: state.mode,
         association: state.association,
+        admin: state.admin,
+        companyCode: state.companyCode,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true);

@@ -4,14 +4,27 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSessionStore } from "@/core/session/session.store";
+import { useContactsStore } from "@/modules/contacts/contacts.store";
+import { useDocumentsStore } from "@/modules/documents/documents.store";
+import { useEventsStore } from "@/modules/events/events.store";
+import { useSocialPostsStore } from "@/modules/social/social.store";
+import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 
 export default function LoginPage() {
   const router = useRouter();
   const mode = useSessionStore((s) => s.mode);
   const hydrated = useSessionStore((s) => s.hydrated);
+  const admin = useSessionStore((s) => s.admin);
+  const companyCode = useSessionStore((s) => s.companyCode);
   const setGuest = useSessionStore((s) => s.setGuest);
   const setAuthenticated = useSessionStore((s) => s.setAuthenticated);
+  const resetContacts = useContactsStore((s) => s.resetContacts);
+  const resetDocuments = useDocumentsStore((s) => s.resetDocuments);
+  const resetEvents = useEventsStore((s) => s.resetEvents);
+  const resetPosts = useSocialPostsStore((s) => s.resetPosts);
+  const resetTransactions = useTransactionsStore((s) => s.resetTransactions);
   const [guestOpen, setGuestOpen] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -20,26 +33,47 @@ export default function LoginPage() {
 
   const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setLoginError(null);
+
+    if (!admin || !companyCode) {
+      setLoginError(
+        "No hay un administrador registrado. Completa el registro para generar el codigo de empresa."
+      );
+      return;
+    }
+
+    const data = new FormData(event.currentTarget);
+    const identifier = String(data.get("identifier") ?? "").trim();
+    const password = String(data.get("password") ?? "").trim();
+    const code = String(data.get("companyCode") ?? "")
+      .trim()
+      .toUpperCase();
+
+    const matchesIdentifier =
+      identifier.toLowerCase() === admin.email.toLowerCase() ||
+      identifier.toUpperCase() === admin.dni;
+    const matchesPassword = password === admin.password;
+    const matchesCode = code === companyCode;
+
+    if (!matchesIdentifier || !matchesPassword || !matchesCode) {
+      setLoginError(
+        "Credenciales incorrectas o codigo de empresa invalido."
+      );
+      return;
+    }
+
     setAuthenticated();
     router.push("/dashboard");
   };
 
   const handleGuestSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const name = String(data.get("associationName") ?? "").trim();
-    const taxId = String(data.get("taxId") ?? "").trim();
-    const contactEmail = String(data.get("contactEmail") ?? "").trim();
-    const phone = String(data.get("phone") ?? "").trim();
-    const location = String(data.get("location") ?? "").trim();
-
-    setGuest({
-      name: name || "Invitado",
-      taxId: taxId || undefined,
-      contactEmail: contactEmail || undefined,
-      phone: phone || undefined,
-      location: location || undefined,
-    });
+    resetContacts();
+    resetDocuments();
+    resetEvents();
+    resetPosts();
+    resetTransactions();
+    setGuest();
     setGuestOpen(false);
     router.push("/dashboard");
   };
@@ -77,16 +111,25 @@ export default function LoginPage() {
             <div className="space-y-2">
               <h2 className="text-3xl font-semibold text-slate-900">Bienvenido a Kora</h2>
               <p className="text-sm text-slate-500">
-                Ingresa tus credenciales para acceder a la plataforma de gestión.
+                Ingresa tu DNI o correo, contraseña y el código de empresa.
               </p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-5">
+              {!admin || !companyCode ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  No hay un administrador registrado. Completa el registro para generar el
+                  codigo de empresa.
+                </div>
+              ) : null}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Correo electrónico</label>
+                <label className="text-sm font-medium text-slate-700">
+                  DNI o correo electrónico
+                </label>
                 <input
-                  type="email"
-                  placeholder="nombre@asociacion.com"
+                  name="identifier"
+                  type="text"
+                  placeholder="DNI o correo"
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
@@ -98,8 +141,18 @@ export default function LoginPage() {
                   </button>
                 </div>
                 <input
+                  name="password"
                   type="password"
                   placeholder="••••••••"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Codigo de empresa</label>
+                <input
+                  name="companyCode"
+                  type="text"
+                  placeholder="KORA-0000-0000"
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
@@ -111,6 +164,11 @@ export default function LoginPage() {
                 Mantener sesión iniciada
               </label>
 
+              {loginError ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {loginError}
+                </div>
+              ) : null}
               <button
                 type="submit"
                 className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700"
@@ -165,7 +223,8 @@ export default function LoginPage() {
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">Datos de la asociación</h3>
                 <p className="text-sm text-slate-500">
-                  Completa la información básica para iniciar como invitado.
+                  Completa la información básica para iniciar como invitado. Estos datos no se
+                  guardarán.
                 </p>
               </div>
               <button

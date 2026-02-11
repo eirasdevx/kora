@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Contact } from "./contact.types";
 import { db } from "@/core/storage/kora.db";
+import { useSessionStore } from "@/core/session/session.store";
 
 interface ContactsState {
   contacts: Contact[];
@@ -8,13 +9,18 @@ interface ContactsState {
   loadContacts: () => Promise<void>;
   addContact: (contact: Contact) => Promise<void>;
   removeContact: (id: string) => Promise<void>;
+  resetContacts: () => void;
 }
+
+const isAuthenticated = () =>
+  useSessionStore.getState().mode === "authenticated";
 
 export const useContactsStore = create<ContactsState>((set) => ({
   contacts: [],
 
   // Cargar todos los contactos desde IndexedDB
   loadContacts: async () => {
+    if (!isAuthenticated()) return;
     const all = await db.contacts.toArray();
     const normalized = all.map((c) => {
       const fullName = c.fullName ?? `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim();
@@ -57,6 +63,23 @@ export const useContactsStore = create<ContactsState>((set) => ({
       createdAt: contact.createdAt ?? new Date().toISOString(),
       deactivatedAt: contact.deactivatedAt ?? undefined,
     };
+    if (!isAuthenticated()) {
+      set((state) => {
+        const exists = state.contacts.some(
+          (c) => c.id === contact.id
+        );
+
+        return {
+          contacts: exists
+            ? state.contacts.map((c) =>
+                c.id === contact.id ? normalized : c
+              )
+            : [...state.contacts, normalized],
+        };
+      });
+      return;
+    }
+
     await db.contacts.put(normalized);
 
     set((state) => {
@@ -76,10 +99,18 @@ export const useContactsStore = create<ContactsState>((set) => ({
 
   // Eliminar contacto
   removeContact: async (id) => {
+    if (!isAuthenticated()) {
+      set((state) => ({
+        contacts: state.contacts.filter((c) => c.id !== id),
+      }));
+      return;
+    }
     await db.contacts.delete(id);
 
     set((state) => ({
       contacts: state.contacts.filter((c) => c.id !== id),
     }));
   },
+
+  resetContacts: () => set({ contacts: [] }),
 }));
