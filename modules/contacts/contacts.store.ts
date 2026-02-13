@@ -25,17 +25,19 @@ export const useContactsStore = create<ContactsState>((set) => ({
     const normalized = all.map((c) => {
       const fullName = c.fullName ?? `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim();
       const nameParts = fullName.split(" ").filter(Boolean);
+      const kind = c.kind === "entity" ? "entity" : "person";
+      const allowedTypes =
+        kind === "entity" ? ["provider", "collaborator"] : ["member", "provider", "collaborator"];
       const types = Array.isArray(c.types)
         ? c.types.filter(
             (t) =>
-              t === "member" ||
-              t === "provider" ||
-              t === "collaborator"
+              allowedTypes.includes(t as "member" | "provider" | "collaborator")
           )
         : [];
       const createdAt = c.createdAt ?? new Date().toISOString();
       return {
         ...c,
+        kind,
         firstName: c.firstName ?? nameParts[0] ?? "",
         lastName: c.lastName ?? nameParts.slice(1).join(" "),
         dni: c.dni ?? "",
@@ -53,12 +55,16 @@ export const useContactsStore = create<ContactsState>((set) => ({
     const fullName =
       contact.fullName ??
       `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
+    const kind = contact.kind === "entity" ? "entity" : "person";
+    const allowedTypes =
+      kind === "entity" ? ["provider", "collaborator"] : ["member", "provider", "collaborator"];
     const normalized = {
       ...contact,
+      kind,
       fullName,
       types: contact.types.filter(
         (t) =>
-          t === "member" || t === "provider" || t === "collaborator"
+          allowedTypes.includes(t as "member" | "provider" | "collaborator")
       ),
       createdAt: contact.createdAt ?? new Date().toISOString(),
       deactivatedAt: contact.deactivatedAt ?? undefined,

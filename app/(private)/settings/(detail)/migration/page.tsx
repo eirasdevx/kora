@@ -9,7 +9,11 @@ import {
   type AssociationRepresentative,
   useSessionStore,
 } from "@/core/session/session.store";
-import type { Contact, ContactType } from "@/modules/contacts/contact.types";
+import type {
+  Contact,
+  ContactKind,
+  ContactType,
+} from "@/modules/contacts/contact.types";
 import type { Event, EventStatus } from "@/modules/events/event.types";
 import type {
   Transaction,
@@ -70,8 +74,11 @@ const ASSOCIATION_PROFILE_COLUMNS = [
 
 const CONTACTS_COLUMNS = [
   "id",
+  "kind",
   "firstName",
   "lastName",
+  "representativeFirstName",
+  "representativeLastName",
   "dni",
   "fullName",
   "email",
@@ -133,6 +140,60 @@ const SOCIAL_POSTS_COLUMNS = [
   "scheduledAt",
   "createdAt",
 ] as const;
+
+const DATA_SCOPE_OPTIONS: Array<{
+  value: DataScope;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "all",
+    label: "Todos los módulos",
+    description: "Perfil, contactos, eventos, contabilidad y redes.",
+  },
+  {
+    value: "associationProfile",
+    label: "Perfil de la asociación",
+    description: "Datos legales, ubicación y representantes.",
+  },
+  {
+    value: "contacts",
+    label: "Contactos",
+    description: "Miembros, proveedores y colaboradores.",
+  },
+  {
+    value: "events",
+    label: "Eventos",
+    description: "Agenda, registros y asistencia.",
+  },
+  {
+    value: "transactions",
+    label: "Contabilidad",
+    description: "Ingresos, gastos y transacciones.",
+  },
+  {
+    value: "socialPosts",
+    label: "Redes sociales",
+    description: "Publicaciones y campañas.",
+  },
+];
+
+const FORMAT_OPTIONS: Array<{
+  value: DataFormat;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "csv",
+    label: "Excel (CSV)",
+    description: "Compatible con hojas de cálculo.",
+  },
+  {
+    value: "json",
+    label: "JSON",
+    description: "Datos en bruto.",
+  },
+];
 
 function safeString(value: unknown): string {
   if (typeof value === "string") return value;
@@ -332,6 +393,14 @@ function normalizeContact(value: unknown): Contact | null {
     safeString(obj.nationalId).trim() ||
     safeString(obj.document).trim();
 
+  const kindRaw = safeString(obj.kind).trim().toLowerCase();
+  const contactKindRaw = safeString(obj.contactKind).trim().toLowerCase();
+  const isEntityFlag =
+    kindRaw === "entity" ||
+    contactKindRaw === "entity" ||
+    safeString(obj.isEntity).trim().toLowerCase() === "true";
+  const kind: ContactKind = isEntityFlag ? "entity" : "person";
+
   const types = splitList(obj.types).filter((t): t is ContactType =>
     CONTACT_TYPES.includes(t as ContactType)
   );
@@ -358,8 +427,13 @@ function normalizeContact(value: unknown): Contact | null {
 
   return {
     id: ensureId(obj.id),
+    kind,
     firstName,
     lastName,
+    representativeFirstName:
+      safeString(obj.representativeFirstName).trim() || undefined,
+    representativeLastName:
+      safeString(obj.representativeLastName).trim() || undefined,
     dni,
     fullName: fullNameRaw || undefined,
     email: safeString(obj.email) || undefined,
@@ -682,6 +756,7 @@ export default function MigrationSettingsPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastAction, setLastAction] = useState<"import" | "export" | null>(null);
 
   const importAccept = useMemo(() => {
     return importFormat === "json" ? "application/json,.json" : ".csv,text/csv";
@@ -690,6 +765,13 @@ export default function MigrationSettingsPage() {
   const importMultiple = useMemo(() => {
     return importFormat === "csv" && importScope === "all";
   }, [importFormat, importScope]);
+
+  const isImportBusy = busy && lastAction === "import";
+  const isExportBusy = busy && lastAction === "export";
+  const importMessage = lastAction === "import" ? message : null;
+  const exportMessage = lastAction === "export" ? message : null;
+  const importError = lastAction === "import" ? error : null;
+  const exportError = lastAction === "export" ? error : null;
 
   const exportAllJson = async () => {
     const [contacts, events, transactions, socialPosts] = await Promise.all([
@@ -880,6 +962,7 @@ export default function MigrationSettingsPage() {
     setBusy(true);
     setMessage(null);
     setError(null);
+    setLastAction("export");
 
     try {
       if (exportFormat === "json") {
@@ -1091,6 +1174,7 @@ export default function MigrationSettingsPage() {
     setBusy(true);
     setMessage(null);
     setError(null);
+    setLastAction("import");
 
     try {
       const input = fileInputRef.current;
@@ -1125,17 +1209,34 @@ export default function MigrationSettingsPage() {
     <div className="space-y-8">
       <PageTopbar>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-              Configuración &nbsp;›&nbsp; Migración
-            </p>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Migración de datos
-            </h1>
-            <p className="text-sm text-gray-500">
-              Exporta e importa el perfil de la asociación y los módulos en JSON
-              o CSV (todo junto o por apartado).
-            </p>
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <ellipse cx="12" cy="5" rx="8" ry="3" />
+                <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
+                <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Configuración &nbsp;›&nbsp; Migración
+              </p>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                Gestión de Datos
+              </h1>
+              <p className="text-sm text-gray-500">
+                Importa y exporta la información de tu organización de forma segura y
+                rápida.
+              </p>
+            </div>
           </div>
           <button
             type="button"
@@ -1147,111 +1248,196 @@ export default function MigrationSettingsPage() {
         </div>
       </PageTopbar>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Exportar</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            Descarga tus datos en un archivo JSON o CSV. En CSV, las listas se
-            separan con <span className="font-semibold">;</span> (por ejemplo:{" "}
-            <span className="font-semibold">member;provider</span>).
-          </p>
-
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Apartado
-              </label>
-              <select
-                value={exportScope}
-                onChange={(e) => setExportScope(e.target.value as DataScope)}
-                className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <option value="all">Todo</option>
-                <option value="associationProfile">Perfil de la asociación</option>
-                <option value="contacts">Contactos</option>
-                <option value="events">Eventos</option>
-                <option value="transactions">Contabilidad</option>
-                <option value="socialPosts">Redes sociales</option>
-              </select>
+                <path d="M12 3v12" />
+                <path d="m7 8 5-5 5 5" />
+                <path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+              </svg>
             </div>
             <div>
-              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Formato
-              </label>
-              <select
-                value={exportFormat}
-                onChange={(e) => setExportFormat(e.target.value as DataFormat)}
-                className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
-              >
-                <option value="json">JSON</option>
-                <option value="csv">CSV</option>
-              </select>
+              <h2 className="text-lg font-semibold text-gray-900">Importar datos</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Sube tus archivos para actualizar la base de datos de Kora.
+              </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={busy}
-            className="mt-6 w-full rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-primary/50"
-          >
-            {busy ? "Procesando..." : "Exportar"}
-          </button>
-
-          <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-500">
-            <p className="font-semibold text-gray-700">
-              Perfil actual:{" "}
-              <span className="font-normal">
-                {association?.name ?? "Sin perfil"}
-              </span>
+          <div className="mt-6 rounded-3xl border-2 border-dashed border-gray-200 bg-gray-50/60 p-8 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M16 16l-4-4-4 4" />
+                <path d="M12 12v9" />
+                <path d="M20 16a4 4 0 0 0-3-7.7A5 5 0 0 0 4 10a4 4 0 0 0 0 8h16" />
+              </svg>
+            </div>
+            <p className="mt-4 text-sm font-semibold text-gray-900">
+              Arrastra y suelta tus archivos aquí
             </p>
+            <p className="mt-2 text-xs text-gray-400">
+              Formato seleccionado: {importFormat === "csv" ? "CSV" : "JSON"}.
+            </p>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 shadow-sm hover:bg-gray-50"
+            >
+              Explorar archivos
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={importAccept}
+              multiple={importMultiple}
+              className="sr-only"
+            />
           </div>
-        </section>
+          {importMultiple ? (
+            <p className="mt-2 text-xs text-gray-400">
+              Importación CSV completa: selecciona varios CSV (perfil, contactos,
+              eventos, transacciones y redes). El sistema los detecta por sus
+              columnas.
+            </p>
+          ) : null}
 
-        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Importar</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            Importa datos desde JSON o CSV. Puedes combinar o reemplazar datos.
-          </p>
-
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Apartado
-              </label>
-              <select
-                value={importScope}
-                onChange={(e) => setImportScope(e.target.value as DataScope)}
-                className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
-              >
-                <option value="all">Todo</option>
-                <option value="associationProfile">Perfil de la asociación</option>
-                <option value="contacts">Contactos</option>
-                <option value="events">Eventos</option>
-                <option value="transactions">Contabilidad</option>
-                <option value="socialPosts">Redes sociales</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Formato
-              </label>
-              <select
-                value={importFormat}
-                onChange={(e) => setImportFormat(e.target.value as DataFormat)}
-                className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
-              >
-                <option value="json">JSON</option>
-                <option value="csv">CSV</option>
-              </select>
+          <div className="mt-6">
+            <p className="text-sm font-semibold text-gray-900">
+              Seleccionar módulos de destino
+            </p>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {DATA_SCOPE_OPTIONS.map((option) => {
+                const isActive = importScope === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setImportScope(option.value)}
+                    className={`flex items-start gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                      isActive
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-200 bg-white hover:bg-gray-50"
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-md border ${
+                        isActive
+                          ? "border-primary bg-primary text-white"
+                          : "border-gray-300 bg-white text-transparent"
+                      }`}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-3 w-3"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M5 12l4 4 10-10" />
+                      </svg>
+                    </span>
+                    <span>
+                      <span className="block text-sm font-semibold text-gray-900">
+                        {option.label}
+                      </span>
+                      <span className="block text-xs text-gray-500">
+                        {option.description}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="mt-4">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-              Modo de importación
-            </label>
-            <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mt-6">
+            <p className="text-sm font-semibold text-gray-900">Formato de entrada</p>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {FORMAT_OPTIONS.map((option) => {
+                const isActive = importFormat === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setImportFormat(option.value)}
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                      isActive
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-200 bg-white hover:bg-gray-50"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                        isActive
+                          ? "bg-primary/10 text-primary"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {option.value === "csv" ? (
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+                        </svg>
+                      ) : (
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M8 7l-4 5 4 5" />
+                          <path d="M16 7l4 5-4 5" />
+                        </svg>
+                      )}
+                    </span>
+                    <span>
+                      <span className="block text-sm font-semibold text-gray-900">
+                        {option.label}
+                      </span>
+                      <span className="block text-xs text-gray-500">
+                        {option.description}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-sm font-semibold text-gray-900">Modo de importación</p>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => setImportMode("merge")}
@@ -1277,44 +1463,200 @@ export default function MigrationSettingsPage() {
             </div>
           </div>
 
-          <div className="mt-6">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-              Archivo{importMultiple ? "s" : ""}
-            </label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={importAccept}
-              multiple={importMultiple}
-              className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm file:mr-4 file:rounded-xl file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-gray-700 hover:file:bg-gray-200"
-            />
-            {importMultiple ? (
-              <p className="mt-2 text-xs text-gray-400">
-                Importación CSV completa: selecciona varios CSV (perfil,
-                contactos, eventos, transacciones y redes). El sistema los
-                detecta por sus columnas.
-              </p>
-            ) : null}
-          </div>
-
           <button
             type="button"
             onClick={handleImport}
             disabled={busy}
             className="mt-6 w-full rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-primary/50"
           >
-            {busy ? "Importando..." : "Importar"}
+            {isImportBusy ? "Importando..." : "Iniciar importación"}
           </button>
 
-          {message ? (
+          {importMessage ? (
             <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              {message}
+              {importMessage}
             </div>
           ) : null}
 
-          {error ? (
+          {importError ? (
             <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-              {error}
+              {importError}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 3v12" />
+                <path d="m7 10 5 5 5-5" />
+                <path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Exportar datos</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Genera un respaldo o descarga tu información en diferentes formatos.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-sm font-semibold text-gray-900">
+              ¿Qué datos deseas exportar?
+            </p>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {DATA_SCOPE_OPTIONS.map((option) => {
+                const isActive = exportScope === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setExportScope(option.value)}
+                    className={`flex items-start gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                      isActive
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-200 bg-white hover:bg-gray-50"
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-md border ${
+                        isActive
+                          ? "border-primary bg-primary text-white"
+                          : "border-gray-300 bg-white text-transparent"
+                      }`}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-3 w-3"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M5 12l4 4 10-10" />
+                      </svg>
+                    </span>
+                    <span>
+                      <span className="block text-sm font-semibold text-gray-900">
+                        {option.label}
+                      </span>
+                      <span className="block text-xs text-gray-500">
+                        {option.description}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-sm font-semibold text-gray-900">Formato de salida</p>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {FORMAT_OPTIONS.map((option) => {
+                const isActive = exportFormat === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setExportFormat(option.value)}
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                      isActive
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-200 bg-white hover:bg-gray-50"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                        isActive
+                          ? "bg-primary/10 text-primary"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {option.value === "csv" ? (
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+                        </svg>
+                      ) : (
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M8 7l-4 5 4 5" />
+                          <path d="M16 7l4 5-4 5" />
+                        </svg>
+                      )}
+                    </span>
+                    <span>
+                      <span className="block text-sm font-semibold text-gray-900">
+                        {option.label}
+                      </span>
+                      <span className="block text-xs text-gray-500">
+                        {option.description}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-xs text-gray-400">
+              En CSV, las listas se separan con <span className="font-semibold">;</span>{" "}
+              (por ejemplo: <span className="font-semibold">member;provider</span>).
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={busy}
+            className="mt-6 w-full rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-primary/50"
+          >
+            {isExportBusy ? "Descargando..." : "Descargar datos"}
+          </button>
+
+          <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-500">
+            <p className="font-semibold text-gray-700">
+              Perfil actual:{" "}
+              <span className="font-normal">
+                {association?.name ?? "Sin perfil"}
+              </span>
+            </p>
+          </div>
+
+          {exportMessage ? (
+            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              {exportMessage}
+            </div>
+          ) : null}
+
+          {exportError ? (
+            <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              {exportError}
             </div>
           ) : null}
         </section>

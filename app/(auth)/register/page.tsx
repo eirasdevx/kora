@@ -71,7 +71,7 @@ export default function RegisterPage() {
     const location = String(data.get("location") ?? "").trim();
 
     if (!name) {
-      setFormError("Indica el nombre de la asociacion para continuar.");
+      setFormError("Indica el nombre de la asociación para continuar.");
       return;
     }
 
@@ -376,7 +376,7 @@ export default function RegisterPage() {
       </main>
 
       <footer className="border-t border-slate-100 py-8 text-center text-xs text-slate-400">
-        © 2024 Kora Management Inc.
+        © {new Date().getFullYear()} Kora Management Inc.
       </footer>
     </div>
   );

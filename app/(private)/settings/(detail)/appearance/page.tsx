@@ -100,7 +100,7 @@ export default function AppearanceSettingsPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-              Configuracion &nbsp;›&nbsp; Apariencia
+              Configuración &nbsp;›&nbsp; Apariencia
             </p>
             <h1 className="text-2xl font-semibold text-gray-900">Apariencia</h1>
             <p className="text-sm text-gray-500">
@@ -178,7 +178,7 @@ export default function AppearanceSettingsPage() {
             </div>
             {!hasValidColor && draft.brandColor ? (
               <p className="mt-2 text-xs text-rose-500">
-                Usa un codigo HEX valido de 6 caracteres.
+                Usa un código HEX válido de 6 caracteres.
               </p>
             ) : null}
           </div>
@@ -269,7 +269,7 @@ export default function AppearanceSettingsPage() {
                 fontSize: `${draft.fontScale}rem`,
               }}
             >
-              "La asociacion gestiona eficazmente sus recursos."
+              "La asociación gestiona eficazmente sus recursos."
             </span>
           </p>
           <div className="flex items-center justify-between rounded-2xl border border-gray-200 px-4 py-3">

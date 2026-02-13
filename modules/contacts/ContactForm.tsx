@@ -1,7 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Contact, ContactType, ContactTypeLabels } from "./contact.types";
+import { useEffect, useRef, useState } from "react";
+import {
+  Contact,
+  ContactKind,
+  ContactType,
+  ContactTypeLabels,
+} from "./contact.types";
 
 interface Props {
   initialData?: Contact;
@@ -146,11 +151,20 @@ export default function ContactForm({
   const isEditing = Boolean(initialData);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [contactKind, setContactKind] = useState<ContactKind>(
+    initialData?.kind ?? "person"
+  );
   const [firstName, setFirstName] = useState(
     initialData?.firstName ?? ""
   );
   const [lastName, setLastName] = useState(
     initialData?.lastName ?? ""
+  );
+  const [representativeFirstName, setRepresentativeFirstName] = useState(
+    initialData?.representativeFirstName ?? ""
+  );
+  const [representativeLastName, setRepresentativeLastName] = useState(
+    initialData?.representativeLastName ?? ""
   );
   const [dni, setDni] = useState(initialData?.dni ?? "");
   const [types, setTypes] = useState<ContactType[]>(
@@ -186,15 +200,27 @@ export default function ContactForm({
   const [deactivatedDate, setDeactivatedDate] = useState(
     toInputDate(initialData?.deactivatedAt)
   );
+  const isEntity = contactKind === "entity";
+  const allowedTypes = isEntity
+    ? (["provider", "collaborator"] as ContactType[])
+    : CONTACT_TYPES;
 
   const [errors, setErrors] = useState<{
     firstName?: string;
     lastName?: string;
     dni?: string;
     types?: string;
+    representativeFirstName?: string;
+    representativeLastName?: string;
   }>({});
 
+  useEffect(() => {
+    if (!isEntity) return;
+    setTypes((prev) => prev.filter((t) => t !== "member"));
+  }, [isEntity]);
+
   const toggleType = (type: ContactType) => {
+    if (isEntity && type === "member") return;
     setTypes((prev) =>
       prev.includes(type)
         ? prev.filter((t) => t !== type)
@@ -226,12 +252,24 @@ export default function ContactForm({
     const trimmedFirst = firstName.trim();
     const trimmedLast = lastName.trim();
     const trimmedDni = dni.trim();
+    const trimmedRepFirst = representativeFirstName.trim();
+    const trimmedRepLast = representativeLastName.trim();
     const nextErrors: typeof errors = {};
 
     if (!trimmedFirst) nextErrors.firstName = "Requerido";
-    if (!trimmedLast) nextErrors.lastName = "Requerido";
+    if (!isEntity && !trimmedLast) nextErrors.lastName = "Requerido";
     if (!trimmedDni) nextErrors.dni = "Requerido";
-    if (types.length === 0) {
+    if (isEntity && !trimmedRepFirst) {
+      nextErrors.representativeFirstName = "Requerido";
+    }
+    if (isEntity && !trimmedRepLast) {
+      nextErrors.representativeLastName = "Requerido";
+    }
+
+    const normalizedTypes = types.filter((t) =>
+      allowedTypes.includes(t)
+    );
+    if (normalizedTypes.length === 0) {
       nextErrors.types = "Selecciona al menos un tipo.";
     }
 
@@ -247,11 +285,18 @@ export default function ContactForm({
 
     const contact: Contact = {
       id: initialData?.id ?? crypto.randomUUID(),
+      kind: contactKind,
       firstName: trimmedFirst,
       lastName: trimmedLast,
       fullName,
       dni: trimmedDni,
-      types,
+      representativeFirstName: isEntity
+        ? trimmedRepFirst || undefined
+        : undefined,
+      representativeLastName: isEntity
+        ? trimmedRepLast || undefined
+        : undefined,
+      types: normalizedTypes,
       email: email || undefined,
       phone: phone || undefined,
       secondaryPhone: secondaryPhone || undefined,
@@ -412,19 +457,24 @@ export default function ContactForm({
             </p>
             <p className="mt-2 text-xs text-gray-500">
               Selección múltiple permitida
+              {isEntity ? ". Socio solo disponible para personas." : "."}
             </p>
             <div className="mt-4 space-y-2">
               {CONTACT_TYPES.map((type) => {
                 const isActive = types.includes(type);
+                const isDisabled = isEntity && type === "member";
                 return (
                   <button
                     key={type}
                     type="button"
                     onClick={() => toggleType(type)}
+                    disabled={isDisabled}
                     className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition ${
-                      isActive
-                        ? "border-primary bg-primary text-white shadow-sm"
-                        : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                      isDisabled
+                        ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
+                        : isActive
+                          ? "border-primary bg-primary text-white shadow-sm"
+                          : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                     }`}
                   >
                     <span className="flex items-center gap-3">
@@ -432,7 +482,9 @@ export default function ContactForm({
                         className={`flex h-7 w-7 items-center justify-center rounded-full ${
                           isActive
                             ? "bg-white/20 text-white"
-                            : "bg-gray-100 text-gray-500"
+                            : isDisabled
+                              ? "bg-gray-100 text-gray-300"
+                              : "bg-gray-100 text-gray-500"
                         }`}
                       >
                         <TypeIcon type={type} />
@@ -443,7 +495,9 @@ export default function ContactForm({
                       className={`flex h-5 w-5 items-center justify-center rounded-full border ${
                         isActive
                           ? "border-white text-white"
-                          : "border-gray-300 text-gray-400"
+                          : isDisabled
+                            ? "border-gray-200 text-gray-300"
+                            : "border-gray-300 text-gray-400"
                       }`}
                     >
                       ✓
@@ -475,6 +529,38 @@ export default function ContactForm({
 
         <div className="space-y-6">
           <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">
+                Perfil del contacto
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {([
+                  { value: "person", label: "Persona" },
+                  { value: "entity", label: "Entidad" },
+                ] as const).map((option) => {
+                  const isActive = contactKind === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setContactKind(option.value)}
+                      className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                        isActive
+                          ? "border-primary bg-primary text-white shadow-sm"
+                          : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Persona mantiene el formulario actual. Entidad solo
+                proveedor o colaborador y requiere representante.
+              </p>
+            </div>
+
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <svg
@@ -498,7 +584,7 @@ export default function ContactForm({
             <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
                 <label className="text-xs font-semibold uppercase text-gray-400">
-                  Nombre completo / Razón social
+                  {isEntity ? "Razón social" : "Nombre completo"}
                 </label>
                 <div className="mt-2 grid gap-4 md:grid-cols-2">
                   <div>
@@ -506,7 +592,7 @@ export default function ContactForm({
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                      placeholder="Ej: Juan"
+                      placeholder={isEntity ? "Ej: Bar La Plaza" : "Ej: Juan"}
                       required
                     />
                     {errors.firstName && (
@@ -520,8 +606,10 @@ export default function ContactForm({
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                      placeholder="Ej: Pérez García"
-                      required
+                      placeholder={
+                        isEntity ? "Ej: La Plaza" : "Ej: Pérez García"
+                      }
+                      required={!isEntity}
                     />
                     {errors.lastName && (
                       <p className="mt-2 text-xs font-semibold text-red-600">
@@ -530,6 +618,11 @@ export default function ContactForm({
                     )}
                   </div>
                 </div>
+                {isEntity && (
+                  <p className="mt-2 text-xs text-gray-400">
+                    Segundo campo opcional para nombre comercial.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-semibold uppercase text-gray-400">
@@ -539,7 +632,7 @@ export default function ContactForm({
                   value={dni}
                   onChange={(e) => setDni(e.target.value)}
                   className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                  placeholder="00000000X"
+                  placeholder={isEntity ? "B12345678" : "00000000X"}
                   required
                 />
                 {errors.dni && (
@@ -548,6 +641,47 @@ export default function ContactForm({
                   </p>
                 )}
               </div>
+              {isEntity && (
+                <div className="md:col-span-2">
+                  <label className="text-xs font-semibold uppercase text-gray-400">
+                    Representante legal
+                  </label>
+                  <div className="mt-2 grid gap-4 md:grid-cols-2">
+                    <div>
+                      <input
+                        value={representativeFirstName}
+                        onChange={(e) =>
+                          setRepresentativeFirstName(e.target.value)
+                        }
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                        placeholder="Nombre del representante"
+                        required={isEntity}
+                      />
+                      {errors.representativeFirstName && (
+                        <p className="mt-2 text-xs font-semibold text-red-600">
+                          {errors.representativeFirstName}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <input
+                        value={representativeLastName}
+                        onChange={(e) =>
+                          setRepresentativeLastName(e.target.value)
+                        }
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                        placeholder="Apellidos del representante"
+                        required={isEntity}
+                      />
+                      {errors.representativeLastName && (
+                        <p className="mt-2 text-xs font-semibold text-red-600">
+                          {errors.representativeLastName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="text-xs font-semibold uppercase text-gray-400">
                   Código postal

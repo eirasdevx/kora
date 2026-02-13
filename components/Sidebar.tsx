@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/core/session/session.store";
+import { type UserRole, useUsersStore } from "@/core/users/users.store";
 
+type NavModule = "accounting" | "events" | "contacts" | "documents" | "social";
 type NavItem = {
   label: string;
   href: string;
+  moduleKey?: NavModule;
 };
 
 function cx(...classes: Array<string | false | undefined | null>) {
@@ -24,14 +27,16 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const mode = useSessionStore((s) => s.mode);
   const association = useSessionStore((s) => s.association);
   const logout = useSessionStore((s) => s.logout);
+  const activeUserId = useSessionStore((s) => s.activeUserId);
+  const users = useUsersStore((s) => s.users);
 
   const mainItems: NavItem[] = [
     { label: "Panel de control", href: "/dashboard" },
-    { label: "Contabilidad", href: "/accounting" },
-    { label: "Eventos", href: "/events" },
-    { label: "Contactos", href: "/contacts" },
-    { label: "Documentos", href: "/documents" },
-    { label: "Redes sociales", href: "/social" },
+    { label: "Contabilidad", href: "/accounting", moduleKey: "accounting" },
+    { label: "Eventos", href: "/events", moduleKey: "events" },
+    { label: "Contactos", href: "/contacts", moduleKey: "contacts" },
+    { label: "Documentos", href: "/documents", moduleKey: "documents" },
+    { label: "Redes sociales", href: "/social", moduleKey: "social" },
   ];
 
   const isActive = (href: string) =>
@@ -42,6 +47,36 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const associationName = association?.name?.trim();
   const showAssociationName =
     !!associationName && associationName.toLowerCase() !== "invitado";
+  const activeUser = users.find((user) => user.id === activeUserId);
+  const roleLabels: Record<UserRole, string> = {
+    Admin: "Administrador",
+    Gestor: "Gestor",
+    Lector: "Lector",
+  };
+  const activeUserName =
+    `${activeUser?.firstName ?? ""} ${activeUser?.lastName ?? ""}`.trim() ||
+    activeUser?.name?.trim() ||
+    activeUser?.email?.trim() ||
+    "Usuario";
+  const activeUserRoleLabel = activeUser?.role
+    ? roleLabels[activeUser.role] ?? "Usuario"
+    : "Usuario";
+  const activeUserInitials =
+    activeUserName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "U";
+  const activeUserPhotoUrl = activeUser?.photoUrl?.trim();
+  const isAdmin = activeUser?.role === "Admin";
+  const moduleAccess = activeUser?.permissions?.modules;
+  const showSettings = true;
+  const visibleItems = mainItems.filter((item) => {
+    if (!item.moduleKey) return true;
+    if (!activeUser || isAdmin || !moduleAccess) return true;
+    return moduleAccess[item.moduleKey];
+  });
 
   return (
     <>
@@ -99,7 +134,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         {/* Navegación principal */}
         <nav className="flex-1 px-4">
           <ul className="space-y-1">
-            {mainItems.map((item) => {
+            {visibleItems.map((item) => {
               const active = isActive(item.href);
 
               return (
@@ -123,32 +158,56 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         </nav>
 
         {/* Configuración */}
-        <div className="px-4 pb-4">
-          <div className="border-t pt-4">
-            <Link
-              href="/settings"
-              onClick={closeSidebar}
-              className={cx(
-                "block px-4 py-3 rounded-xl font-medium transition",
-                isActive("/settings")
-                  ? "bg-primary/10 text-primary"
-                  : "text-gray-700 hover:bg-gray-50"
-              )}
-            >
-              Configuración
-            </Link>
+        {showSettings ? (
+          <div className="px-4 pb-4">
+            <div className="border-t pt-4">
+              <Link
+                href="/settings"
+                onClick={closeSidebar}
+                className={cx(
+                  "block px-4 py-3 rounded-xl font-medium transition",
+                  isActive("/settings")
+                    ? "bg-primary/10 text-primary"
+                    : "text-gray-700 hover:bg-gray-50"
+                )}
+              >
+                Configuración
+              </Link>
+            </div>
           </div>
-        </div>
+        ) : null}
 
         {/* Footer */}
         <div className="px-6 py-4 border-t">
-          <p className="text-sm text-gray-500">
-            {mode === "guest"
-              ? "Modo invitado"
-              : mode === "authenticated"
-                ? "Sesión iniciada"
-                : "Sin sesión"}
-          </p>
+          {mode === "guest" ? (
+            <p className="text-sm text-gray-500">Modo invitado</p>
+          ) : mode === "authenticated" ? (
+            <button
+              type="button"
+              onClick={() => router.push("/settings/profile")}
+              className="flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left transition hover:bg-gray-50"
+            >
+              <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-slate-100 text-sm font-semibold text-slate-700">
+                {activeUserPhotoUrl ? (
+                  <img
+                    src={activeUserPhotoUrl}
+                    alt={`Perfil de ${activeUserName}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span>{activeUserInitials}</span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-800">
+                  {activeUserName}
+                </p>
+                <p className="text-xs text-gray-500">{activeUserRoleLabel}</p>
+              </div>
+            </button>
+          ) : (
+            <p className="text-sm text-gray-500">Sin sesión</p>
+          )}
           <button
             type="button"
             onClick={() => {

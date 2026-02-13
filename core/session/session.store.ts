@@ -37,6 +37,7 @@ interface SessionState {
   association: AssociationProfile | null;
   admin: AdminAccount | null;
   companyCode: string | null;
+  activeUserId: string | null;
   hydrated: boolean;
   setHydrated: (hydrated: boolean) => void;
   setAssociation: (association: AssociationProfile | null) => void;
@@ -46,7 +47,7 @@ interface SessionState {
     companyCode: string;
   }) => void;
   setGuest: () => void;
-  setAuthenticated: () => void;
+  setAuthenticated: (activeUserId?: string | null) => void;
   logout: () => void;
 }
 
@@ -57,6 +58,7 @@ export const useSessionStore = create<SessionState>()(
       association: null,
       admin: null,
       companyCode: null,
+      activeUserId: null,
       hydrated: false,
       setHydrated: (hydrated) => set({ hydrated }),
       setAssociation: (association) => set({ association }),
@@ -66,10 +68,12 @@ export const useSessionStore = create<SessionState>()(
           association,
           companyCode,
           mode: null,
+          activeUserId: null,
         }),
-      setGuest: () => set({ mode: "guest" }),
-      setAuthenticated: () => set({ mode: "authenticated" }),
-      logout: () => set({ mode: null }),
+      setGuest: () => set({ mode: "guest", activeUserId: null }),
+      setAuthenticated: (activeUserId = null) =>
+        set({ mode: "authenticated", activeUserId }),
+      logout: () => set({ mode: null, activeUserId: null }),
     }),
     {
       name: "kora-session",
@@ -79,6 +83,7 @@ export const useSessionStore = create<SessionState>()(
         association: state.association,
         admin: state.admin,
         companyCode: state.companyCode,
+        activeUserId: state.activeUserId,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true);

@@ -7,20 +7,52 @@ import { type AdminAccount } from "@/core/session/session.store";
 export type UserRole = "Admin" | "Gestor" | "Lector";
 export type UserStatus = "Activo" | "Pendiente";
 
+export type UserPermissions = {
+  modules: {
+    accounting: boolean;
+    events: boolean;
+    contacts: boolean;
+    documents: boolean;
+    social: boolean;
+  };
+  actions: {
+    view: boolean;
+    edit: boolean;
+    delete: boolean;
+  };
+};
+
 export type UserAccount = {
   id: string;
-  name: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  photoUrl?: string;
+  phone?: string;
+  dni?: string;
   email: string;
+  password?: string;
   role: UserRole;
   status: UserStatus;
   lastAccessAt: string | null;
+  permissions?: UserPermissions;
 };
 
 interface UsersState {
   companyCode: string | null;
   users: UserAccount[];
   ensureSeed: (companyCode: string | null, admin: AdminAccount | null) => void;
-  addUser: (payload: { name: string; email: string; role: UserRole }) => void;
+  addUser: (payload: {
+    firstName: string;
+    lastName: string;
+    dni: string;
+    email: string;
+    password: string;
+    role: UserRole;
+    status?: UserStatus;
+    permissions?: UserPermissions;
+    photoUrl?: string;
+  }) => void;
   updateUser: (id: string, updates: Partial<UserAccount>) => void;
   removeUser: (id: string) => void;
   resetUsers: () => void;
@@ -33,14 +65,109 @@ const createUserId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-const toAdminUser = (admin: AdminAccount): UserAccount => ({
-  id: createUserId(),
-  name: `${admin.firstName} ${admin.lastName}`.trim() || "Administrador",
-  email: admin.email,
-  role: "Admin",
-  status: "Activo",
-  lastAccessAt: new Date().toISOString(),
+const createDefaultPermissions = (): UserPermissions => ({
+  modules: {
+    accounting: true,
+    events: true,
+    contacts: true,
+    documents: true,
+    social: true,
+  },
+  actions: {
+    view: true,
+    edit: true,
+    delete: false,
+  },
 });
+
+const normalizeEnabled = (value?: string | boolean): boolean => {
+  if (value === true) return true;
+  if (value === "edit" || value === "read") return true;
+  return false;
+};
+
+type LegacyModules = Partial<{
+  accounting: string | boolean;
+  events: string | boolean;
+  contacts: string | boolean;
+  documents: string | boolean;
+  social: string | boolean;
+  treasury: string | boolean;
+}>;
+
+const withDefaultPermissions = (
+  permissions?: UserPermissions
+): UserPermissions => {
+  const defaults = createDefaultPermissions();
+  const modules = (permissions?.modules ?? {}) as LegacyModules;
+  const resolveEnabled = (value: unknown, fallback: boolean) => {
+    if (value === null || value === undefined) return fallback;
+    return normalizeEnabled(value as string | boolean);
+  };
+
+  const edit = permissions?.actions?.edit ?? defaults.actions.edit;
+  return {
+    modules: {
+      accounting: resolveEnabled(
+        modules.accounting ?? modules.treasury,
+        defaults.modules.accounting
+      ),
+      events: resolveEnabled(modules.events, defaults.modules.events),
+      contacts: resolveEnabled(modules.contacts, defaults.modules.contacts),
+      documents: resolveEnabled(modules.documents, defaults.modules.documents),
+      social: resolveEnabled(modules.social, defaults.modules.social),
+    },
+    actions: {
+      view: edit ? false : true,
+      edit,
+      delete: permissions?.actions?.delete ?? defaults.actions.delete,
+    },
+  };
+};
+
+const normalizeUser = (user: UserAccount): UserAccount => {
+  const name = user.name?.trim() ?? "";
+  const composed =
+    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || name;
+  const parts = composed.split(" ").filter(Boolean);
+  const basePermissions = withDefaultPermissions(user.permissions);
+  const permissions =
+    user.role === "Admin"
+      ? {
+          ...basePermissions,
+          modules: {
+            accounting: true,
+            events: true,
+            contacts: true,
+            documents: true,
+            social: true,
+          },
+        }
+      : basePermissions;
+  return {
+    ...user,
+    name: name || composed || "Usuario",
+    firstName: user.firstName ?? parts[0] ?? "",
+    lastName: user.lastName ?? parts.slice(1).join(" "),
+    dni: user.dni ?? "",
+    permissions,
+  };
+};
+
+const toAdminUser = (admin: AdminAccount): UserAccount =>
+  normalizeUser({
+    id: createUserId(),
+    firstName: admin.firstName ?? "",
+    lastName: admin.lastName ?? "",
+    name: `${admin.firstName} ${admin.lastName}`.trim() || "Administrador",
+    dni: admin.dni ?? "",
+    email: admin.email,
+    password: admin.password,
+    role: "Admin",
+    status: "Activo",
+    lastAccessAt: new Date().toISOString(),
+    permissions: createDefaultPermissions(),
+  });
 
 export const useUsersStore = create<UsersState>()(
   persist(
@@ -51,48 +178,65 @@ export const useUsersStore = create<UsersState>()(
         set((state) => {
           if (!companyCode || !admin) return state;
           const adminUser = toAdminUser(admin);
+          const normalizedUsers = state.users.map(normalizeUser);
 
-          if (state.companyCode !== companyCode || state.users.length === 0) {
+          if (state.companyCode !== companyCode || normalizedUsers.length === 0) {
             return {
               companyCode,
               users: [adminUser],
             };
           }
 
-          const exists = state.users.some(
+          const exists = normalizedUsers.some(
             (user) => user.email.toLowerCase() === admin.email.toLowerCase()
           );
 
           if (!exists) {
             return {
               companyCode,
-              users: [adminUser, ...state.users],
+              users: [adminUser, ...normalizedUsers],
             };
           }
 
           return {
             companyCode: state.companyCode ?? companyCode,
-            users: state.users,
+            users: normalizedUsers,
           };
         }),
-      addUser: ({ name, email, role }) =>
+      addUser: ({
+        firstName,
+        lastName,
+        dni,
+        email,
+        password,
+        role,
+        status,
+        permissions,
+        photoUrl,
+      }) =>
         set((state) => ({
           users: [
-            {
+            normalizeUser({
               id: createUserId(),
-              name,
+              name: `${firstName} ${lastName}`.trim(),
+              firstName,
+              lastName,
+              dni,
               email,
+              password,
               role,
-              status: "Pendiente",
+              status: status ?? "Pendiente",
               lastAccessAt: null,
-            },
-            ...state.users,
+              permissions: permissions ?? createDefaultPermissions(),
+              photoUrl,
+            }),
+            ...state.users.map(normalizeUser),
           ],
         })),
       updateUser: (id, updates) =>
         set((state) => ({
           users: state.users.map((user) =>
-            user.id === id ? { ...user, ...updates } : user
+            user.id === id ? normalizeUser({ ...user, ...updates }) : user
           ),
         })),
       removeUser: (id) =>

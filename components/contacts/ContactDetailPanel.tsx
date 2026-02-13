@@ -1,6 +1,10 @@
 "use client";
 
-import { Contact, ContactTypeLabels } from "@/modules/contacts/contact.types";
+import {
+  Contact,
+  ContactKindLabels,
+  ContactTypeLabels,
+} from "@/modules/contacts/contact.types";
 
 interface Props {
   contact: Contact | null;
@@ -54,6 +58,9 @@ export default function ContactDetailPanel({
   ]
     .filter(Boolean)
     .join(", ");
+  const representativeName = `${contact.representativeFirstName ?? ""} ${
+    contact.representativeLastName ?? ""
+  }`.trim();
 
   return (
     <div className="flex h-full flex-col gap-6 rounded-2xl border border-gray-200 bg-white p-6">
@@ -113,7 +120,21 @@ export default function ContactDetailPanel({
       <div className="grid gap-4 text-sm text-gray-700">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-            DNI
+            Perfil
+          </p>
+          <p className="mt-1">{ContactKindLabels[contact.kind]}</p>
+        </div>
+        {contact.kind === "entity" && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Representante
+            </p>
+            <p className="mt-1">{representativeName || "—"}</p>
+          </div>
+        )}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            {contact.kind === "entity" ? "NIF / CIF" : "DNI"}
           </p>
           <p className="mt-1">{contact.dni || "—"}</p>
         </div>

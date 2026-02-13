@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSessionStore } from "@/core/session/session.store";
+import { useUsersStore } from "@/core/users/users.store";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
 import { useEventsStore } from "@/modules/events/events.store";
@@ -18,6 +19,7 @@ export default function LoginPage() {
   const companyCode = useSessionStore((s) => s.companyCode);
   const setGuest = useSessionStore((s) => s.setGuest);
   const setAuthenticated = useSessionStore((s) => s.setAuthenticated);
+  const ensureUsersSeed = useUsersStore((s) => s.ensureSeed);
   const resetContacts = useContactsStore((s) => s.resetContacts);
   const resetDocuments = useDocumentsStore((s) => s.resetDocuments);
   const resetEvents = useEventsStore((s) => s.resetEvents);
@@ -37,7 +39,7 @@ export default function LoginPage() {
 
     if (!admin || !companyCode) {
       setLoginError(
-        "No hay un administrador registrado. Completa el registro para generar el codigo de empresa."
+        "No hay un administrador registrado. Completa el registro para generar el código de empresa."
       );
       return;
     }
@@ -49,20 +51,73 @@ export default function LoginPage() {
       .trim()
       .toUpperCase();
 
-    const matchesIdentifier =
-      identifier.toLowerCase() === admin.email.toLowerCase() ||
-      identifier.toUpperCase() === admin.dni;
-    const matchesPassword = password === admin.password;
-    const matchesCode = code === companyCode;
-
-    if (!matchesIdentifier || !matchesPassword || !matchesCode) {
+    if (!identifier || !password || !code) {
       setLoginError(
-        "Credenciales incorrectas o codigo de empresa invalido."
+        "Completa DNI o correo, contraseña y código de empresa."
       );
       return;
     }
 
-    setAuthenticated();
+    const matchesCode = code === companyCode;
+    if (!matchesCode) {
+      setLoginError(
+        "Credenciales incorrectas o código de empresa inválido."
+      );
+      return;
+    }
+
+    ensureUsersSeed(companyCode, admin);
+    const { users, updateUser } = useUsersStore.getState();
+    const identifierLower = identifier.toLowerCase();
+    const identifierUpper = identifier.toUpperCase();
+    const matchesAdminIdentifier =
+      identifierLower === admin.email.toLowerCase() ||
+      identifierUpper === admin.dni;
+    const matchesAdminPassword = password === admin.password;
+    const candidate = users.find((user) => {
+      const email = user.email.toLowerCase();
+      const dni = (user.dni ?? "").toUpperCase();
+      return email === identifierLower || dni === identifierUpper;
+    });
+
+    if (!candidate) {
+      if (matchesAdminIdentifier && matchesAdminPassword) {
+        const adminUser = users.find(
+          (user) => user.email.toLowerCase() === admin.email.toLowerCase()
+        );
+        if (adminUser) {
+          if (!adminUser.password) {
+            updateUser(adminUser.id, { password: admin.password });
+          }
+          setAuthenticated(adminUser.id);
+          router.push("/dashboard");
+          return;
+        }
+      }
+      setLoginError(
+        "Credenciales incorrectas o código de empresa inválido."
+      );
+      return;
+    }
+
+    const storedPassword = candidate.password?.trim();
+    if (!storedPassword || storedPassword !== password) {
+      if (
+        candidate.role === "Admin" &&
+        !storedPassword &&
+        matchesAdminIdentifier &&
+        matchesAdminPassword
+      ) {
+        updateUser(candidate.id, { password: admin.password });
+      } else {
+        setLoginError(
+          "Credenciales incorrectas o código de empresa inválido."
+        );
+        return;
+      }
+    }
+
+    setAuthenticated(candidate.id);
     router.push("/dashboard");
   };
 
@@ -102,7 +157,9 @@ export default function LoginPage() {
                 intuitiva diseñada para el crecimiento comunitario.
               </p>
             </div>
-            <p className="text-xs text-white/60">© 2024 Kora Platform. Todos los derechos reservados.</p>
+            <p className="text-xs text-white/60">
+              © {new Date().getFullYear()} Kora Platform. Todos los derechos reservados.
+            </p>
           </div>
         </section>
 
@@ -119,7 +176,7 @@ export default function LoginPage() {
               {!admin || !companyCode ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   No hay un administrador registrado. Completa el registro para generar el
-                  codigo de empresa.
+                  código de empresa.
                 </div>
               ) : null}
               <div className="space-y-2">
@@ -148,7 +205,7 @@ export default function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Codigo de empresa</label>
+                <label className="text-sm font-medium text-slate-700">Código de empresa</label>
                 <input
                   name="companyCode"
                   type="text"
