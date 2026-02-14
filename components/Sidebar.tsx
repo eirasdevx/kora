@@ -98,16 +98,21 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       >
         {/* Logo */}
         <div className="flex items-start justify-between gap-3 px-6 py-6">
-          <div>
-            <div className="font-heading text-lg font-extrabold text-slate-900">
-              Kora
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-rounded kora-logo" aria-hidden="true">
+              crop_7_5
+            </span>
+            <div>
+              <div className="font-heading text-lg font-extrabold text-slate-900">
+                Kora
+              </div>
+              <div className="text-xs text-gray-500">Gestión de asociaciones</div>
+              {showAssociationName ? (
+                <p className="mt-3 line-clamp-2 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                  {associationName}
+                </p>
+              ) : null}
             </div>
-            <div className="text-xs text-gray-500">Gestión de asociaciones</div>
-            {showAssociationName ? (
-              <p className="mt-3 line-clamp-2 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-                {associationName}
-              </p>
-            ) : null}
           </div>
           {onClose ? (
             <button
@@ -116,17 +121,9 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 lg:hidden"
               aria-label="Cerrar menú"
             >
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M6 6l12 12M18 6l-12 12" />
-              </svg>
+              <span className="material-symbols-outlined text-[16px]">
+                close
+              </span>
             </button>
           ) : null}
         </div>

@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 
 const sections = [
@@ -50,17 +53,29 @@ function Toggle({ defaultChecked }: { defaultChecked?: boolean }) {
 }
 
 export default function NotificationsSettingsPage() {
+  const router = useRouter();
   return (
     <div className="space-y-8">
       <PageTopbar>
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-            Configuración &nbsp;›&nbsp; Notificaciones
-          </p>
-          <h1 className="text-2xl font-semibold text-gray-900">Notificaciones</h1>
-          <p className="text-sm text-gray-500">
-            Gestiona cómo y cuándo recibes avisos de la plataforma.
-          </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+              Configuración &nbsp;›&nbsp; Notificaciones
+            </p>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Notificaciones
+            </h1>
+            <p className="text-sm text-gray-500">
+              Gestiona cómo y cuándo recibes avisos de la plataforma.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/settings")}
+            className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
+          >
+            ← Volver a configuracion
+          </button>
         </div>
       </PageTopbar>
 
@@ -68,16 +83,7 @@ export default function NotificationsSettingsPage() {
         <div key={section.title} className="space-y-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gray-100 text-gray-600">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M12 3v18" />
-                <path d="M4 12h16" />
-              </svg>
+              <span className="material-symbols-outlined text-[20px]">add</span>
             </span>
             <h2 className="text-lg font-semibold text-gray-900">
               {section.title}

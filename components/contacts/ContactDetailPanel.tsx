@@ -91,17 +91,9 @@ export default function ContactDetailPanel({
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50"
             aria-label="Cerrar panel"
           >
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M6 6l12 12M18 6l-12 12" />
-            </svg>
+            <span className="material-symbols-outlined text-[16px]">
+              close
+            </span>
           </button>
         ) : null}
       </div>

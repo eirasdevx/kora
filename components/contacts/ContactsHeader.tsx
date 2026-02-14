@@ -22,18 +22,9 @@ export default function ContactsHeader({ onAdd }: Props) {
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
         >
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 5v14" />
-              <path d="M5 12h14" />
-            </svg>
+            <span className="material-symbols-outlined text-[16px]">
+              add
+            </span>
           </span>
           Nuevo contacto
         </button>

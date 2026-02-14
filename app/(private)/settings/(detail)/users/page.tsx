@@ -163,58 +163,23 @@ const MODULE_ITEMS = [
     label: "Tesorería",
     description: "Gestión de cobros y facturas",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="3" y="4" width="18" height="16" rx="2" />
-        <path d="M7 9h10M7 13h6M7 17h4" />
-      </svg>
+      <span className="material-symbols-outlined text-[20px]">
+        receipt_long
+      </span>
     ),
   },
   {
     key: "events",
     label: "Eventos",
     description: "Creación y control de eventos",
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="3" y="4" width="18" height="16" rx="2" />
-        <path d="M16 2v4M8 2v4M3 10h18" />
-      </svg>
-    ),
+    icon: <span className="material-symbols-outlined text-[20px]">event</span>,
   },
   {
     key: "contacts",
     label: "Contactos",
     description: "Gestión de miembros y proveedores",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="9" cy="7" r="4" />
-        <path d="M3 21v-1a4 4 0 0 1 4-4h4" />
-        <circle cx="17" cy="9" r="3" />
-        <path d="M21 21v-1a4 4 0 0 0-3-3" />
-      </svg>
+      <span className="material-symbols-outlined text-[20px]">groups</span>
     ),
   },
   {
@@ -222,41 +187,16 @@ const MODULE_ITEMS = [
     label: "Documentos",
     description: "Archivos, actas y plantillas",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <path d="M14 2v6h6" />
-        <path d="M8 13h8M8 17h6" />
-      </svg>
+      <span className="material-symbols-outlined text-[20px]">
+        description
+      </span>
     ),
   },
   {
     key: "social",
     label: "Redes Sociales",
     description: "Publicaciones y campañas",
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="18" cy="5" r="3" />
-        <circle cx="6" cy="12" r="3" />
-        <circle cx="18" cy="19" r="3" />
-        <path d="m8.6 13.5 6.8 3.9M15.4 6.6 8.6 10.5" />
-      </svg>
-    ),
+    icon: <span className="material-symbols-outlined text-[20px]">share</span>,
   },
 ] as const;
 
@@ -289,34 +229,10 @@ function ToggleSwitch({
 }
 
 function EyeIcon({ open }: { open: boolean }) {
-  return open ? (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ) : (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.82 21.82 0 0 1 5.06-6.94" />
-      <path d="M1 1l22 22" />
-      <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
-      <path d="M14.12 14.12L9.88 9.88" />
-    </svg>
+  return (
+    <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+      {open ? "visibility" : "visibility_off"}
+    </span>
   );
 }
 
@@ -593,7 +509,7 @@ export default function UsersSettingsPage() {
                 onClick={() => router.push("/settings")}
                 className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
               >
-                Volver a configuración
+                ← Volver a configuracion
               </button>
             </div>
           </div>
@@ -601,19 +517,7 @@ export default function UsersSettingsPage() {
 
         <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 6v6" />
-              <path d="M12 18h.01" />
-              <circle cx="12" cy="12" r="9" />
-            </svg>
+            <span className="material-symbols-outlined text-[24px]">info</span>
           </div>
           <h2 className="mt-4 text-lg font-semibold text-gray-900">
             Gestión no disponible en modo invitado
@@ -639,53 +543,44 @@ export default function UsersSettingsPage() {
               asociación.
             </p>
           </div>
-          {isAdmin ? (
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              onClick={() => {
-                setFormError(null);
-                setUserForm(createEmptyForm());
-                setShowPassword(false);
-                setShowRepeat(false);
-                setPanelMode("create");
-                setSelectedId(null);
-              }}
-              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
+              onClick={() => router.push("/settings")}
+              className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
             >
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M19 8v6" />
-                <path d="M22 11h-6" />
-              </svg>
-              Añadir Usuario
+              ← Volver a configuracion
             </button>
-          ) : null}
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setFormError(null);
+                  setUserForm(createEmptyForm());
+                  setShowPassword(false);
+                  setShowRepeat(false);
+                  setPanelMode("create");
+                  setSelectedId(null);
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  person_add
+                </span>
+                Añadir Usuario
+              </button>
+            ) : null}
+          </div>
         </div>
       </PageTopbar>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="relative flex-1">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="M21 21l-4.3-4.3" />
-              </svg>
+            <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-gray-400">
+              <span className="material-symbols-outlined text-[16px] leading-none">
+                search
+              </span>
             </span>
             <input
               placeholder="Buscar administradores o gestores por nombre o email..."
@@ -699,17 +594,9 @@ export default function UsersSettingsPage() {
             onClick={() => setFiltersOpen((prev) => !prev)}
             className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-600 shadow-sm"
           >
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M22 3H2l8 9v7l4 2v-9l8-9Z" />
-            </svg>
+            <span className="material-symbols-outlined text-[18px]">
+              tune
+            </span>
             Filtros
           </button>
         </div>
@@ -982,20 +869,9 @@ export default function UsersSettingsPage() {
             <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-5">
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-6 w-6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M19 8v6" />
-                    <path d="M22 11h-6" />
-                  </svg>
+                  <span className="material-symbols-outlined text-[24px]">
+                    badge
+                  </span>
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -1017,17 +893,9 @@ export default function UsersSettingsPage() {
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50"
                 aria-label="Cerrar"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M6 6l12 12M18 6l-12 12" />
-                </svg>
+                <span className="material-symbols-outlined text-[18px]">
+                  close
+                </span>
               </button>
             </div>
 
@@ -1044,18 +912,9 @@ export default function UsersSettingsPage() {
                 <section className="px-6 py-6 space-y-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <circle cx="12" cy="7" r="4" />
-                        <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
-                      </svg>
+                      <span className="material-symbols-outlined text-[16px]">
+                        person
+                      </span>
                     </span>
                     Informacion personal
                   </div>
@@ -1152,18 +1011,9 @@ export default function UsersSettingsPage() {
                 <section className="px-6 py-6 space-y-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <rect x="3" y="11" width="18" height="10" rx="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                      </svg>
+                      <span className="material-symbols-outlined text-[16px]">
+                        lock
+                      </span>
                     </span>
                     Seguridad y acceso
                   </div>
@@ -1245,20 +1095,9 @@ export default function UsersSettingsPage() {
                 <section className="px-6 py-6 space-y-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <rect x="3" y="4" width="7" height="7" rx="2" />
-                        <rect x="14" y="4" width="7" height="7" rx="2" />
-                        <rect x="3" y="13" width="7" height="7" rx="2" />
-                        <rect x="14" y="13" width="7" height="7" rx="2" />
-                      </svg>
+                      <span className="material-symbols-outlined text-[16px]">
+                        apps
+                      </span>
                     </span>
                     Acceso a módulos
                   </div>
@@ -1386,21 +1225,9 @@ export default function UsersSettingsPage() {
               <div className="relative w-full max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M3 6h18" />
-                      <path d="M8 6V4h8v2" />
-                      <path d="M10 11v6" />
-                      <path d="M14 11v6" />
-                      <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14" />
-                    </svg>
+                    <span className="material-symbols-outlined text-[20px]">
+                      delete
+                    </span>
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">

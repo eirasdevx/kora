@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import {
   type AssociationRepresentative,
@@ -98,6 +99,7 @@ function getAssociationFormState(
 }
 
 export default function AssociationProfilePage() {
+  const router = useRouter();
   const hydrated = useSessionStore((s) => s.hydrated);
   const association = useSessionStore((s) => s.association);
   const companyCode = useSessionStore((s) => s.companyCode);
@@ -213,13 +215,24 @@ export default function AssociationProfilePage() {
               Actualiza la información legal y de contacto de tu asociación.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => document.getElementById("association-save")?.click()}
-            className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
-          >
-            Guardar Cambios
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.push("/settings")}
+              className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
+            >
+              ← Volver a configuracion
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                document.getElementById("association-save")?.click()
+              }
+              className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
+            >
+              Guardar Cambios
+            </button>
+          </div>
         </div>
       </PageTopbar>
 
@@ -277,17 +290,10 @@ export default function AssociationProfilePage() {
                 </div>
               ) : (
                 <div>
-                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-sm">
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="h-8 w-8 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M3 5h18v14H3z" />
-                      <path d="M8 10l4 4 4-4" />
-                    </svg>
+                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-sm text-gray-400">
+                    <span className="material-symbols-outlined text-[32px]">
+                      upload
+                    </span>
                   </div>
                   <p className="mt-4 font-semibold text-primary">
                     Haz clic para subir un logo

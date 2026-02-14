@@ -195,19 +195,10 @@ export default function ContactsPage() {
                     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
                         <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center">
                             <div className="relative flex-1">
-                                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                    <svg
-                                        viewBox="0 0 24 24"
-                                        className="h-4 w-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    >
-                                        <circle cx="11" cy="11" r="7" />
-                                        <path d="M21 21l-4.3-4.3" />
-                                    </svg>
+                                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                                    <span className="material-symbols-outlined text-[16px] leading-none">
+                                        search
+                                    </span>
                                 </span>
                                 <input
                                     type="text"
@@ -225,19 +216,9 @@ export default function ContactsPage() {
                                     aria-controls="contacts-filters-panel"
                                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
                                 >
-                                    <svg
-                                        viewBox="0 0 24 24"
-                                        className="h-4 w-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    >
-                                        <path d="M3 6h18" />
-                                        <path d="M7 12h10" />
-                                        <path d="M10 18h4" />
-                                    </svg>
+                                    <span className="material-symbols-outlined text-[16px]">
+                                        tune
+                                    </span>
                                     Filtros
                                 </button>
                                 {filtersOpen && (

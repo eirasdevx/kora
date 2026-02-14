@@ -143,8 +143,8 @@ export default function LoginPage() {
           </div>
           <div className="relative flex h-full flex-col justify-between p-12">
             <div className="flex items-center gap-3 text-white">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
-                <span className="text-lg font-semibold">K</span>
+              <span className="material-symbols-rounded kora-logo" aria-hidden="true">
+                crop_7_5
               </span>
               <span className="text-lg font-semibold">Kora</span>
             </div>

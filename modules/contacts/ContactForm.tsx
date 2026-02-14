@@ -91,55 +91,16 @@ function fromInputDate(value?: string) {
 }
 
 function TypeIcon({ type }: { type: ContactType }) {
-  if (type === "provider") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="3" y="7" width="18" height="12" rx="2" />
-        <path d="M9 7V5a3 3 0 0 1 6 0v2" />
-      </svg>
-    );
-  }
-
-  if (type === "collaborator") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="8" cy="8" r="3" />
-        <circle cx="16" cy="8" r="3" />
-        <path d="M2 20c1.6-3 9.4-3 11 0" />
-        <path d="M11 20c1.1-2 6.9-2 8 0" />
-      </svg>
-    );
-  }
-
+  const iconName =
+    type === "provider"
+      ? "storefront"
+      : type === "collaborator"
+        ? "groups"
+        : "person";
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c2.4-4 13.6-4 16 0" />
-    </svg>
+    <span className="material-symbols-outlined text-[16px]">
+      {iconName}
+    </span>
   );
 }
 
@@ -360,19 +321,9 @@ export default function ContactForm({
             type="submit"
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
           >
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M5 21h14a2 2 0 0 0 2-2V7l-4-4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2Z" />
-              <path d="M17 21v-8H7v8" />
-              <path d="M7 3v4h8" />
-            </svg>
+            <span className="material-symbols-outlined text-[16px]">
+              save
+            </span>
             {primaryLabel}
           </button>
         </div>
@@ -394,33 +345,14 @@ export default function ContactForm({
                     className="h-full w-full rounded-2xl object-cover"
                   />
                 ) : (
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-10 w-10"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="3" y="7" width="18" height="12" rx="2" />
-                    <path d="M7 7l2-3h6l2 3" />
-                    <circle cx="12" cy="13" r="3" />
-                  </svg>
+                  <span className="material-symbols-outlined text-[40px]">
+                    photo_camera
+                  </span>
                 )}
                 <span className="absolute -right-2 -bottom-2 flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-primary shadow-sm">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                  </svg>
+                  <span className="material-symbols-outlined text-[16px]">
+                    edit
+                  </span>
                 </span>
               </button>
               {photoUrl && (
@@ -563,18 +495,9 @@ export default function ContactForm({
 
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="4" width="18" height="16" rx="2" />
-                  <path d="M8 9h8M8 13h8M8 17h4" />
-                </svg>
+                <span className="material-symbols-outlined text-[16px]">
+                  badge
+                </span>
               </span>
               <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-gray-500">
                 Datos personales y fiscales
@@ -733,17 +656,9 @@ export default function ContactForm({
                     ))}
                   </select>
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
+                    <span className="material-symbols-outlined text-[16px]">
+                      expand_more
+                    </span>
                   </span>
                 </div>
               </div>
@@ -775,18 +690,9 @@ export default function ContactForm({
           <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M4 4h16v12H4z" />
-                  <path d="M22 7l-10 6L2 7" />
-                </svg>
+                <span className="material-symbols-outlined text-[16px]">
+                  mail
+                </span>
               </span>
               <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-gray-500">
                 Información de contacto
@@ -856,18 +762,9 @@ export default function ContactForm({
           <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M4 4h16v14H7l-3 3Z" />
-                  <path d="M8 9h8M8 13h6" />
-                </svg>
+                <span className="material-symbols-outlined text-[16px]">
+                  comment
+                </span>
               </span>
               <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-gray-500">
                 Notas y observaciones

@@ -49,19 +49,10 @@ export default function EventsTopbar({
           </div>
 
           <div className="relative w-full sm:w-64">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="M21 21l-4.3-4.3" />
-              </svg>
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+              <span className="material-symbols-outlined text-[16px] leading-none">
+                search
+              </span>
             </span>
             <input
               type="text"
@@ -76,18 +67,9 @@ export default function EventsTopbar({
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 5v14" />
-                <path d="M5 12h14" />
-              </svg>
+              <span className="material-symbols-outlined text-[16px]">
+                add
+              </span>
             </span>
             Crear Nuevo Evento
           </button>

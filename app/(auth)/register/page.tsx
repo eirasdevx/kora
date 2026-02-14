@@ -106,8 +106,8 @@ export default function RegisterPage() {
       <header className="border-b border-slate-100 bg-white">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
-              <span className="text-lg font-semibold">K</span>
+            <span className="material-symbols-rounded kora-logo" aria-hidden="true">
+              crop_7_5
             </span>
             <span className="text-lg font-semibold text-slate-900">Kora</span>
           </div>

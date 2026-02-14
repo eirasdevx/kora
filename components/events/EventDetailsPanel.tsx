@@ -109,33 +109,15 @@ export default function EventDetailsPanel({
 
         <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
           <span className="flex items-center gap-2">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="3" y="4" width="18" height="17" rx="2" />
-              <path d="M16 2v4M8 2v4M3 10h18" />
-            </svg>
+            <span className="material-symbols-outlined text-[16px]">
+              calendar_month
+            </span>
             {formatted.dateLabel}
           </span>
           <span className="flex items-center gap-2">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 7v5l3 3" />
-            </svg>
+            <span className="material-symbols-outlined text-[16px]">
+              schedule
+            </span>
             {formatted.startTimeLabel} - {formatted.endTimeLabel}
           </span>
         </div>

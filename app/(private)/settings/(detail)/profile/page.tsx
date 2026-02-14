@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import { useSessionStore } from "@/core/session/session.store";
 import { type UserAccount, useUsersStore } from "@/core/users/users.store";
@@ -47,34 +48,10 @@ function getUserFormState(user: UserAccount | null): UserProfileFormState {
 }
 
 function EyeIcon({ open }: { open: boolean }) {
-  return open ? (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ) : (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.82 21.82 0 0 1 5.06-6.94" />
-      <path d="M1 1l22 22" />
-      <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
-      <path d="M14.12 14.12L9.88 9.88" />
-    </svg>
+  return (
+    <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+      {open ? "visibility" : "visibility_off"}
+    </span>
   );
 }
 
@@ -108,9 +85,11 @@ function ToggleSwitch({
 
 function UserProfileCard({
   user,
+  users,
   onSave,
 }: {
   user: UserAccount | null;
+  users: UserAccount[];
   onSave: (updates: Partial<UserAccount>) => void;
 }) {
   const [form, setForm] = useState<UserProfileFormState>(
@@ -123,6 +102,15 @@ function UserProfileCard({
   const [formError, setFormError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setForm(getUserFormState(user));
+    setFormError(null);
+    setPasswordOpen(false);
+    setShowPassword(false);
+    setShowRepeat(false);
+    setLastSavedAt(null);
+  }, [user?.id]);
 
   const fullName = `${form.firstName} ${form.lastName}`.trim();
   const displayName = fullName || user?.name || "Usuario";
@@ -181,6 +169,16 @@ function UserProfileCard({
 
     if (!firstName || !lastName || !dni || !email) {
       setFormError("Completa nombre, apellidos, DNI y correo.");
+      return;
+    }
+
+    const emailTaken = users.some(
+      (candidate) =>
+        candidate.id !== user.id &&
+        candidate.email.toLowerCase() === email.toLowerCase()
+    );
+    if (emailTaken) {
+      setFormError("Ya existe un usuario con ese correo.");
       return;
     }
 
@@ -318,18 +316,9 @@ function UserProfileCard({
         <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="7" r="4" />
-                <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
-              </svg>
+              <span className="material-symbols-outlined text-[16px]">
+                person
+              </span>
             </span>
             Datos Personales
           </div>
@@ -391,18 +380,7 @@ function UserProfileCard({
         <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="3" y="11" width="18" height="10" rx="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
+              <span className="material-symbols-outlined text-[16px]">lock</span>
             </span>
             Seguridad y Cuenta
           </div>
@@ -560,9 +538,14 @@ function UserProfileCard({
 }
 
 export default function ProfileSettingsPage() {
+  const router = useRouter();
   const hydrated = useSessionStore((s) => s.hydrated);
+  const mode = useSessionStore((s) => s.mode);
+  const admin = useSessionStore((s) => s.admin);
+  const companyCode = useSessionStore((s) => s.companyCode);
   const activeUserId = useSessionStore((s) => s.activeUserId);
   const users = useUsersStore((s) => s.users);
+  const ensureSeed = useUsersStore((s) => s.ensureSeed);
   const updateUser = useUsersStore((s) => s.updateUser);
   const activeUser = users.find((user) => user.id === activeUserId) ?? null;
 
@@ -572,8 +555,54 @@ export default function ProfileSettingsPage() {
   const [browserNotifications, setBrowserNotifications] = useState(false);
   const [updatesNotifications, setUpdatesNotifications] = useState(true);
 
+  useEffect(() => {
+    if (!hydrated || mode !== "authenticated") return;
+    ensureSeed(companyCode, admin);
+  }, [hydrated, mode, companyCode, admin, ensureSeed]);
+
   if (!hydrated) {
     return <div className="min-h-screen bg-background-light" aria-busy="true" />;
+  }
+
+  if (mode === "guest") {
+    return (
+      <div className="space-y-8">
+        <PageTopbar>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Configuración &nbsp;&gt;&nbsp; Perfil
+              </p>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                Configuración del Perfil
+              </h1>
+              <p className="text-sm text-gray-500">
+                Esta sección solo está disponible en cuentas autenticadas.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push("/settings")}
+              className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
+            >
+              ← Volver a configuracion
+            </button>
+          </div>
+        </PageTopbar>
+
+        <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
+            <span className="material-symbols-outlined text-[24px]">info</span>
+          </div>
+          <h2 className="mt-4 text-lg font-semibold text-gray-900">
+            Perfil no disponible en modo invitado
+          </h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Inicia sesión para gestionar tu información y preferencias.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -591,18 +620,30 @@ export default function ProfileSettingsPage() {
               Gestiona tu información personal y preferencias de cuenta.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => document.getElementById("profile-user-save")?.click()}
-            className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
-          >
-            Guardar Cambios
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.push("/settings")}
+              className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
+            >
+              ← Volver a configuracion
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                document.getElementById("profile-user-save")?.click()
+              }
+              className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
+            >
+              Guardar Cambios
+            </button>
+          </div>
         </div>
       </PageTopbar>
 
       <UserProfileCard
         user={activeUser}
+        users={users}
         onSave={(updates) => {
           if (!activeUser) return;
           updateUser(activeUser.id, updates);
@@ -612,23 +653,7 @@ export default function ProfileSettingsPage() {
       <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="3" />
-              <path d="m19.4 15-2.1-1.2" />
-              <path d="m4.6 15 2.1-1.2" />
-              <path d="m19.4 9-2.1 1.2" />
-              <path d="m4.6 9 2.1 1.2" />
-              <path d="M12 3v3" />
-              <path d="M12 18v3" />
-            </svg>
+            <span className="material-symbols-outlined text-[16px]">settings</span>
           </span>
           Preferencias
         </div>

@@ -46,19 +46,9 @@ export default function AppLayout({
             aria-label="Abrir menú"
             className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50"
           >
-            <svg
-              viewBox="0 0 24 24"
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 6h18" />
-              <path d="M3 12h18" />
-              <path d="M3 18h18" />
-            </svg>
+            <span className="material-symbols-outlined text-[20px]">
+              menu
+            </span>
           </button>
           <span className="text-sm font-semibold text-gray-600">Menú</span>
         </div>

@@ -27,6 +27,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={`${bodyFont.variable} ${headingFont.variable}`}>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300,0,0"
+        />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300,0,0"
+        />
+      </head>
       <body>
         <AppearanceSync />
         {children}

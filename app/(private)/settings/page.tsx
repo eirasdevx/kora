@@ -12,41 +12,17 @@ const cards = [
     description:
       "Actualiza tu información personal, credenciales y preferencias de cuenta.",
     href: "/settings/profile",
-    action: "Ver mi perfil",
     tone: "bg-blue-50 text-blue-600",
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <circle cx="12" cy="7" r="4" />
-        <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
-      </svg>
-    ),
+    icon: <span className="material-symbols-outlined text-[20px]">person</span>,
   },
   {
     title: "Perfil de Asociación",
     description:
       "Información legal, NIF/CIF, datos de contacto, dirección y logotipos oficiales de la entidad.",
     href: "/settings/association",
-    action: "Gestionar perfil",
     tone: "bg-indigo-50 text-indigo-600",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M4 4h16v16H4z" />
-        <path d="M8 8h8" />
-        <path d="M8 12h8" />
-        <path d="M8 16h5" />
-      </svg>
+      <span className="material-symbols-outlined text-[20px]">apartment</span>
     ),
   },
   {
@@ -54,39 +30,19 @@ const cards = [
     description:
       "Administra los accesos del equipo, define roles, permisos y monitoriza la actividad.",
     href: "/settings/users",
-    action: "Configurar accesos",
     tone: "bg-purple-50 text-purple-600",
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M16 11a4 4 0 1 0-8 0" />
-        <path d="M6 21c1.7-3.4 9.7-3.4 12 0" />
-      </svg>
-    ),
+    icon: <span className="material-symbols-outlined text-[20px]">group</span>,
   },
   {
     title: "Notificaciones",
     description:
       "Personaliza las alertas por email, notificaciones push y avisos del sistema.",
     href: "/settings/notifications",
-    action: "Preferencias",
     tone: "bg-amber-50 text-amber-600",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8" />
-        <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-      </svg>
+      <span className="material-symbols-outlined text-[20px]">
+        notifications
+      </span>
     ),
   },
   {
@@ -94,18 +50,9 @@ const cards = [
     description:
       "Ajustes de 2FA, políticas de contraseñas, sesiones activas y logs de seguridad.",
     href: "/settings/security",
-    action: "Seguridad avanzada",
     tone: "bg-rose-50 text-rose-600",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M12 3l8 4v5c0 5-3.6 8.4-8 9-4.4-.6-8-4-8-9V7l8-4z" />
-      </svg>
+      <span className="material-symbols-outlined text-[20px]">security</span>
     ),
   },
   {
@@ -113,20 +60,9 @@ const cards = [
     description:
       "Personaliza los colores corporativos, temas claros/oscuros y la tipografía.",
     href: "/settings/appearance",
-    action: "Personalizar",
     tone: "bg-emerald-50 text-emerald-600",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M12 3a9 9 0 1 0 9 9" />
-        <path d="M12 7v10" />
-        <path d="M7 12h10" />
-      </svg>
+      <span className="material-symbols-outlined text-[20px]">palette</span>
     ),
   },
   {
@@ -134,22 +70,11 @@ const cards = [
     description:
       "Exporta e importa los datos de tu asociación en formato JSON o CSV.",
     href: "/settings/migration",
-    action: "Gestionar datos",
     tone: "bg-sky-50 text-sky-600",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M12 3v10" />
-        <path d="M7 8l5 5 5-5" />
-        <path d="M5 21h14" />
-      </svg>
+      <span className="material-symbols-outlined text-[20px]">
+        cloud_download
+      </span>
     ),
   },
 ];
@@ -193,9 +118,7 @@ export default function SettingsPage() {
     const term = search.trim().toLowerCase();
     if (!term) return visibleCards;
     return visibleCards.filter((card) => {
-      const haystack = `${card.title} ${card.description} ${card.action}`
-        .toLowerCase()
-        .trim();
+      const haystack = `${card.title} ${card.description}`.toLowerCase().trim();
       return haystack.includes(term);
     });
   }, [search, visibleCards]);
@@ -207,15 +130,9 @@ export default function SettingsPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M12 3l8 4v5c0 5-3.6 8.4-8 9-4.4-.6-8-4-8-9V7l8-4z" />
-                </svg>
+                <span className="material-symbols-outlined text-[20px]">
+                  settings
+                </span>
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
@@ -226,17 +143,10 @@ export default function SettingsPage() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="M21 21l-4.3-4.3" />
-                  </svg>
+                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                  <span className="material-symbols-outlined text-[16px] leading-none">
+                    search
+                  </span>
                 </span>
                 <input
                   value={search}
@@ -289,13 +199,14 @@ export default function SettingsPage() {
       ) : (
         <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredCards.map((card) => (
-            <div
+            <Link
               key={card.title}
-              className="flex h-full flex-col justify-between rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+              href={card.href}
+              className="group flex h-full flex-col justify-between rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
             >
               <div>
                 <div
-                  className={`flex h-12 w-12 items-center justify-center rounded-2xl ${card.tone}`}
+                  className={`flex h-12 w-12 items-center justify-center rounded-2xl transition ${card.tone} group-hover:scale-[1.03]`}
                 >
                   {card.icon}
                 </div>
@@ -306,14 +217,7 @@ export default function SettingsPage() {
                   {card.description}
                 </p>
               </div>
-              <Link
-                href={card.href}
-                className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary"
-              >
-                {card.action}
-                <span>?</span>
-              </Link>
-            </div>
+            </Link>
           ))}
         </section>
       )}

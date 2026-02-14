@@ -331,7 +331,7 @@ export default function EventForm({
                   Precio de entrada
                 </label>
                 <div className="relative mt-2">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
                     €
                   </span>
                   <input

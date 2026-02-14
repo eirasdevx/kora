@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import { db } from "@/core/storage/kora.db";
@@ -31,8 +31,6 @@ type DataScope =
   | "transactions"
   | "socialPosts";
 
-type DataFormat = "json" | "csv";
-
 type ImportMode = "merge" | "replace";
 
 type KoraExportPayloadV1 = {
@@ -61,85 +59,6 @@ const SOCIAL_POST_STATUSES: SocialPostStatus[] = [
   "scheduled",
   "published",
 ];
-
-const ASSOCIATION_PROFILE_COLUMNS = [
-  "name",
-  "taxId",
-  "contactEmail",
-  "phone",
-  "location",
-  "address",
-  "representatives",
-] as const;
-
-const CONTACTS_COLUMNS = [
-  "id",
-  "kind",
-  "firstName",
-  "lastName",
-  "representativeFirstName",
-  "representativeLastName",
-  "dni",
-  "fullName",
-  "email",
-  "phone",
-  "secondaryPhone",
-  "website",
-  "socialLinks",
-  "postalCode",
-  "address",
-  "city",
-  "region",
-  "photoUrl",
-  "types",
-  "tags",
-  "notes",
-  "createdAt",
-] as const;
-
-const EVENTS_COLUMNS = [
-  "id",
-  "title",
-  "description",
-  "category",
-  "status",
-  "startDate",
-  "endDate",
-  "location",
-  "locationType",
-  "ticketPrice",
-  "capacity",
-  "registrationDeadline",
-  "waitlistEnabled",
-  "participantIds",
-  "organizerIds",
-  "createdAt",
-] as const;
-
-const TRANSACTIONS_COLUMNS = [
-  "id",
-  "type",
-  "amount",
-  "date",
-  "concept",
-  "description",
-  "paymentMethod",
-  "category",
-  "status",
-  "eventId",
-  "contactId",
-  "createdAt",
-] as const;
-
-const SOCIAL_POSTS_COLUMNS = [
-  "id",
-  "content",
-  "channels",
-  "status",
-  "mediaUrls",
-  "scheduledAt",
-  "createdAt",
-] as const;
 
 const DATA_SCOPE_OPTIONS: Array<{
   value: DataScope;
@@ -175,23 +94,6 @@ const DATA_SCOPE_OPTIONS: Array<{
     value: "socialPosts",
     label: "Redes sociales",
     description: "Publicaciones y campañas.",
-  },
-];
-
-const FORMAT_OPTIONS: Array<{
-  value: DataFormat;
-  label: string;
-  description: string;
-}> = [
-  {
-    value: "csv",
-    label: "Excel (CSV)",
-    description: "Compatible con hojas de cálculo.",
-  },
-  {
-    value: "json",
-    label: "JSON",
-    description: "Datos en bruto.",
   },
 ];
 
@@ -304,24 +206,6 @@ function normalizeRepresentatives(value: unknown): AssociationRepresentative[] {
   }
   const entry = normalizeRepresentativeEntry(value);
   return entry ? [entry] : [];
-}
-
-function serializeRepresentativesForCsv(
-  representatives: AssociationRepresentative[] | undefined
-) {
-  if (!representatives || representatives.length === 0) return "";
-  return representatives
-    .map((rep) => {
-      const role = safeString(rep.role).trim();
-      const name = safeString(rep.name).trim();
-      const email = safeString(rep.email).trim();
-      const phone = safeString(rep.phone).trim();
-      const fields = [role, name, email, phone];
-      const hasData = fields.some((value) => value.length > 0);
-      return hasData ? fields.join("|") : "";
-    })
-    .filter((entry) => entry.length > 0)
-    .join(";");
 }
 
 function normalizeAssociationProfile(value: unknown): AssociationProfile | null {
@@ -580,152 +464,6 @@ function normalizeSocialPost(value: unknown): SocialPost | null {
   };
 }
 
-function escapeCsv(value: string) {
-  const mustQuote = /[",\r\n]/.test(value);
-  const escaped = value.replace(/"/g, '""');
-  return mustQuote ? `"${escaped}"` : escaped;
-}
-
-function stringifyCell(value: unknown): string {
-  if (Array.isArray(value)) return value.map((v) => safeString(v)).join(";");
-  return safeString(value);
-}
-
-function toCsv<T extends Record<string, unknown>>(
-  columns: readonly string[],
-  rows: T[]
-) {
-  const header = columns.join(",");
-  const lines = rows.map((row) =>
-    columns.map((col) => escapeCsv(stringifyCell(row[col]))).join(",")
-  );
-  return [header, ...lines].join("\r\n");
-}
-
-function associationProfileToCsvRows(association: AssociationProfile | null) {
-  if (!association) return [];
-  return [
-    {
-      ...association,
-      representatives: serializeRepresentativesForCsv(
-        association.representatives
-      ),
-    },
-  ] as Record<string, unknown>[];
-}
-
-function detectDelimiter(text: string) {
-  const firstLine = text.split(/\r?\n/).find((l) => l.trim().length) ?? "";
-
-  let commas = 0;
-  let semicolons = 0;
-  let inQuotes = false;
-
-  for (let i = 0; i < firstLine.length; i += 1) {
-    const char = firstLine[i];
-    if (char === '"') {
-      const next = firstLine[i + 1];
-      if (inQuotes && next === '"') {
-        i += 1;
-        continue;
-      }
-      inQuotes = !inQuotes;
-      continue;
-    }
-    if (!inQuotes && char === ",") commas += 1;
-    if (!inQuotes && char === ";") semicolons += 1;
-  }
-
-  return semicolons > commas ? ";" : ",";
-}
-
-function parseCsvRows(text: string, delimiter: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let inQuotes = false;
-  const content = text.replace(/^\uFEFF/, "");
-
-  const pushField = () => {
-    row.push(field);
-    field = "";
-  };
-
-  const pushRow = () => {
-    if (row.length === 1 && row[0].trim() === "") {
-      row = [];
-      return;
-    }
-    rows.push(row);
-    row = [];
-  };
-
-  for (let i = 0; i < content.length; i += 1) {
-    const char = content[i];
-    const next = content[i + 1];
-
-    if (char === '"') {
-      if (inQuotes && next === '"') {
-        field += '"';
-        i += 1;
-        continue;
-      }
-      inQuotes = !inQuotes;
-      continue;
-    }
-
-    if (!inQuotes && char === delimiter) {
-      pushField();
-      continue;
-    }
-
-    if (!inQuotes && (char === "\n" || char === "\r")) {
-      pushField();
-      pushRow();
-      if (char === "\r" && next === "\n") i += 1;
-      continue;
-    }
-
-    field += char;
-  }
-
-  pushField();
-  pushRow();
-
-  return rows;
-}
-
-function parseCsvObjects(text: string) {
-  const delimiter = detectDelimiter(text);
-  const rows = parseCsvRows(text, delimiter).filter((r) =>
-    r.some((cell) => cell.trim().length > 0)
-  );
-
-  const headers = (rows[0] ?? []).map((h) => h.trim());
-  const items = rows.slice(1).map((cells) => {
-    const obj: Record<string, string> = {};
-    headers.forEach((key, idx) => {
-      obj[key] = cells[idx] ?? "";
-    });
-    return obj;
-  });
-  return { headers, items };
-}
-
-function inferCsvScope(headers: string[]): DataScope | null {
-  const keys = headers.map((h) => h.trim());
-  const has = (k: string) => keys.includes(k);
-
-  if (has("name") && (has("taxId") || has("contactEmail") || has("phone"))) {
-    return "associationProfile";
-  }
-  if (has("dni") && has("types")) return "contacts";
-  if (has("startDate") && has("participantIds")) return "events";
-  if (has("amount") && has("concept") && has("category")) return "transactions";
-  if (has("channels") && has("status") && has("content")) return "socialPosts";
-  return null;
-}
-
 function downloadTextFile(filename: string, text: string, mime: string) {
   const blob = new Blob([text], { type: mime });
   const url = URL.createObjectURL(blob);
@@ -745,26 +483,20 @@ export default function MigrationSettingsPage() {
   const setAssociation = useSessionStore((s) => s.setAssociation);
 
   const [exportScope, setExportScope] = useState<DataScope>("all");
-  const [exportFormat, setExportFormat] = useState<DataFormat>("json");
 
   const [importScope, setImportScope] = useState<DataScope>("all");
-  const [importFormat, setImportFormat] = useState<DataFormat>("json");
   const [importMode, setImportMode] = useState<ImportMode>("merge");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
 
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<"import" | "export" | null>(null);
 
-  const importAccept = useMemo(() => {
-    return importFormat === "json" ? "application/json,.json" : ".csv,text/csv";
-  }, [importFormat]);
-
-  const importMultiple = useMemo(() => {
-    return importFormat === "csv" && importScope === "all";
-  }, [importFormat, importScope]);
+  const importAccept = "application/json,.json";
 
   const isImportBusy = busy && lastAction === "import";
   const isExportBusy = busy && lastAction === "export";
@@ -772,6 +504,54 @@ export default function MigrationSettingsPage() {
   const exportMessage = lastAction === "export" ? message : null;
   const importError = lastAction === "import" ? error : null;
   const exportError = lastAction === "export" ? error : null;
+
+  const isJsonFile = (file: File) => {
+    const name = file.name.toLowerCase();
+    return file.type === "application/json" || name.endsWith(".json");
+  };
+
+  const handleFilesSelected = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    if (fileList.length > 1) {
+      setLastAction("import");
+      setMessage(null);
+      setError("Solo se permite un archivo JSON.");
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    const file = fileList[0];
+    if (!file) return;
+
+    if (!isJsonFile(file)) {
+      setLastAction("import");
+      setMessage(null);
+      setError("Solo se permiten archivos JSON.");
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setSelectedFile(file);
+    setError(null);
+    if (lastAction === "import") setMessage(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragActive(false);
+    handleFilesSelected(event.dataTransfer.files);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (!isDragActive) setIsDragActive(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragActive(false);
+  };
 
   const exportAllJson = async () => {
     const [contacts, events, transactions, socialPosts] = await Promise.all([
@@ -857,107 +637,6 @@ export default function MigrationSettingsPage() {
     );
   };
 
-  const exportAllCsv = async () => {
-    const [contacts, events, transactions, socialPosts] = await Promise.all([
-      db.contacts.toArray(),
-      db.events.toArray(),
-      db.transactions.toArray(),
-      db.socialPosts.toArray(),
-    ]);
-
-    downloadTextFile(
-      "kora-associationProfile.csv",
-      toCsv(
-        ASSOCIATION_PROFILE_COLUMNS,
-        associationProfileToCsvRows(association)
-      ),
-      "text/csv"
-    );
-    downloadTextFile(
-      "kora-contacts.csv",
-      toCsv(CONTACTS_COLUMNS, contacts as unknown as Record<string, unknown>[]),
-      "text/csv"
-    );
-    downloadTextFile(
-      "kora-events.csv",
-      toCsv(EVENTS_COLUMNS, events as unknown as Record<string, unknown>[]),
-      "text/csv"
-    );
-    downloadTextFile(
-      "kora-transactions.csv",
-      toCsv(
-        TRANSACTIONS_COLUMNS,
-        transactions as unknown as Record<string, unknown>[]
-      ),
-      "text/csv"
-    );
-    downloadTextFile(
-      "kora-socialPosts.csv",
-      toCsv(
-        SOCIAL_POSTS_COLUMNS,
-        socialPosts as unknown as Record<string, unknown>[]
-      ),
-      "text/csv"
-    );
-  };
-
-  const exportScopedCsv = async (scope: Exclude<DataScope, "all">) => {
-    if (scope === "associationProfile") {
-      downloadTextFile(
-        "kora-associationProfile.csv",
-        toCsv(
-          ASSOCIATION_PROFILE_COLUMNS,
-          associationProfileToCsvRows(association)
-        ),
-        "text/csv"
-      );
-      return;
-    }
-
-    if (scope === "contacts") {
-      const contacts = await db.contacts.toArray();
-      downloadTextFile(
-        "kora-contacts.csv",
-        toCsv(CONTACTS_COLUMNS, contacts as unknown as Record<string, unknown>[]),
-        "text/csv"
-      );
-      return;
-    }
-
-    if (scope === "events") {
-      const events = await db.events.toArray();
-      downloadTextFile(
-        "kora-events.csv",
-        toCsv(EVENTS_COLUMNS, events as unknown as Record<string, unknown>[]),
-        "text/csv"
-      );
-      return;
-    }
-
-    if (scope === "transactions") {
-      const transactions = await db.transactions.toArray();
-      downloadTextFile(
-        "kora-transactions.csv",
-        toCsv(
-          TRANSACTIONS_COLUMNS,
-          transactions as unknown as Record<string, unknown>[]
-        ),
-        "text/csv"
-      );
-      return;
-    }
-
-    const socialPosts = await db.socialPosts.toArray();
-    downloadTextFile(
-      "kora-socialPosts.csv",
-      toCsv(
-        SOCIAL_POSTS_COLUMNS,
-        socialPosts as unknown as Record<string, unknown>[]
-      ),
-      "text/csv"
-    );
-  };
-
   const handleExport = async () => {
     setBusy(true);
     setMessage(null);
@@ -965,22 +644,12 @@ export default function MigrationSettingsPage() {
     setLastAction("export");
 
     try {
-      if (exportFormat === "json") {
-        if (exportScope === "all") {
-          await exportAllJson();
-        } else {
-          await exportScopedJson(exportScope);
-        }
-        setMessage("Exportación JSON completada.");
-        return;
-      }
-
       if (exportScope === "all") {
-        await exportAllCsv();
+        await exportAllJson();
       } else {
-        await exportScopedCsv(exportScope);
+        await exportScopedJson(exportScope);
       }
-      setMessage("Exportación CSV completada.");
+      setMessage("Exportacion JSON completada.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al exportar.");
     } finally {
@@ -1127,49 +796,6 @@ export default function MigrationSettingsPage() {
     return applyImport({ socialPosts });
   };
 
-  const importCsvFiles = async (files: FileList) => {
-    const payload: Partial<KoraExportPayloadV1> = {};
-
-    for (const file of Array.from(files)) {
-      const text = await file.text();
-      const { headers, items } = parseCsvObjects(text);
-      const inferred = inferCsvScope(headers);
-      if (!inferred) continue;
-      if (importScope !== "all" && inferred !== importScope) continue;
-
-      if (inferred === "associationProfile") {
-        const first = items[0] ?? null;
-        payload.associationProfile = first
-          ? (normalizeAssociationProfile(first) as AssociationProfile | null)
-          : null;
-        continue;
-      }
-
-      if (inferred === "contacts") {
-        payload.contacts = items.map(normalizeContact).filter(Boolean) as Contact[];
-        continue;
-      }
-
-      if (inferred === "events") {
-        payload.events = items.map(normalizeEvent).filter(Boolean) as Event[];
-        continue;
-      }
-
-      if (inferred === "transactions") {
-        payload.transactions = items
-          .map(normalizeTransaction)
-          .filter(Boolean) as Transaction[];
-        continue;
-      }
-
-      payload.socialPosts = items
-        .map(normalizeSocialPost)
-        .filter(Boolean) as SocialPost[];
-    }
-
-    return applyImport(payload);
-  };
-
   const handleImport = async () => {
     setBusy(true);
     setMessage(null);
@@ -1178,22 +804,24 @@ export default function MigrationSettingsPage() {
 
     try {
       const input = fileInputRef.current;
-      const files = input?.files;
-      if (!files || files.length === 0) {
-        setError("Selecciona un archivo para importar.");
+      const file = selectedFile ?? input?.files?.[0];
+      if (!file) {
+        setError("Selecciona un archivo JSON para importar.");
+        return;
+      }
+      if (!isJsonFile(file)) {
+        setError("Solo se permiten archivos JSON.");
         return;
       }
 
-      const result =
-        importFormat === "json"
-          ? await importJsonText(await files[0].text())
-          : await importCsvFiles(files);
+      const result = await importJsonText(await file.text());
 
       setMessage(
-        `Importación completada. Perfil: ${result.profile}, Contactos: ${result.contacts}, Eventos: ${result.events}, Contabilidad: ${result.transactions}, Redes: ${result.socialPosts}.`
+        `Importacion completada. Perfil: ${result.profile}, Contactos: ${result.contacts}, Eventos: ${result.events}, Contabilidad: ${result.transactions}, Redes: ${result.socialPosts}.`
       );
 
       if (input) input.value = "";
+      setSelectedFile(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al importar.");
     } finally {
@@ -1211,19 +839,9 @@ export default function MigrationSettingsPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <ellipse cx="12" cy="5" rx="8" ry="3" />
-                <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
-                <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
-              </svg>
+              <span className="material-symbols-outlined text-[20px]">
+                storage
+              </span>
             </div>
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
@@ -1243,7 +861,7 @@ export default function MigrationSettingsPage() {
             onClick={() => router.push("/settings")}
             className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
           >
-            ← Volver a configuración
+            ← Volver a configuracion
           </button>
         </div>
       </PageTopbar>
@@ -1252,73 +870,57 @@ export default function MigrationSettingsPage() {
         <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 3v12" />
-                <path d="m7 8 5-5 5 5" />
-                <path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
-              </svg>
+              <span className="material-symbols-outlined text-[20px]">
+                upload
+              </span>
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Importar datos</h2>
               <p className="mt-1 text-sm text-gray-500">
-                Sube tus archivos para actualizar la base de datos de Kora.
+                Sube tu archivo JSON para actualizar la base de datos de Kora.
               </p>
             </div>
           </div>
 
-          <div className="mt-6 rounded-3xl border-2 border-dashed border-gray-200 bg-gray-50/60 p-8 text-center">
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            className={`mt-6 rounded-3xl border-2 border-dashed p-8 text-center transition ${
+              isDragActive
+                ? "border-primary bg-primary/10"
+                : "border-gray-200 bg-gray-50/60"
+            }`}
+          >
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M16 16l-4-4-4 4" />
-                <path d="M12 12v9" />
-                <path d="M20 16a4 4 0 0 0-3-7.7A5 5 0 0 0 4 10a4 4 0 0 0 0 8h16" />
-              </svg>
+              <span className="material-symbols-outlined text-[20px]">
+                cloud_upload
+              </span>
             </div>
             <p className="mt-4 text-sm font-semibold text-gray-900">
-              Arrastra y suelta tus archivos aquí
+              Arrastra y suelta tu archivo aqui
             </p>
-            <p className="mt-2 text-xs text-gray-400">
-              Formato seleccionado: {importFormat === "csv" ? "CSV" : "JSON"}.
-            </p>
+            <p className="mt-2 text-xs text-gray-400">Formato: JSON.</p>
+            {selectedFile ? (
+              <p className="mt-2 text-xs text-gray-500">
+                Archivo seleccionado: {selectedFile.name}
+              </p>
+            ) : null}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="mt-4 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 shadow-sm hover:bg-gray-50"
             >
-              Explorar archivos
+              Explorar archivo
             </button>
             <input
               ref={fileInputRef}
               type="file"
               accept={importAccept}
-              multiple={importMultiple}
               className="sr-only"
+              onChange={(event) => handleFilesSelected(event.target.files)}
             />
           </div>
-          {importMultiple ? (
-            <p className="mt-2 text-xs text-gray-400">
-              Importación CSV completa: selecciona varios CSV (perfil, contactos,
-              eventos, transacciones y redes). El sistema los detecta por sus
-              columnas.
-            </p>
-          ) : null}
-
           <div className="mt-6">
             <p className="text-sm font-semibold text-gray-900">
               Seleccionar módulos de destino
@@ -1344,82 +946,9 @@ export default function MigrationSettingsPage() {
                           : "border-gray-300 bg-white text-transparent"
                       }`}
                     >
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="h-3 w-3"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M5 12l4 4 10-10" />
-                      </svg>
-                    </span>
-                    <span>
-                      <span className="block text-sm font-semibold text-gray-900">
-                        {option.label}
+                      <span className="material-symbols-outlined text-[14px]">
+                        check
                       </span>
-                      <span className="block text-xs text-gray-500">
-                        {option.description}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <p className="text-sm font-semibold text-gray-900">Formato de entrada</p>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {FORMAT_OPTIONS.map((option) => {
-                const isActive = importFormat === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setImportFormat(option.value)}
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
-                      isActive
-                        ? "border-primary bg-primary/5"
-                        : "border-gray-200 bg-white hover:bg-gray-50"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                        isActive
-                          ? "bg-primary/10 text-primary"
-                          : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {option.value === "csv" ? (
-                        <svg
-                          viewBox="0 0 24 24"
-                          className="h-5 w-5"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <rect x="3" y="3" width="18" height="18" rx="2" />
-                          <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
-                        </svg>
-                      ) : (
-                        <svg
-                          viewBox="0 0 24 24"
-                          className="h-5 w-5"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M8 7l-4 5 4 5" />
-                          <path d="M16 7l4 5-4 5" />
-                        </svg>
-                      )}
                     </span>
                     <span>
                       <span className="block text-sm font-semibold text-gray-900">
@@ -1488,24 +1017,14 @@ export default function MigrationSettingsPage() {
         <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 3v12" />
-                <path d="m7 10 5 5 5-5" />
-                <path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
-              </svg>
+              <span className="material-symbols-outlined text-[20px]">
+                download
+              </span>
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Exportar datos</h2>
               <p className="mt-1 text-sm text-gray-500">
-                Genera un respaldo o descarga tu información en diferentes formatos.
+                Genera un respaldo o descarga tu informacion en JSON.
               </p>
             </div>
           </div>
@@ -1535,17 +1054,9 @@ export default function MigrationSettingsPage() {
                           : "border-gray-300 bg-white text-transparent"
                       }`}
                     >
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="h-3 w-3"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M5 12l4 4 10-10" />
-                      </svg>
+                      <span className="material-symbols-outlined text-[14px]">
+                        check
+                      </span>
                     </span>
                     <span>
                       <span className="block text-sm font-semibold text-gray-900">
@@ -1559,75 +1070,6 @@ export default function MigrationSettingsPage() {
                 );
               })}
             </div>
-          </div>
-
-          <div className="mt-6">
-            <p className="text-sm font-semibold text-gray-900">Formato de salida</p>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {FORMAT_OPTIONS.map((option) => {
-                const isActive = exportFormat === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setExportFormat(option.value)}
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
-                      isActive
-                        ? "border-primary bg-primary/5"
-                        : "border-gray-200 bg-white hover:bg-gray-50"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                        isActive
-                          ? "bg-primary/10 text-primary"
-                          : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {option.value === "csv" ? (
-                        <svg
-                          viewBox="0 0 24 24"
-                          className="h-5 w-5"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <rect x="3" y="3" width="18" height="18" rx="2" />
-                          <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
-                        </svg>
-                      ) : (
-                        <svg
-                          viewBox="0 0 24 24"
-                          className="h-5 w-5"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M8 7l-4 5 4 5" />
-                          <path d="M16 7l4 5-4 5" />
-                        </svg>
-                      )}
-                    </span>
-                    <span>
-                      <span className="block text-sm font-semibold text-gray-900">
-                        {option.label}
-                      </span>
-                      <span className="block text-xs text-gray-500">
-                        {option.description}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-3 text-xs text-gray-400">
-              En CSV, las listas se separan con <span className="font-semibold">;</span>{" "}
-              (por ejemplo: <span className="font-semibold">member;provider</span>).
-            </p>
           </div>
 
           <button

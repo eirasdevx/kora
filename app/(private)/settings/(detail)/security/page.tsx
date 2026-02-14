@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 
 const activity = [
@@ -16,17 +19,27 @@ const activity = [
 ];
 
 export default function SecuritySettingsPage() {
+  const router = useRouter();
   return (
     <div className="space-y-8">
       <PageTopbar>
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-            Configuración &nbsp;›&nbsp; Seguridad
-          </p>
-          <h1 className="text-2xl font-semibold text-gray-900">Seguridad</h1>
-          <p className="text-sm text-gray-500">
-            Gestiona el acceso a tu cuenta y protege la integridad de los datos.
-          </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+              Configuración &nbsp;›&nbsp; Seguridad
+            </p>
+            <h1 className="text-2xl font-semibold text-gray-900">Seguridad</h1>
+            <p className="text-sm text-gray-500">
+              Gestiona el acceso a tu cuenta y protege la integridad de los datos.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/settings")}
+            className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
+          >
+            ← Volver a configuracion
+          </button>
         </div>
       </PageTopbar>
 

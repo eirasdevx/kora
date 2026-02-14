@@ -264,17 +264,9 @@ export default function TransactionForm({
               className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300"
               aria-label="Volver"
             >
-              <svg
-                viewBox="0 0 24 24"
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
+              <span className="material-symbols-outlined text-[20px]">
+                chevron_left
+              </span>
             </button>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
@@ -330,18 +322,9 @@ export default function TransactionForm({
                         : "bg-emerald-50 text-emerald-500"
                     }`}
                   >
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M12 4v12" />
-                      <path d="M8 12l4 4 4-4" />
-                    </svg>
+                    <span className="material-symbols-outlined text-[16px]">
+                      south
+                    </span>
                   </span>
                   Ingreso
                 </button>
@@ -361,18 +344,9 @@ export default function TransactionForm({
                         : "bg-rose-50 text-rose-500"
                     }`}
                   >
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M12 20V8" />
-                      <path d="M8 12l4-4 4 4" />
-                    </svg>
+                    <span className="material-symbols-outlined text-[16px]">
+                      north
+                    </span>
                   </span>
                   Gasto
                 </button>
@@ -408,18 +382,9 @@ export default function TransactionForm({
                         required
                       />
                       <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                        <svg
-                          viewBox="0 0 24 24"
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <rect x="3" y="4" width="18" height="17" rx="2" />
-                          <path d="M16 2v4M8 2v4M3 10h18" />
-                        </svg>
+                        <span className="material-symbols-outlined text-[16px]">
+                          calendar_month
+                        </span>
                       </span>
                     </div>
                   </div>
@@ -439,17 +404,9 @@ export default function TransactionForm({
                         <option value="pending">Pendiente</option>
                       </select>
                       <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                        <svg
-                          viewBox="0 0 24 24"
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M6 9l6 6 6-6" />
-                        </svg>
+                        <span className="material-symbols-outlined text-[16px]">
+                          expand_more
+                        </span>
                       </span>
                     </div>
                   </div>
@@ -494,27 +451,9 @@ export default function TransactionForm({
                             isExpense ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-600"
                           }`}
                         >
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-3.5 w-3.5"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            {isExpense ? (
-                              <>
-                                <path d="M12 4v12" />
-                                <path d="M8 12l4 4 4-4" />
-                              </>
-                            ) : (
-                              <>
-                                <path d="M12 20V8" />
-                                <path d="M8 12l4-4 4 4" />
-                              </>
-                            )}
-                          </svg>
+                          <span className="material-symbols-outlined text-[14px]">
+                            {isExpense ? "south" : "north"}
+                          </span>
                         </span>
                         {impactLabel}
                       </div>
@@ -540,17 +479,9 @@ export default function TransactionForm({
                       ))}
                     </select>
                     <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
+                      <span className="material-symbols-outlined text-[16px]">
+                        expand_more
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -572,19 +503,9 @@ export default function TransactionForm({
                         }`}
                       >
                         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-5 w-5"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M4 7h16" />
-                            <path d="M4 12h16" />
-                            <path d="M4 17h16" />
-                          </svg>
+                          <span className="material-symbols-outlined text-[20px]">
+                            format_list_bulleted
+                          </span>
                         </span>
                         {TransactionCategoryLabels[cat]}
                       </button>
@@ -612,18 +533,9 @@ export default function TransactionForm({
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-600">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M3 3h18v18H3z" />
-                    <path d="M7 8h10M7 12h7M7 16h4" />
-                  </svg>
+                  <span className="material-symbols-outlined text-[16px]">
+                    summarize
+                  </span>
                 </span>
                 Resumen rapido
               </div>
@@ -680,20 +592,9 @@ export default function TransactionForm({
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M10 13a5 5 0 0 0 7.7 4.2l2.1-2.1" />
-                    <path d="M14 11a5 5 0 0 0-7.7-4.2L4.2 8.9" />
-                    <path d="M8 16l-2 2" />
-                    <path d="M16 8l2-2" />
-                  </svg>
+                  <span className="material-symbols-outlined text-[16px]">
+                    link
+                  </span>
                 </span>
                 Vinculación
               </div>
@@ -742,17 +643,9 @@ export default function TransactionForm({
                       ))}
                     </select>
                     <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
+                      <span className="material-symbols-outlined text-[16px]">
+                        expand_more
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -762,18 +655,9 @@ export default function TransactionForm({
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <path d="M14 2v6h6" />
-                  </svg>
+                  <span className="material-symbols-outlined text-[16px]">
+                    description
+                  </span>
                 </span>
                 Documentación
               </div>
@@ -791,19 +675,9 @@ export default function TransactionForm({
                   onChange={(e) => handleFilesSelected(e.target.files)}
                 />
                 <span className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 16V4" />
-                    <path d="M8 8l4-4 4 4" />
-                    <path d="M4 16v4h16v-4" />
-                  </svg>
+                  <span className="material-symbols-outlined text-[20px]">
+                    cloud_upload
+                  </span>
                 </span>
                 <span className="mt-3 font-semibold text-slate-700">
                   Arrastra comprobantes
@@ -825,18 +699,9 @@ export default function TransactionForm({
                     >
                       <div className="flex items-center gap-2">
                         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                            <path d="M14 2v6h6" />
-                          </svg>
+                          <span className="material-symbols-outlined text-[16px]">
+                            description
+                          </span>
                         </span>
                         <div>
                           <p className="text-xs font-semibold text-slate-700">
@@ -932,17 +797,9 @@ export default function TransactionForm({
                 <option value="collaborator">Colaboradores</option>
               </select>
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
+                <span className="material-symbols-outlined text-[16px]">
+                  expand_more
+                </span>
               </span>
             </div>
           </div>
