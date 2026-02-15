@@ -137,13 +137,22 @@ h6 {
 }
 
 .kora-logo {
-  font-size: 48px;
-  color: #ffffff;
-  background: #5a78ff;
-  padding: 16px;
-  border-radius: 12px;
+  color: rgb(var(--color-primary));
   display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
+}
+
+.kora-logo--inverse {
+  color: #ffffff;
+}
+
+.kora-logo svg {
+  width: 32px;
+  height: 32px;
+}
+
+:root[data-theme="dark"] .kora-logo {
+  color: #ffffff;
 }

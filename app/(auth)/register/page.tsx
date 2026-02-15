@@ -19,12 +19,53 @@ const createCompanyCode = () => {
   return `KORA-${segment(4)}-${segment(4)}`;
 };
 
+const FEATURE_ITEMS = [
+  {
+    title: "Contabilidad",
+    description: "Ingresos, gastos y tesorería.",
+    icon: "payments",
+  },
+  {
+    title: "Eventos",
+    description: "Agenda, inscripciones y control.",
+    icon: "event",
+  },
+  {
+    title: "Contactos",
+    description: "Miembros, proveedores y colaboradores.",
+    icon: "groups",
+  },
+  {
+    title: "Documentos",
+    description: "Actas, archivos y plantillas.",
+    icon: "description",
+  },
+  {
+    title: "Redes sociales",
+    description: "Publicaciones y campañas.",
+    icon: "share",
+  },
+  {
+    title: "Panel de control",
+    description: "Indicadores clave en tiempo real.",
+    icon: "dashboard",
+  },
+] as const;
+
+const STEP_LABELS = {
+  admin: "Administrador",
+  association: "Asociación",
+  success: "Código",
+} as const;
+
 export default function RegisterPage() {
   const registerAdmin = useSessionStore((s) => s.registerAdmin);
   const [step, setStep] = useState<"admin" | "association" | "success">("admin");
   const [pendingAdmin, setPendingAdmin] = useState<AdminAccount | null>(null);
   const [companyCode, setCompanyCode] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRepeat, setShowRepeat] = useState(false);
 
   const handleAdminSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -35,9 +76,22 @@ export default function RegisterPage() {
     const dni = String(data.get("dni") ?? "").trim().toUpperCase();
     const email = String(data.get("email") ?? "").trim().toLowerCase();
     const password = String(data.get("password") ?? "").trim();
+    const passwordRepeat = String(data.get("passwordRepeat") ?? "").trim();
 
-    if (!firstName || !lastName || !dni || !email || !password) {
+    if (
+      !firstName ||
+      !lastName ||
+      !dni ||
+      !email ||
+      !password ||
+      !passwordRepeat
+    ) {
       setFormError("Completa todos los datos del administrador para continuar.");
+      return;
+    }
+
+    if (password !== passwordRepeat) {
+      setFormError("Las contraseñas no coinciden.");
       return;
     }
 
@@ -106,8 +160,13 @@ export default function RegisterPage() {
       <header className="border-b border-slate-100 bg-white">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <span className="material-symbols-rounded kora-logo" aria-hidden="true">
-              crop_7_5
+            <span className="kora-logo" aria-hidden="true">
+              <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+                <path
+                  d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z"
+                  fill="currentColor"
+                />
+              </svg>
             </span>
             <span className="text-lg font-semibold text-slate-900">Kora</span>
           </div>
@@ -142,37 +201,38 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
-                  <span className="text-sm font-semibold">C</span>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Contabilidad Simplificada</h3>
-                  <p className="text-sm text-slate-600">
-                    Automatiza cuotas y reportes financieros sin complicaciones.
-                  </p>
-                </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                Todo en un solo lugar
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {FEATURE_ITEMS.map((item) => (
+                  <div
+                    key={item.title}
+                    className="rounded-2xl border border-white/60 bg-white/80 p-4 shadow-sm"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+                        <span className="material-symbols-outlined text-[18px]">
+                          {item.icon}
+                        </span>
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-slate-600">
+                          {item.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
-                  <span className="text-sm font-semibold">E</span>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Eventos y Redes</h3>
-                  <p className="text-sm text-slate-600">
-                    Organiza actividades y mantén conectada a tu comunidad.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-gradient-to-br from-blue-200 via-blue-100 to-slate-100 p-8">
-              <div className="h-32 w-32 rounded-2xl bg-white/80 shadow-lg" />
             </div>
           </section>
 
           <section className="space-y-6">
-            <div className="space-y-2">
+            <div className="space-y-3">
               <h2 className="text-2xl font-semibold text-slate-900">
                 Registro del administrador
               </h2>
@@ -180,6 +240,20 @@ export default function RegisterPage() {
                 Crea la cuenta del administrador y registra la asociación para generar el
                 código de empresa.
               </p>
+              <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                {(["admin", "association", "success"] as const).map((item, index) => (
+                  <span
+                    key={item}
+                    className={`rounded-full px-3 py-1 ${
+                      step === item
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    {index + 1}. {STEP_LABELS[item]}
+                  </span>
+                ))}
+              </div>
             </div>
 
             <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
@@ -236,14 +310,56 @@ export default function RegisterPage() {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Contraseña</label>
-                  <input
-                    name="password"
-                    type="password"
-                    placeholder="Mínimo 8 caracteres"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
-                  />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Contraseña
+                    </label>
+                    <div className="relative">
+                      <input
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Mínimo 8 caracteres"
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      >
+                        <span className="material-symbols-outlined text-[18px]">
+                          {showPassword ? "visibility" : "visibility_off"}
+                        </span>
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      Usa al menos 8 caracteres.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Repetir contraseña
+                    </label>
+                    <div className="relative">
+                      <input
+                        name="passwordRepeat"
+                        type={showRepeat ? "text" : "password"}
+                        placeholder="Repite la contraseña"
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRepeat((prev) => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        aria-label={showRepeat ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      >
+                        <span className="material-symbols-outlined text-[18px]">
+                          {showRepeat ? "visibility" : "visibility_off"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <button
                   type="submit"

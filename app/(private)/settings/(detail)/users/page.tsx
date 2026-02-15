@@ -112,7 +112,7 @@ type UserFormState = {
 };
 
 const MODULE_LABELS: Record<keyof UserPermissions["modules"], string> = {
-  accounting: "Tesorería",
+  accounting: "Contabilidad",
   events: "Eventos",
   contacts: "Contactos",
   documents: "Documentos",
@@ -123,6 +123,25 @@ const clonePermissions = (permissions: UserPermissions): UserPermissions => ({
   modules: { ...permissions.modules },
   actions: { ...permissions.actions },
 });
+
+const applyAdminPermissions = (permissions: UserPermissions): UserPermissions => {
+  const modules = Object.keys(permissions.modules).reduce(
+    (acc, key) => {
+      acc[key as keyof UserPermissions["modules"]] = true;
+      return acc;
+    },
+    {} as UserPermissions["modules"]
+  );
+
+  return {
+    modules,
+    actions: {
+      view: false,
+      edit: true,
+      delete: true,
+    },
+  };
+};
 
 const createEmptyForm = (): UserFormState => ({
   firstName: "",
@@ -142,6 +161,7 @@ const createFormFromUser = (user: UserAccount): UserFormState => {
   const fallback = splitName(user.name ?? displayName);
   const firstName = user.firstName ?? fallback.firstName;
   const lastName = user.lastName ?? fallback.lastName;
+  const permissions = clonePermissions(normalizePermissions(user.permissions));
   return {
     id: user.id,
     firstName,
@@ -153,15 +173,16 @@ const createFormFromUser = (user: UserAccount): UserFormState => {
     role: user.role,
     status: user.status,
     photoUrl: user.photoUrl ?? "",
-    permissions: clonePermissions(normalizePermissions(user.permissions)),
+    permissions:
+      user.role === "Admin" ? applyAdminPermissions(permissions) : permissions,
   };
 };
 
 const MODULE_ITEMS = [
   {
     key: "accounting",
-    label: "Tesorería",
-    description: "Gestión de cobros y facturas",
+    label: "Contabilidad",
+    description: "Gestión de ingresos y gastos",
     icon: (
       <span className="material-symbols-outlined text-[20px]">
         receipt_long
@@ -274,6 +295,7 @@ export default function UsersSettingsPage() {
   const [portalReady, setPortalReady] = useState(false);
   const canDeleteUser =
     isAdmin && panelMode === "edit" && userForm.id && userForm.id !== activeUserId;
+  const isAdminSelected = userForm.role === "Admin";
 
   useEffect(() => {
     if (!hydrated || mode !== "authenticated") return;
@@ -337,9 +359,13 @@ export default function UsersSettingsPage() {
     () => filteredUsers.find((user) => user.id === selectedId) ?? null,
     [filteredUsers, selectedId]
   );
-  const summaryPermissions = selectedUser
+  const summaryPermissionsRaw = selectedUser
     ? normalizePermissions(selectedUser.permissions)
     : DEFAULT_PERMISSIONS;
+  const summaryPermissions =
+    selectedUser?.role === "Admin"
+      ? applyAdminPermissions(summaryPermissionsRaw)
+      : summaryPermissionsRaw;
   const canDeleteSummaryUser =
     isAdmin && selectedUser?.id && selectedUser.id !== activeUserId;
 
@@ -347,13 +373,15 @@ export default function UsersSettingsPage() {
     event.preventDefault();
     setFormError(null);
 
+    const isCreate = panelMode === "create";
     const firstName = userForm.firstName.trim();
     const lastName = userForm.lastName.trim();
     const dni = userForm.dni.trim();
     const email = userForm.email.trim().toLowerCase();
     const password = userForm.password.trim();
     const passwordRepeat = userForm.passwordRepeat.trim();
-    const hasPassword = password.length > 0 || passwordRepeat.length > 0;
+    const hasPassword =
+      isCreate && (password.length > 0 || passwordRepeat.length > 0);
     const name = `${firstName} ${lastName}`.trim();
 
     if (!firstName || !lastName || !dni || !email) {
@@ -361,7 +389,7 @@ export default function UsersSettingsPage() {
       return;
     }
 
-    if (panelMode === "create" && (!password || !passwordRepeat)) {
+    if (isCreate && (!password || !passwordRepeat)) {
       setFormError("La contraseña es obligatoria al crear un usuario.");
       return;
     }
@@ -381,6 +409,10 @@ export default function UsersSettingsPage() {
       return;
     }
 
+    const effectivePermissions =
+      userForm.role === "Admin"
+        ? applyAdminPermissions(userForm.permissions)
+        : clonePermissions(userForm.permissions);
     const payload = {
       firstName,
       lastName,
@@ -389,10 +421,10 @@ export default function UsersSettingsPage() {
       role: userForm.role,
       status: userForm.status,
       photoUrl: userForm.photoUrl.trim() || undefined,
-      permissions: clonePermissions(userForm.permissions),
+      permissions: effectivePermissions,
     };
 
-    if (panelMode === "create") {
+    if (isCreate) {
       addUser({
         ...payload,
         password,
@@ -1035,60 +1067,72 @@ export default function UsersSettingsPage() {
                         className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
                       />
                     </div>
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500">
-                        Contraseña
-                      </label>
-                      <div className="relative mt-2">
-                        <input
-                          value={userForm.password}
-                          onChange={(event) =>
-                            setUserForm((prev) => ({
-                              ...prev,
-                              password: event.target.value,
-                            }))
-                          }
-                          type={showPassword ? "text" : "password"}
-                          placeholder="********"
-                          className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-10 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((prev) => !prev)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                        >
-                          <EyeIcon open={showPassword} />
-                        </button>
+                    {panelMode === "create" ? (
+                      <>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500">
+                            Contraseña inicial (temporal)
+                          </label>
+                          <div className="relative mt-2">
+                            <input
+                              value={userForm.password}
+                              onChange={(event) =>
+                                setUserForm((prev) => ({
+                                  ...prev,
+                                  password: event.target.value,
+                                }))
+                              }
+                              type={showPassword ? "text" : "password"}
+                              placeholder="********"
+                              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-10 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword((prev) => !prev)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                            >
+                              <EyeIcon open={showPassword} />
+                            </button>
+                          </div>
+                          <p className="mt-2 text-xs text-gray-400">
+                            El usuario podrá cambiar esta contraseña más adelante.
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500">
+                            Repetir contraseña
+                          </label>
+                          <div className="relative mt-2">
+                            <input
+                              value={userForm.passwordRepeat}
+                              onChange={(event) =>
+                                setUserForm((prev) => ({
+                                  ...prev,
+                                  passwordRepeat: event.target.value,
+                                }))
+                              }
+                              type={showRepeat ? "text" : "password"}
+                              placeholder="********"
+                              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-10 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowRepeat((prev) => !prev)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              aria-label={showRepeat ? "Ocultar contraseña" : "Mostrar contraseña"}
+                            >
+                              <EyeIcon open={showRepeat} />
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="md:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                        La contraseña no se puede cambiar desde aquí. El usuario la podrá
+                        actualizar desde su perfil.
                       </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500">
-                        Repetir contraseña
-                      </label>
-                      <div className="relative mt-2">
-                        <input
-                          value={userForm.passwordRepeat}
-                          onChange={(event) =>
-                            setUserForm((prev) => ({
-                              ...prev,
-                              passwordRepeat: event.target.value,
-                            }))
-                          }
-                          type={showRepeat ? "text" : "password"}
-                          placeholder="********"
-                          className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-10 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowRepeat((prev) => !prev)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          aria-label={showRepeat ? "Ocultar contraseña" : "Mostrar contraseña"}
-                        >
-                          <EyeIcon open={showRepeat} />
-                        </button>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </section>
 
@@ -1106,7 +1150,6 @@ export default function UsersSettingsPage() {
                   </p>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {MODULE_ITEMS.map((module) => {
-                      const isAdminSelected = userForm.role === "Admin";
                       const enabled = Boolean(userForm.permissions.modules[module.key]);
                       return (
                         <div
@@ -1146,11 +1189,17 @@ export default function UsersSettingsPage() {
                         <p className="text-xs text-gray-400">Incluye acceso de lectura.</p>
                       </div>
                       <ToggleSwitch
-                        checked={userForm.permissions.actions.edit}
-                        disabled={!canEditSidebar}
-                        onChange={() =>
-                          setActionEnabled("edit", !userForm.permissions.actions.edit)
+                        checked={
+                          isAdminSelected ? true : userForm.permissions.actions.edit
                         }
+                        disabled={isAdminSelected || !canEditSidebar}
+                        onChange={() => {
+                          if (isAdminSelected) return;
+                          setActionEnabled(
+                            "edit",
+                            !userForm.permissions.actions.edit
+                          );
+                        }}
                       />
                     </div>
                     <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3">
@@ -1159,11 +1208,17 @@ export default function UsersSettingsPage() {
                         <p className="text-xs text-gray-400">Permite borrar registros.</p>
                       </div>
                       <ToggleSwitch
-                        checked={userForm.permissions.actions.delete}
-                        disabled={!canEditSidebar}
-                        onChange={() =>
-                          setActionEnabled("delete", !userForm.permissions.actions.delete)
+                        checked={
+                          isAdminSelected ? true : userForm.permissions.actions.delete
                         }
+                        disabled={isAdminSelected || !canEditSidebar}
+                        onChange={() => {
+                          if (isAdminSelected) return;
+                          setActionEnabled(
+                            "delete",
+                            !userForm.permissions.actions.delete
+                          );
+                        }}
                       />
                     </div>
                   </div>

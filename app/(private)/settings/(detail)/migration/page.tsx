@@ -7,6 +7,8 @@ import { db } from "@/core/storage/kora.db";
 import {
   type AssociationProfile,
   type AssociationRepresentative,
+  type AssociationSocialLinks,
+  type AssociationSocialStats,
   useSessionStore,
 } from "@/core/session/session.store";
 import type {
@@ -208,6 +210,79 @@ function normalizeRepresentatives(value: unknown): AssociationRepresentative[] {
   return entry ? [entry] : [];
 }
 
+const SOCIAL_LINK_KEYS = [
+  "instagram",
+  "facebook",
+  "x",
+  "tiktok",
+  "youtube",
+  "linkedin",
+] as const;
+
+function normalizeAssociationSocialLinks(
+  value: unknown
+): AssociationSocialLinks | undefined {
+  if (!value) return undefined;
+
+  if (typeof value === "string") {
+    const raw = value.trim();
+    if (!raw) return undefined;
+    try {
+      return normalizeAssociationSocialLinks(JSON.parse(raw));
+    } catch {
+      return undefined;
+    }
+  }
+
+  if (typeof value !== "object") return undefined;
+  const obj = value as Record<string, unknown>;
+  const links = SOCIAL_LINK_KEYS.reduce((acc, key) => {
+    const link = safeString(obj[key]).trim();
+    if (link) acc[key] = link;
+    return acc;
+  }, {} as AssociationSocialLinks);
+
+  return Object.keys(links).length ? links : undefined;
+}
+
+function normalizeAssociationSocialStats(
+  value: unknown
+): AssociationSocialStats | undefined {
+  if (!value) return undefined;
+
+  if (typeof value === "string") {
+    const raw = value.trim();
+    if (!raw) return undefined;
+    try {
+      return normalizeAssociationSocialStats(JSON.parse(raw));
+    } catch {
+      return undefined;
+    }
+  }
+
+  if (typeof value !== "object") return undefined;
+  const obj = value as Record<string, unknown>;
+  const followers = parseNumber(
+    obj.followers ?? obj.totalFollowers ?? obj.seguidores
+  );
+  const views = parseNumber(
+    obj.views ?? obj.visualizations ?? obj.totalViews ?? obj.visualizaciones
+  );
+  const likes = parseNumber(
+    obj.likes ?? obj.totalLikes ?? obj.meGustas ?? obj.megustas
+  );
+
+  if (followers === undefined && views === undefined && likes === undefined) {
+    return undefined;
+  }
+
+  return {
+    followers: followers ?? 0,
+    views: views ?? 0,
+    likes: likes ?? 0,
+  };
+}
+
 function normalizeAssociationProfile(value: unknown): AssociationProfile | null {
   if (!value || typeof value !== "object") return null;
   const obj = value as Record<string, unknown>;
@@ -245,6 +320,12 @@ function normalizeAssociationProfile(value: unknown): AssociationProfile | null 
   const representatives = normalizeRepresentatives(
     obj.representatives ?? obj.boardMembers ?? obj.committee
   );
+  const socialLinks = normalizeAssociationSocialLinks(
+    obj.socialLinks ?? obj.social ?? obj.socialMedia ?? obj.networks
+  );
+  const socialStats = normalizeAssociationSocialStats(
+    obj.socialStats ?? obj.socialMetrics ?? obj.metrics ?? obj.socialMediaMetrics
+  );
 
   return {
     name,
@@ -254,6 +335,8 @@ function normalizeAssociationProfile(value: unknown): AssociationProfile | null 
     location: location || undefined,
     address: address || undefined,
     representatives: representatives.length ? representatives : undefined,
+    socialLinks,
+    socialStats,
   };
 }
 

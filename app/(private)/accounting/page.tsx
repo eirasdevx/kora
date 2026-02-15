@@ -42,7 +42,7 @@ export default function AccountingPage() {
       <PageTopbar>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Gestión de Tesorería</h1>
+            <h1 className="text-2xl font-semibold">Gestión de Contabilidad</h1>
             <p className="text-sm text-gray-500">
               Supervisa el flujo de caja y mantén al día la salud financiera de tu asociación.
             </p>

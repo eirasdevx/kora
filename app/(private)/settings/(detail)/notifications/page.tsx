@@ -5,7 +5,7 @@ import PageTopbar from "@/components/PageTopbar";
 
 const sections = [
   {
-    title: "Tesorería",
+    title: "Contabilidad",
     items: [
       {
         title: "Nuevas transacciones",

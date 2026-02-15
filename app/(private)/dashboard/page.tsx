@@ -6,7 +6,6 @@ import { useSessionStore } from "@/core/session/session.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useEventsStore } from "@/modules/events/events.store";
-import { useSocialPostsStore } from "@/modules/social/social.store";
 
 const CATEGORY_LABELS: Record<string, string> = {
   membership: "Membresía",
@@ -23,6 +22,11 @@ const formatCurrency = (value: number) =>
     minimumFractionDigits: 2,
   }).format(value);
 
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("es-ES", {
+    maximumFractionDigits: 0,
+  }).format(value);
+
 const formatPercent = (value: number) =>
   `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
 
@@ -34,14 +38,12 @@ export default function DashboardPage() {
   const { transactions, loadTransactions } = useTransactionsStore();
   const { contacts, loadContacts } = useContactsStore();
   const { events, loadEvents } = useEventsStore();
-  const { posts, loadPosts } = useSocialPostsStore();
 
   useEffect(() => {
     loadTransactions();
     loadContacts();
     loadEvents();
-    loadPosts();
-  }, [loadTransactions, loadContacts, loadEvents, loadPosts]);
+  }, [loadTransactions, loadContacts, loadEvents]);
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -149,9 +151,13 @@ export default function DashboardPage() {
 
   const totalEvents = events.length;
 
-  const totalFollowers = useMemo(() => {
-    return posts.length;
-  }, [posts]);
+  const socialFollowers = association?.socialStats?.followers ?? 0;
+  const socialViews = association?.socialStats?.views ?? 0;
+  const socialLikes = association?.socialStats?.likes ?? 0;
+  const socialEngagement =
+    socialViews === 0 ? 0 : (socialLikes / socialViews) * 100;
+  const hasSocialStats =
+    socialFollowers > 0 || socialViews > 0 || socialLikes > 0;
 
   const activeEvents = useMemo(() => {
     return events.filter((event) => {
@@ -170,20 +176,23 @@ export default function DashboardPage() {
       .slice(0, 2);
   }, [activeEvents]);
 
-  const socialHighlights = useMemo(() => {
-    return posts
-      .filter((p) => p.status === "published")
-      .slice(0, 2)
-      .map((post) => ({
-        channel: post.channels[0] ?? "General",
-        content: post.content || "Publicación sin texto",
-        metrics: [
-          { label: "Media", value: post.mediaUrls?.length ?? 0 },
-          { label: "Canales", value: post.channels.length },
-          { label: "Chars", value: post.content.length },
-        ],
-      }));
-  }, [posts]);
+  const socialSummary = [
+    {
+      label: "Seguidores totales",
+      value: formatNumber(socialFollowers),
+      helper: "Total de seguidores en redes.",
+    },
+    {
+      label: "Me gustas vs visualizaciones",
+      value: `${socialEngagement.toFixed(1)}%`,
+      helper: `${formatNumber(socialLikes)} me gustas registrados.`,
+    },
+    {
+      label: "Visualizaciones totales",
+      value: formatNumber(socialViews),
+      helper: "Total de visualizaciones acumuladas.",
+    },
+  ];
 
   const pendingDocs = useMemo(() => {
     return transactions
@@ -287,7 +296,7 @@ export default function DashboardPage() {
             </span>
           </div>
           <p className="mt-3 text-2xl font-semibold text-gray-900">
-            {totalFollowers}
+            {formatNumber(socialFollowers)}
           </p>
         </div>
       </section>
@@ -472,44 +481,30 @@ export default function DashboardPage() {
             </span>
           </div>
           <div className="mt-6 space-y-4">
-            {socialHighlights.length === 0 && (
-              <p className="text-sm text-gray-400">
-                No hay publicaciones recientes.
+            <div className="grid gap-3">
+              {socialSummary.map((metric) => (
+                <div
+                  key={metric.label}
+                  className="rounded-2xl border border-gray-200 p-4"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                    {metric.label}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-gray-900">
+                    {metric.value}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {metric.helper}
+                  </p>
+                </div>
+              ))}
+            </div>
+            {!hasSocialStats && (
+              <p className="text-xs text-gray-400">
+                Completa las métricas en el perfil de la asociación para ver
+                valores reales.
               </p>
             )}
-            {socialHighlights.map((item, idx) => (
-              <div
-                key={`${item.channel}-${idx}`}
-                className="rounded-2xl border border-gray-200 p-4"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-xs font-semibold text-gray-600">
-                    {item.channel.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold text-primary">
-                      {item.channel.toUpperCase()}
-                    </p>
-                    <p className="text-sm text-gray-700">
-                      {item.content.slice(0, 60)}
-                    </p>
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs text-gray-500">
-                      {item.metrics.map((metric) => (
-                        <div
-                          key={metric.label}
-                          className="rounded-xl bg-gray-50 px-2 py-2"
-                        >
-                          <p className="text-sm font-semibold text-gray-800">
-                            {metric.value}
-                          </p>
-                          <p>{metric.label}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 

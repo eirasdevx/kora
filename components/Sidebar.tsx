@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/core/session/session.store";
@@ -25,7 +26,13 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const mode = useSessionStore((s) => s.mode);
+  const hydrated = useSessionStore((s) => s.hydrated);
   const association = useSessionStore((s) => s.association);
+  const associations = useSessionStore((s) => s.associations);
+  const activeAssociationId = useSessionStore((s) => s.activeAssociationId);
+  const setActiveAssociation = useSessionStore((s) => s.setActiveAssociation);
+  const addAssociation = useSessionStore((s) => s.addAssociation);
+  const ensureAssociations = useSessionStore((s) => s.ensureAssociations);
   const logout = useSessionStore((s) => s.logout);
   const activeUserId = useSessionStore((s) => s.activeUserId);
   const users = useUsersStore((s) => s.users);
@@ -78,6 +85,53 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
     return moduleAccess[item.moduleKey];
   });
 
+  const [associationMenuOpen, setAssociationMenuOpen] = useState(false);
+  const [newAssociationName, setNewAssociationName] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    ensureAssociations();
+  }, [hydrated, ensureAssociations]);
+
+  useEffect(() => {
+    if (!associationMenuOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(event.target as Node)) {
+        setAssociationMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [associationMenuOpen]);
+
+  const associationEntries =
+    associations.length > 0
+      ? associations
+      : association
+        ? [
+            {
+              id: "active",
+              profile: association,
+              companyCode: "",
+            },
+          ]
+        : [];
+
+  const handleCreateAssociation = () => {
+    const name = newAssociationName.trim();
+    if (!name) {
+      setCreateError("Indica el nombre de la asociación.");
+      return;
+    }
+    addAssociation({ name });
+    setNewAssociationName("");
+    setCreateError(null);
+    setAssociationMenuOpen(false);
+  };
+
   return (
     <>
       <div
@@ -98,21 +152,100 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       >
         {/* Logo */}
         <div className="flex items-start justify-between gap-3 px-6 py-6">
-          <div className="flex items-start gap-3">
-            <span className="material-symbols-rounded kora-logo" aria-hidden="true">
-              crop_7_5
-            </span>
-            <div>
-              <div className="font-heading text-lg font-extrabold text-slate-900">
-                Kora
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <span className="kora-logo" aria-hidden="true">
+                <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+                  <path
+                    d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </span>
+              <div>
+                <div className="font-heading text-lg font-extrabold text-slate-900">
+                  Kora
+                </div>
+                <div className="mt-1 text-xs text-gray-500">
+                  Gestión de asociaciones
+                </div>
               </div>
-              <div className="text-xs text-gray-500">Gestión de asociaciones</div>
-              {showAssociationName ? (
-                <p className="mt-3 line-clamp-2 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-                  {associationName}
-                </p>
-              ) : null}
             </div>
+            {showAssociationName ? (
+              <div className="relative" ref={menuRef}>
+                <button
+                  type="button"
+                  onClick={() => setAssociationMenuOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                  aria-haspopup="menu"
+                  aria-expanded={associationMenuOpen}
+                >
+                  <span className="line-clamp-2">{associationName}</span>
+                  <span className="material-symbols-outlined text-[18px] text-slate-400">
+                    expand_more
+                  </span>
+                </button>
+                {associationMenuOpen ? (
+                  <div className="absolute left-0 top-full z-20 mt-2 w-full rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                      Cambiar asociación
+                    </p>
+                    <div className="mt-3 space-y-1">
+                      {associationEntries.map((entry) => {
+                        const isActive = entry.id === activeAssociationId;
+                        return (
+                          <button
+                            key={entry.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveAssociation(entry.id);
+                              setAssociationMenuOpen(false);
+                            }}
+                            className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                              isActive
+                                ? "bg-primary/10 text-primary"
+                                : "text-slate-600 hover:bg-slate-50"
+                            }`}
+                          >
+                            <span className="line-clamp-2">
+                              {entry.profile.name}
+                            </span>
+                            {isActive ? (
+                              <span className="text-[11px] font-semibold text-primary">
+                                Activa
+                              </span>
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <p className="text-xs font-semibold text-slate-500">
+                        Crear nueva
+                      </p>
+                      <input
+                        value={newAssociationName}
+                        onChange={(event) =>
+                          setNewAssociationName(event.target.value)
+                        }
+                        placeholder="Nombre de la asociación"
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                      />
+                      {createError ? (
+                        <p className="text-xs text-rose-500">{createError}</p>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={handleCreateAssociation}
+                        className="w-full rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-primary/90"
+                      >
+                        Crear asociación
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           {onClose ? (
             <button

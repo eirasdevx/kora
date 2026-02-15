@@ -5,45 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSocialPostsStore } from "@/modules/social/social.store";
 import { SocialPostStatus } from "@/modules/social/social.types";
 import PageTopbar from "@/components/PageTopbar";
-
-const kpis = [
-  {
-    title: "Alcance Total",
-    value: "124.5k",
-    change: "+12.4%",
-    positive: true,
-    icon: (
-      <span className="material-symbols-outlined text-[20px]">
-        bar_chart
-      </span>
-    ),
-    accent: "bg-blue-50 text-blue-600",
-  },
-  {
-    title: "Engagement Promedio",
-    value: "4.8%",
-    change: "-0.5%",
-    positive: false,
-    icon: (
-      <span className="material-symbols-outlined text-[20px]">
-        favorite
-      </span>
-    ),
-    accent: "bg-rose-50 text-rose-600",
-  },
-  {
-    title: "Nuevos Seguidores",
-    value: "+1,200",
-    change: "+8.2%",
-    positive: true,
-    icon: (
-      <span className="material-symbols-outlined text-[20px]">
-        person_add
-      </span>
-    ),
-    accent: "bg-emerald-50 text-emerald-600",
-  },
-];
+import { useSessionStore } from "@/core/session/session.store";
 
 const filters = [
   { id: "Todo", label: "Todo" },
@@ -79,15 +41,68 @@ const channelStyles: Record<string, string> = {
   TikTok: "bg-gray-100 text-gray-800",
 };
 
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("es-ES", {
+    maximumFractionDigits: 0,
+  }).format(value);
+
 function isVideo(url: string) {
   return url.startsWith("data:video");
 }
 
 export default function SocialPage() {
   const { posts, loadPosts } = useSocialPostsStore();
+  const association = useSessionStore((s) => s.association);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("Todo");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+
+  const socialFollowers = association?.socialStats?.followers ?? 0;
+  const socialViews = association?.socialStats?.views ?? 0;
+  const socialLikes = association?.socialStats?.likes ?? 0;
+  const socialEngagement =
+    socialViews === 0 ? 0 : (socialLikes / socialViews) * 100;
+  const hasSocialStats =
+    socialFollowers > 0 || socialViews > 0 || socialLikes > 0;
+
+  const socialKpis = [
+    {
+      title: "Seguidores totales",
+      value: formatNumber(socialFollowers),
+      change: "Global",
+      positive: true,
+      icon: (
+        <span className="material-symbols-outlined text-[20px]">
+          groups
+        </span>
+      ),
+      accent: "bg-emerald-50 text-emerald-600",
+    },
+    {
+      title: "Me gustas vs visualizaciones",
+      value: `${socialEngagement.toFixed(1)}%`,
+      change: "Ratio",
+      positive: true,
+      icon: (
+        <span className="material-symbols-outlined text-[20px]">
+          favorite
+        </span>
+      ),
+      accent: "bg-rose-50 text-rose-600",
+    },
+    {
+      title: "Visualizaciones totales",
+      value: formatNumber(socialViews),
+      change: "Global",
+      positive: true,
+      icon: (
+        <span className="material-symbols-outlined text-[20px]">
+          bar_chart
+        </span>
+      ),
+      accent: "bg-blue-50 text-blue-600",
+    },
+  ];
 
   useEffect(() => {
     loadPosts();
@@ -171,7 +186,7 @@ export default function SocialPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {kpis.map((kpi) => (
+          {socialKpis.map((kpi) => (
             <div
               key={kpi.title}
               className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
@@ -199,6 +214,12 @@ export default function SocialPage() {
             </div>
           ))}
         </div>
+        {!hasSocialStats && (
+          <p className="text-xs text-gray-400">
+            Completa las métricas en el perfil de la asociación para ver
+            valores reales.
+          </p>
+        )}
       </section>
 
       <section className="space-y-4">

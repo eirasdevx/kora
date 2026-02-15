@@ -11,6 +11,8 @@ import { useEventsStore } from "@/modules/events/events.store";
 import { useSocialPostsStore } from "@/modules/social/social.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 
+const LAST_LOGIN_KEY = "kora-last-login";
+
 export default function LoginPage() {
   const router = useRouter();
   const mode = useSessionStore((s) => s.mode);
@@ -27,11 +29,45 @@ export default function LoginPage() {
   const resetTransactions = useTransactionsStore((s) => s.resetTransactions);
   const [guestOpen, setGuestOpen] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [identifierValue, setIdentifierValue] = useState("");
+  const [companyCodeValue, setCompanyCodeValue] = useState("");
 
   useEffect(() => {
     if (!hydrated) return;
     if (mode) router.replace("/dashboard");
   }, [hydrated, mode, router]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      const raw = localStorage.getItem(LAST_LOGIN_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        identifier?: string;
+        companyCode?: string;
+      };
+      if (typeof saved.identifier === "string") {
+        setIdentifierValue(saved.identifier);
+      }
+      if (typeof saved.companyCode === "string") {
+        setCompanyCodeValue(saved.companyCode);
+      }
+    } catch {
+      // ignore invalid storage
+    }
+  }, [hydrated]);
+
+  const persistLastLogin = (identifier: string, companyCode: string) => {
+    try {
+      localStorage.setItem(
+        LAST_LOGIN_KEY,
+        JSON.stringify({ identifier, companyCode })
+      );
+    } catch {
+      // ignore storage failures
+    }
+  };
 
   const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -89,6 +125,7 @@ export default function LoginPage() {
           if (!adminUser.password) {
             updateUser(adminUser.id, { password: admin.password });
           }
+          persistLastLogin(identifier, code);
           setAuthenticated(adminUser.id);
           router.push("/dashboard");
           return;
@@ -118,6 +155,7 @@ export default function LoginPage() {
     }
 
     setAuthenticated(candidate.id);
+    persistLastLogin(identifier, code);
     router.push("/dashboard");
   };
 
@@ -143,8 +181,13 @@ export default function LoginPage() {
           </div>
           <div className="relative flex h-full flex-col justify-between p-12">
             <div className="flex items-center gap-3 text-white">
-              <span className="material-symbols-rounded kora-logo" aria-hidden="true">
-                crop_7_5
+              <span className="kora-logo kora-logo--inverse" aria-hidden="true">
+                <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+                  <path
+                    d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z"
+                    fill="currentColor"
+                  />
+                </svg>
               </span>
               <span className="text-lg font-semibold">Kora</span>
             </div>
@@ -187,6 +230,8 @@ export default function LoginPage() {
                   name="identifier"
                   type="text"
                   placeholder="DNI o correo"
+                  value={identifierValue}
+                  onChange={(event) => setIdentifierValue(event.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
@@ -197,12 +242,24 @@ export default function LoginPage() {
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                />
+                <div className="relative">
+                  <input
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {showPassword ? "visibility" : "visibility_off"}
+                    </span>
+                  </button>
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">Código de empresa</label>
@@ -210,6 +267,8 @@ export default function LoginPage() {
                   name="companyCode"
                   type="text"
                   placeholder="KORA-0000-0000"
+                  value={companyCodeValue}
+                  onChange={(event) => setCompanyCodeValue(event.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
@@ -234,27 +293,6 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="flex items-center gap-4 text-xs text-slate-400">
-              <span className="h-px flex-1 bg-slate-200" />
-              O CONTINUA CON
-              <span className="h-px flex-1 bg-slate-200" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-              >
-                Google
-              </button>
-              <button
-                type="button"
-                className="rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-              >
-                Microsoft
-              </button>
-            </div>
-
             <button
               type="button"
               onClick={() => setGuestOpen(true)}
@@ -266,7 +304,7 @@ export default function LoginPage() {
             <p className="text-center text-sm text-slate-500">
               ¿No tienes una cuenta?{" "}
               <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-700">
-                Registro (próximamente)
+                Registrar administrador
               </Link>
             </p>
           </div>
