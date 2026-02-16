@@ -4,6 +4,7 @@ import {
   Contact,
   ContactType,
   ContactTypeLabels,
+  ContactKindLabels,
 } from "@/modules/contacts/contact.types";
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
   onSelect: (contact: Contact) => void;
 }
 
-// ORDEN VISUAL CANÓNICO (regla de negocio)
+// ORDEN VISUAL CANONICO (regla de negocio)
 const CONTACT_TYPE_ORDER: ContactType[] = [
   "member",
   "provider",
@@ -40,6 +41,12 @@ function getInitials(contact: Contact) {
     .join("");
 }
 
+function getTypesLabel(types: ContactType[]) {
+  if (!types.length) return "Sin tipo";
+  const ordered = CONTACT_TYPE_ORDER.filter((t) => types.includes(t));
+  return ordered.map((t) => ContactTypeLabels[t]).join(", ");
+}
+
 export default function ContactsTable({
   contacts,
   selectedId,
@@ -54,12 +61,13 @@ export default function ContactsTable({
   }
 
   return (
-    <table className="w-full text-left text-sm">
+    <table className="min-w-[1400px] w-full text-left text-sm">
       <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
         <tr>
-          <th className="px-6 py-4">Contacto</th>
-          <th className="px-6 py-4">Tipo</th>
-          <th className="px-6 py-4">Teléfono</th>
+          <th className="px-6 py-4">Perfil del contacto</th>
+          <th className="px-6 py-4">Todos los datos de los contactos</th>
+          <th className="px-6 py-4">Información de contacto</th>
+          <th className="px-6 py-4">Notas</th>
         </tr>
       </thead>
 
@@ -69,6 +77,18 @@ export default function ContactsTable({
             c.types.includes(t)
           );
           const displayName = getDisplayName(c);
+          const addressLine = [
+            c.address,
+            c.postalCode,
+            c.city,
+            c.region,
+          ]
+            .filter(Boolean)
+            .join(", ");
+          const representativeName = `${c.representativeFirstName ?? ""} ${
+            c.representativeLastName ?? ""
+          }`.trim();
+          const typesLabel = getTypesLabel(c.types);
 
           return (
             <tr
@@ -80,7 +100,7 @@ export default function ContactsTable({
                   : "hover:bg-gray-50"
               }`}
             >
-              <td className="px-6 py-4">
+              <td className="px-6 py-4 align-top">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                     {getInitials(c)}
@@ -90,14 +110,11 @@ export default function ContactsTable({
                       {displayName}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {c.email || "—"}
+                      {ContactKindLabels[c.kind]}
                     </div>
                   </div>
                 </div>
-              </td>
-
-              <td className="px-6 py-4">
-                <div className="flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {orderedTypes.length === 0 && (
                     <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-500">
                       Sin tipo
@@ -114,10 +131,67 @@ export default function ContactsTable({
                 </div>
               </td>
 
-              <td className="px-6 py-4 text-sm text-gray-600">
-                {c.phone || "—"}
+              <td className="px-6 py-4 align-top text-sm text-gray-600">
+                <div className="space-y-1">
+                  <p>
+                    <span className="text-gray-400">DNI:</span>{" "}
+                    {c.dni || "?"}
+                  </p>
+                  <p>
+                    <span className="text-gray-400">Tipo:</span>{" "}
+                    {ContactKindLabels[c.kind]}
+                  </p>
+                  <p>
+                    <span className="text-gray-400">Roles:</span>{" "}
+                    {typesLabel}
+                  </p>
+                  <p>
+                    <span className="text-gray-400">Dirección:</span>{" "}
+                    {addressLine || "?"}
+                  </p>
+                  {c.kind === "entity" && (
+                    <p>
+                      <span className="text-gray-400">Representante:</span>{" "}
+                      {representativeName || "?"}
+                    </p>
+                  )}
+                  {c.tags && c.tags.length > 0 && (
+                    <p>
+                      <span className="text-gray-400">Tags:</span>{" "}
+                      {c.tags.join(", ")}
+                    </p>
+                  )}
+                </div>
               </td>
 
+              <td className="px-6 py-4 align-top text-sm text-gray-600">
+                <div className="space-y-1">
+                  <p>
+                    <span className="text-gray-400">Email:</span>{" "}
+                    {c.email || "?"}
+                  </p>
+                  <p>
+                    <span className="text-gray-400">Tel:</span>{" "}
+                    {c.phone || "?"}
+                  </p>
+                  <p>
+                    <span className="text-gray-400">Tel 2:</span>{" "}
+                    {c.secondaryPhone || "?"}
+                  </p>
+                  <p>
+                    <span className="text-gray-400">Web:</span>{" "}
+                    {c.website || "?"}
+                  </p>
+                  <p>
+                    <span className="text-gray-400">Redes:</span>{" "}
+                    {c.socialLinks || "?"}
+                  </p>
+                </div>
+              </td>
+
+              <td className="px-6 py-4 align-top text-sm text-gray-600">
+                {c.notes || "?"}
+              </td>
             </tr>
           );
         })}

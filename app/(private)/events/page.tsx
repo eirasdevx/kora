@@ -12,6 +12,7 @@ import PageTopbar from "@/components/PageTopbar";
 
 import { Event } from "@/modules/events/event.types";
 import { useEventsStore } from "@/modules/events/events.store";
+import { downloadPdf, downloadXlsx } from "@/lib/exporters";
 
 /* =======================
    Helpers de fechas
@@ -32,6 +33,68 @@ function addDays(date: Date, days: number): Date {
   return d;
 }
 
+function toStartOfDay(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function toEndOfDay(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+function matchesDateRange(
+  iso: string | undefined,
+  from: string,
+  to: string
+) {
+  if (!from && !to) return true;
+  if (!iso) return false;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return false;
+  if (from) {
+    const start = toStartOfDay(from);
+    if (date < start) return false;
+  }
+  if (to) {
+    const end = toEndOfDay(to);
+    if (date > end) return false;
+  }
+  return true;
+}
+
+function formatDate(value?: string) {
+  if (!value) return "â€”";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "â€”";
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatTime(value?: string) {
+  if (!value) return "â€”";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "â€”";
+  return new Intl.DateTimeFormat("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatPrice(value?: number) {
+  if (value === null || value === undefined) return "â€”";
+  if (value === 0) return "Gratis";
+  return new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: "EUR",
+  }).format(value);
+}
+
 /* =======================
    Página
 ======================= */
@@ -47,6 +110,16 @@ export default function EventsPage() {
   /* -------- vista -------- */
   const [view, setView] = useState<EventsView>("month");
   const [search, setSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const VIEW_OPTIONS: { label: string; value: EventsView }[] = [
+    { label: "Mes", value: "month" },
+    { label: "Semana", value: "week" },
+    { label: "D?a", value: "day" },
+  ];
 
   /* -------- selección -------- */
   const [selectedEventId, setSelectedEventId] =
@@ -73,13 +146,97 @@ export default function EventsPage() {
   const [dayDate] = useState(() => new Date());
 
   /* -------- filtros -------- */
+  const categoryOptions = useMemo(() => {
+    const unique = new Set<string>();
+    events.forEach((event) => {
+      if (event.category) unique.add(event.category);
+    });
+    return Array.from(unique);
+  }, [events]);
+
   const filteredEvents = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return events;
-    return events.filter((e) =>
-      e.title.toLowerCase().includes(q)
+    return events.filter((e) => {
+      if (categoryFilter !== "all" && e.category !== categoryFilter) {
+        return false;
+      }
+      if (!matchesDateRange(e.startDate, dateFrom, dateTo)) {
+        return false;
+      }
+      if (!q) return true;
+      const title = e.title.toLowerCase();
+      const description = e.description?.toLowerCase() ?? "";
+      return title.includes(q) || description.includes(q);
+    });
+  }, [events, search, categoryFilter, dateFrom, dateTo]);
+
+  const exportRows = useMemo(
+    () =>
+      filteredEvents.map((event) => {
+        const meetingType =
+          event.locationType === "online" ? "En línea" : "Presencial";
+        const location =
+          event.locationType === "online"
+            ? "En línea"
+            : event.location || "â€”";
+        return [
+          event.title,
+          event.category ?? "â€”",
+          event.description ?? "â€”",
+          formatDate(event.startDate),
+          formatDate(event.endDate),
+          formatTime(event.endDate),
+          meetingType,
+          location,
+          formatPrice(event.ticketPrice),
+          event.capacity?.toString() ?? "â€”",
+          formatDate(event.registrationDeadline),
+        ];
+      }),
+    [filteredEvents]
+  );
+
+  const handleExportXlsx = () => {
+    const rows = [
+      [
+        "Titulo",
+        "Categoria",
+        "Descripcion",
+        "Fecha del Evento",
+        "Fecha fin del Evento",
+        "Hora fin",
+        "Tipo de reunion",
+        "Lugar",
+        "Precio de entrada",
+        "Capacidad maxima",
+        "Fecha cierre inscripcion",
+      ],
+      ...exportRows,
+    ];
+    downloadXlsx("eventos.xlsx", "Eventos", rows);
+  };
+
+  const handleExportPdf = () => {
+    const columns = [
+      { label: "Titulo", width: 18 },
+      { label: "Categoria", width: 12 },
+      { label: "Descripcion", width: 24 },
+      { label: "Fecha", width: 12 },
+      { label: "Fin", width: 12 },
+      { label: "Hora fin", width: 8 },
+      { label: "Tipo", width: 10 },
+      { label: "Lugar", width: 14 },
+      { label: "Precio", width: 10 },
+      { label: "Cap.", width: 6 },
+      { label: "Cierre", width: 12 },
+    ];
+    downloadPdf(
+      "eventos.pdf",
+      "Listado de eventos",
+      columns,
+      exportRows
     );
-  }, [events, search]);
+  };
 
   /* =======================
      Render
@@ -91,14 +248,150 @@ export default function EventsPage() {
       <div className="flex-1 space-y-6">
         <PageTopbar>
           <EventsTopbar
-            view={view}
-            onChangeView={setView}
-            onSearch={setSearch}
             onCreate={() => {
               router.push("/events/new");
             }}
           />
         </PageTopbar>
+
+        <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="inline-flex rounded-2xl border border-gray-200 bg-white p-1 shadow-sm">
+                {VIEW_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setView(opt.value)}
+                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                      view === opt.value
+                        ? "bg-primary text-white shadow"
+                        : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((prev) => !prev)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  tune
+                </span>
+                Filtros
+              </button>
+
+              <div className="relative flex-1">
+                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                  <span className="material-symbols-outlined text-[16px] leading-none">
+                    search
+                  </span>
+                </span>
+                <input
+                  type="text"
+                  placeholder="Buscar eventos..."
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleExportXlsx}
+                aria-label="Exportar XLSX"
+                title="Exportar XLSX"
+                className="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  grid_on
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={handleExportPdf}
+                aria-label="Exportar PDF"
+                title="Exportar PDF"
+                className="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  picture_as_pdf
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+
+        {filtersOpen && (
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label className="text-xs font-semibold uppercase text-gray-400">
+                  CategorÃ­a
+                </label>
+                <select
+                  value={categoryFilter}
+                  onChange={(event) => setCategoryFilter(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                >
+                  <option value="all">Todas</option>
+                  {categoryOptions.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase text-gray-400">
+                  Fecha desde
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase text-gray-400">
+                  Fecha hasta
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => setDateTo(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setCategoryFilter("all");
+                  setDateFrom("");
+                  setDateTo("");
+                }}
+                className="text-xs font-semibold text-gray-500 hover:text-gray-700"
+              >
+                Limpiar
+              </button>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(false)}
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* MES */}
         {view === "month" && (

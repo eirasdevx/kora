@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
-import { Contact, ContactType } from "@/modules/contacts/contact.types";
+import {
+    Contact,
+    ContactType,
+    ContactTypeLabels,
+    ContactKindLabels,
+} from "@/modules/contacts/contact.types";
 
 import ContactsHeader from "@/components/contacts/ContactsHeader";
 import ContactsTable from "@/components/contacts/ContactsTable";
@@ -11,6 +16,7 @@ import ContactDetailPanel from "@/components/contacts/ContactDetailPanel";
 import PageTopbar from "@/components/PageTopbar";
 
 import Modal from "@/components/Modal";
+import { downloadPdf, downloadXlsx } from "@/lib/exporters";
 
 function cx(...classes: Array<string | undefined | null | false>) {
     return classes.filter(Boolean).join(" ");
@@ -46,6 +52,19 @@ function matchesDateRange(
         if (date > end) return false;
     }
     return true;
+}
+
+function getContactDisplayName(contact: Contact) {
+    const composed = `${contact.firstName} ${contact.lastName}`.trim();
+    if (composed) return composed;
+    return contact.fullName ?? "Sin nombre";
+}
+
+function getContactTypesLabel(contact: Contact) {
+    if (!contact.types.length) return "Sin tipo";
+    return contact.types
+        .map((type) => ContactTypeLabels[type])
+        .join(", ");
 }
 
 export default function ContactsPage() {
@@ -117,6 +136,64 @@ export default function ContactsPage() {
         deactivatedTo,
     ]);
 
+    const exportRows = useMemo(() => {
+        return filteredContacts.map((contact) => {
+            const displayName = getContactDisplayName(contact);
+            const typesLabel = getContactTypesLabel(contact);
+            const kindLabel = ContactKindLabels[contact.kind];
+            const address = [
+                contact.address,
+                contact.city,
+                contact.region,
+                contact.postalCode,
+            ]
+                .filter(Boolean)
+                .join(", ");
+            const representative =
+                contact.kind === "entity"
+                    ? `${contact.representativeFirstName ?? ""} ${
+                          contact.representativeLastName ?? ""
+                      }`
+                          .trim()
+                    : "";
+
+            const tagsLabel =
+                contact.tags && contact.tags.length > 0
+                    ? contact.tags.join(", ")
+                    : "";
+
+            const allData = [
+                `DNI: ${contact.dni || "?"}`,
+                `Tipo: ${kindLabel}`,
+                `Roles: ${typesLabel}`,
+                `Direcci?n: ${address || "?"}`,
+                representative ? `Representante: ${representative}` : "",
+                tagsLabel ? `Tags: ${tagsLabel}` : "",
+            ]
+                .filter(Boolean)
+                .join(" | ");
+
+            const contactInfo = [
+                contact.email ? `Email: ${contact.email}` : "Email: ?",
+                contact.phone ? `Tel: ${contact.phone}` : "Tel: ?",
+                contact.secondaryPhone
+                    ? `Tel2: ${contact.secondaryPhone}`
+                    : "Tel2: ?",
+                contact.website ? `Web: ${contact.website}` : "Web: ?",
+                contact.socialLinks
+                    ? `Redes: ${contact.socialLinks}`
+                    : "Redes: ?",
+            ].join(" | ");
+
+            return [
+                displayName,
+                allData,
+                contactInfo,
+                contact.notes ?? "â€”",
+            ];
+        });
+    }, [filteredContacts]);
+
     const pageSize = 10;
 
     const totalPages = useMemo(
@@ -161,6 +238,34 @@ export default function ContactsPage() {
     const canPrev = currentPageSafe > 1;
     const canNext = currentPageSafe < totalPages;
 
+    const handleExportXlsx = () => {
+        const rows = [
+            [
+                "Perfil del contacto",
+                "Todos los datos de los contactos",
+                "InformaciÃ³n de contacto",
+                "Notas",
+            ],
+            ...exportRows,
+        ];
+        downloadXlsx("contactos.xlsx", "Contactos", rows);
+    };
+
+    const handleExportPdf = () => {
+        const columns = [
+            { label: "Perfil", width: 22 },
+            { label: "Datos", width: 40 },
+            { label: "Contacto", width: 36 },
+            { label: "Notas", width: 30 },
+        ];
+        downloadPdf(
+            "contactos.pdf",
+            "Listado de contactos",
+            columns,
+            exportRows
+        );
+    };
+
     useEffect(() => {
         if (!selected) return;
         if (!filteredContacts.some((c) => c.id === selected.id)) {
@@ -193,153 +298,179 @@ export default function ContactsPage() {
                     )}
                 >
                     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-                        <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center">
-                            <div className="relative flex-1">
-                                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                                    <span className="material-symbols-outlined text-[16px] leading-none">
-                                        search
+                        <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center">
+                                <div className="relative flex-1">
+                                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                                        <span className="material-symbols-outlined text-[16px] leading-none">
+                                            search
+                                        </span>
                                     </span>
-                                </span>
-                                <input
-                                    type="text"
-                                    placeholder="Buscar contactos por nombre o email..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                                />
-                            </div>
-                            <div className="relative">
-                                <button
-                                    type="button"
-                                    onClick={() => setFiltersOpen((prev) => !prev)}
-                                    aria-expanded={filtersOpen}
-                                    aria-controls="contacts-filters-panel"
-                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
-                                >
-                                    <span className="material-symbols-outlined text-[16px]">
-                                        tune
-                                    </span>
-                                    Filtros
-                                </button>
-                                {filtersOpen && (
-                                    <div
-                                        id="contacts-filters-panel"
-                                        className="absolute right-0 z-20 mt-2 w-80 rounded-2xl border border-gray-200 bg-white p-4 shadow-lg"
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar contactos por nombre o email..."
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFiltersOpen((prev) => !prev)}
+                                        aria-expanded={filtersOpen}
+                                        aria-controls="contacts-filters-panel"
+                                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
                                     >
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="text-xs font-semibold uppercase text-gray-400">
-                                                    Tipo
-                                                </label>
-                                                <select
-                                                    value={typeFilter}
-                                                    onChange={(e) =>
-                                                        setTypeFilter(
-                                                            e.target.value as
-                                                                | ContactType
-                                                                | "all"
-                                                        )
-                                                    }
-                                                    className="mt-2 w-full appearance-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                                                >
-                                                    <option value="all">Todos</option>
-                                                    <option value="member">Socio</option>
-                                                    <option value="provider">Proveedor</option>
-                                                    <option value="collaborator">
-                                                        Colaborador
-                                                    </option>
-                                                </select>
-                                            </div>
-
-                                            <div>
-                                                <p className="text-xs font-semibold uppercase text-gray-400">
-                                                    Fecha de registro
-                                                </p>
-                                                <div className="mt-2 grid grid-cols-2 gap-2">
-                                                    <input
-                                                        type="date"
-                                                        value={registeredFrom}
+                                        <span className="material-symbols-outlined text-[16px]">
+                                            tune
+                                        </span>
+                                        Filtros
+                                    </button>
+                                    {filtersOpen && (
+                                        <div
+                                            id="contacts-filters-panel"
+                                            className="absolute right-0 z-20 mt-2 w-80 rounded-2xl border border-gray-200 bg-white p-4 shadow-lg"
+                                        >
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="text-xs font-semibold uppercase text-gray-400">
+                                                        Tipo
+                                                    </label>
+                                                    <select
+                                                        value={typeFilter}
                                                         onChange={(e) =>
-                                                            setRegisteredFrom(
-                                                                e.target.value
+                                                            setTypeFilter(
+                                                                e.target.value as
+                                                                    | ContactType
+                                                                    | "all"
                                                             )
                                                         }
-                                                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                                                        aria-label="Registro desde"
-                                                    />
-                                                    <input
-                                                        type="date"
-                                                        value={registeredTo}
-                                                        onChange={(e) =>
-                                                            setRegisteredTo(
-                                                                e.target.value
-                                                            )
-                                                        }
-                                                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                                                        aria-label="Registro hasta"
-                                                    />
+                                                        className="mt-2 w-full appearance-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                                    >
+                                                        <option value="all">Todos</option>
+                                                        <option value="member">Socio</option>
+                                                        <option value="provider">Proveedor</option>
+                                                        <option value="collaborator">
+                                                            Colaborador
+                                                        </option>
+                                                    </select>
                                                 </div>
-                                            </div>
 
-                                            <div>
-                                                <p className="text-xs font-semibold uppercase text-gray-400">
-                                                    Fecha de baja
-                                                </p>
-                                                <div className="mt-2 grid grid-cols-2 gap-2">
-                                                    <input
-                                                        type="date"
-                                                        value={deactivatedFrom}
-                                                        onChange={(e) =>
-                                                            setDeactivatedFrom(
-                                                                e.target.value
-                                                            )
-                                                        }
-                                                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                                                        aria-label="Baja desde"
-                                                    />
-                                                    <input
-                                                        type="date"
-                                                        value={deactivatedTo}
-                                                        onChange={(e) =>
-                                                            setDeactivatedTo(
-                                                                e.target.value
-                                                            )
-                                                        }
-                                                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                                                        aria-label="Baja hasta"
-                                                    />
+                                                <div>
+                                                    <p className="text-xs font-semibold uppercase text-gray-400">
+                                                        Fecha de registro
+                                                    </p>
+                                                    <div className="mt-2 grid grid-cols-2 gap-2">
+                                                        <input
+                                                            type="date"
+                                                            value={registeredFrom}
+                                                            onChange={(e) =>
+                                                                setRegisteredFrom(
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                                            aria-label="Registro desde"
+                                                        />
+                                                        <input
+                                                            type="date"
+                                                            value={registeredTo}
+                                                            onChange={(e) =>
+                                                                setRegisteredTo(
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                                            aria-label="Registro hasta"
+                                                        />
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            <div className="flex items-center justify-between pt-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setTypeFilter("all");
-                                                        setRegisteredFrom("");
-                                                        setRegisteredTo("");
-                                                        setDeactivatedFrom("");
-                                                        setDeactivatedTo("");
-                                                    }}
-                                                    className="text-xs font-semibold text-gray-500 hover:text-gray-700"
-                                                >
-                                                    Limpiar
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setFiltersOpen(false)}
-                                                    className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow"
-                                                >
-                                                    Cerrar
-                                                </button>
+                                                <div>
+                                                    <p className="text-xs font-semibold uppercase text-gray-400">
+                                                        Fecha de baja
+                                                    </p>
+                                                    <div className="mt-2 grid grid-cols-2 gap-2">
+                                                        <input
+                                                            type="date"
+                                                            value={deactivatedFrom}
+                                                            onChange={(e) =>
+                                                                setDeactivatedFrom(
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                                            aria-label="Baja desde"
+                                                        />
+                                                        <input
+                                                            type="date"
+                                                            value={deactivatedTo}
+                                                            onChange={(e) =>
+                                                                setDeactivatedTo(
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                                            aria-label="Baja hasta"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between pt-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setTypeFilter("all");
+                                                            setRegisteredFrom("");
+                                                            setRegisteredTo("");
+                                                            setDeactivatedFrom("");
+                                                            setDeactivatedTo("");
+                                                        }}
+                                                        className="text-xs font-semibold text-gray-500 hover:text-gray-700"
+                                                    >
+                                                        Limpiar
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFiltersOpen(false)}
+                                                        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow"
+                                                    >
+                                                        Cerrar
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleExportXlsx}
+                                    aria-label="Exportar XLSX"
+                                    title="Exportar XLSX"
+                                    className="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">
+                                        grid_on
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleExportPdf}
+                                    aria-label="Exportar PDF"
+                                    title="Exportar PDF"
+                                    className="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">
+                                        picture_as_pdf
+                                    </span>
+                                </button>
                             </div>
                         </div>
 
-                        <div className="overflow-hidden">
+                        <div className="overflow-x-auto">
                             <ContactsTable
                                 contacts={pagedContacts}
                                 selectedId={selected?.id}

@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import PageTopbar from "@/components/PageTopbar";
 import { useSessionStore } from "@/core/session/session.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useEventsStore } from "@/modules/events/events.store";
+import { useDocumentsStore } from "@/modules/documents/documents.store";
 
 const CATEGORY_LABELS: Record<string, string> = {
   membership: "Membresía",
@@ -14,6 +16,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   subsidies: "Subvenciones",
   other: "Otros",
 };
+
+const MONTH_OPTIONS = [3, 4, 5, 6];
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("es-ES", {
@@ -33,17 +37,26 @@ const formatPercent = (value: number) =>
 const toMonthLabel = (date: Date) =>
   date.toLocaleDateString("es-ES", { month: "short" }).toUpperCase();
 
+const formatShortDate = (value: string) =>
+  new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "short",
+  }).format(new Date(value));
+
 export default function DashboardPage() {
   const association = useSessionStore((s) => s.association);
   const { transactions, loadTransactions } = useTransactionsStore();
   const { contacts, loadContacts } = useContactsStore();
   const { events, loadEvents } = useEventsStore();
+  const { documents, loadDocuments } = useDocumentsStore();
+  const [monthsRange, setMonthsRange] = useState(6);
 
   useEffect(() => {
     loadTransactions();
     loadContacts();
     loadEvents();
-  }, [loadTransactions, loadContacts, loadEvents]);
+    loadDocuments();
+  }, [loadTransactions, loadContacts, loadEvents, loadDocuments]);
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -59,28 +72,29 @@ export default function DashboardPage() {
     totalExpense,
     monthlySeries,
     expenseBreakdown,
+    incomeBreakdown,
   } = useMemo(() => {
-    const income = transactions
+    const overallIncome = transactions
       .filter((t) => t.type === "income")
       .reduce((sum, t) => sum + t.amount, 0);
-    const expense = transactions
+    const overallExpense = transactions
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + t.amount, 0);
-    const net = income - expense;
+    const net = overallIncome - overallExpense;
 
-    const inMonth = (dateStr: string, start: Date, end: Date) => {
+    const inRange = (dateStr: string, start: Date, end: Date) => {
       const date = new Date(dateStr);
       return date >= start && date <= end;
     };
 
     const monthNet = transactions.reduce((sum, t) => {
       const value = t.type === "income" ? t.amount : -t.amount;
-      return inMonth(t.date, startOfMonth, now) ? sum + value : sum;
+      return inRange(t.date, startOfMonth, now) ? sum + value : sum;
     }, 0);
 
     const prevNet = transactions.reduce((sum, t) => {
       const value = t.type === "income" ? t.amount : -t.amount;
-      return inMonth(t.date, startOfPrevMonth, endOfPrevMonth)
+      return inRange(t.date, startOfPrevMonth, endOfPrevMonth)
         ? sum + value
         : sum;
     }, 0);
@@ -88,10 +102,31 @@ export default function DashboardPage() {
     const change =
       prevNet === 0 ? 0 : ((monthNet - prevNet) / Math.abs(prevNet)) * 100;
 
-    const months = Array.from({ length: 6 }, (_, idx) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - 5 + idx, 1);
+    const range = Math.min(6, Math.max(3, monthsRange));
+    const months = Array.from({ length: range }, (_, idx) => {
+      const date = new Date(
+        now.getFullYear(),
+        now.getMonth() - (range - 1) + idx,
+        1
+      );
       return date;
     });
+
+    const rangeStart = new Date(
+      now.getFullYear(),
+      now.getMonth() - (range - 1),
+      1
+    );
+    const rangeEnd = now;
+    const rangeTransactions = transactions.filter((t) =>
+      inRange(t.date, rangeStart, rangeEnd)
+    );
+    const rangeIncome = rangeTransactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const rangeExpense = rangeTransactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + t.amount, 0);
 
     const series = months.map((month) => {
       const start = new Date(month.getFullYear(), month.getMonth(), 1);
@@ -99,13 +134,13 @@ export default function DashboardPage() {
       const monthIncome = transactions
         .filter((t) => t.type === "income")
         .reduce(
-          (sum, t) => (inMonth(t.date, start, end) ? sum + t.amount : sum),
+          (sum, t) => (inRange(t.date, start, end) ? sum + t.amount : sum),
           0
         );
       const monthExpense = transactions
         .filter((t) => t.type === "expense")
         .reduce(
-          (sum, t) => (inMonth(t.date, start, end) ? sum + t.amount : sum),
+          (sum, t) => (inRange(t.date, start, end) ? sum + t.amount : sum),
           0
         );
       return {
@@ -115,7 +150,7 @@ export default function DashboardPage() {
       };
     });
 
-    const expenseTotals = transactions
+    const expenseTotals = rangeTransactions
       .filter((t) => t.type === "expense")
       .reduce<Record<string, number>>((acc, t) => {
         acc[t.category] = (acc[t.category] ?? 0) + t.amount;
@@ -127,15 +162,28 @@ export default function DashboardPage() {
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 4);
 
+    const incomeTotals = rangeTransactions
+      .filter((t) => t.type === "income")
+      .reduce<Record<string, number>>((acc, t) => {
+        acc[t.category] = (acc[t.category] ?? 0) + t.amount;
+        return acc;
+      }, {});
+
+    const incomeBreakdown = Object.entries(incomeTotals)
+      .map(([category, amount]) => ({ category, amount }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 4);
+
     return {
       balance: net,
       monthBalance: monthNet,
       prevMonthBalance: prevNet,
       balanceChange: change,
-      totalIncome: income,
-      totalExpense: expense,
+      totalIncome: rangeIncome,
+      totalExpense: rangeExpense,
       monthlySeries: series,
       expenseBreakdown: breakdown,
+      incomeBreakdown,
     };
   }, [
     transactions,
@@ -143,6 +191,7 @@ export default function DashboardPage() {
     startOfMonth,
     startOfPrevMonth,
     endOfPrevMonth,
+    monthsRange,
   ]);
 
   const totalMembers = useMemo(() => {
@@ -194,11 +243,14 @@ export default function DashboardPage() {
     },
   ];
 
-  const pendingDocs = useMemo(() => {
-    return transactions
-      .filter((t) => t.status === "pending")
-      .slice(0, 3);
-  }, [transactions]);
+  const recentDocuments = useMemo(() => {
+    const sorted = [...documents].sort(
+      (a, b) =>
+        new Date(b.updatedAt || b.createdAt).getTime() -
+        new Date(a.updatedAt || a.createdAt).getTime()
+    );
+    return sorted.slice(0, 3);
+  }, [documents]);
 
   const maxBar = Math.max(
     ...monthlySeries.map((m) => Math.max(m.income, m.expense)),
@@ -216,7 +268,7 @@ export default function DashboardPage() {
     .join("");
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-5">
       <PageTopbar>
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -241,95 +293,135 @@ export default function DashboardPage() {
       </PageTopbar>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Link
+          href="/accounting"
+          aria-label="Ir a contabilidad"
+          className="group block rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">Saldo Total</p>
             <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
               {formatPercent(balanceChange)}
             </span>
           </div>
-          <p className="mt-3 text-2xl font-semibold text-gray-900">
+          <p className="mt-2 text-2xl font-semibold text-gray-900">
             {formatCurrency(balance)}
           </p>
-          <div className="mt-4 flex items-end gap-1">
+          <div className="mt-3 flex items-end gap-1">
             {monthlySeries.map((month) => (
               <div
                 key={month.label}
-                className="h-12 w-2 rounded-full bg-primary/20"
+                className="h-10 w-2 rounded-full bg-primary/20"
                 style={{
-                  height: `${(month.income / maxBar) * 48 + 8}px`,
+                  height: `${(month.income / maxBar) * 40 + 6}px`,
                 }}
               />
             ))}
           </div>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Link
+          href="/contacts"
+          aria-label="Ir a contactos"
+          className="group block rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">Total de Socios</p>
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
               +
             </span>
           </div>
-          <p className="mt-3 text-2xl font-semibold text-gray-900">
+          <p className="mt-2 text-2xl font-semibold text-gray-900">
             {totalMembers}
           </p>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Link
+          href="/events"
+          aria-label="Ir a eventos"
+          className="group block rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">Total de Eventos</p>
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
               !
             </span>
           </div>
-          <p className="mt-3 text-2xl font-semibold text-gray-900">
+          <p className="mt-2 text-2xl font-semibold text-gray-900">
             {totalEvents}
           </p>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Link
+          href="/social"
+          aria-label="Ir a redes sociales"
+          className="group block rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">Seguidores en redes</p>
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-pink-50 text-pink-500">
               ♥
             </span>
           </div>
-          <p className="mt-3 text-2xl font-semibold text-gray-900">
+          <p className="mt-2 text-2xl font-semibold text-gray-900">
             {formatNumber(socialFollowers)}
           </p>
-        </div>
+        </Link>
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
                 Análisis de Flujo de Caja
               </h2>
               <p className="text-sm text-gray-500">
-                Comparativa semestral de ingresos y gastos operativos
+                Comparativa de ingresos y gastos operativos
               </p>
             </div>
-            <button className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-xs font-semibold text-gray-600">
-              Últimos 6 meses
-            </button>
+            <div className="flex items-center gap-3">
+              <label htmlFor="cashflow-range" className="sr-only">
+                Rango de meses
+              </label>
+              <select
+                id="cashflow-range"
+                value={monthsRange}
+                onChange={(event) =>
+                  setMonthsRange(Number(event.target.value))
+                }
+                className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-xs font-semibold text-gray-600 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                {MONTH_OPTIONS.map((value) => (
+                  <option key={value} value={value}>
+                    {`Últimos ${value} meses`}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="mt-6 grid grid-cols-6 items-end gap-4">
+          <div
+            className="mt-4 grid items-end gap-3"
+            style={{
+              gridTemplateColumns: `repeat(${Math.max(
+                1,
+                monthlySeries.length
+              )}, minmax(0, 1fr))`,
+            }}
+          >
             {monthlySeries.map((month) => (
               <div key={month.label} className="text-center">
-                <div className="flex h-32 items-end justify-center gap-2">
+                <div className="flex h-24 items-end justify-center gap-2">
                   <div
                     className="w-3 rounded-full bg-primary/60"
                     style={{
-                      height: `${(month.income / maxBar) * 120}px`,
+                      height: `${(month.income / maxBar) * 90}px`,
                     }}
                   />
                   <div
                     className="w-3 rounded-full bg-orange-400/60"
                     style={{
-                      height: `${(month.expense / maxBar) * 120}px`,
+                      height: `${(month.expense / maxBar) * 90}px`,
                     }}
                   />
                 </div>
@@ -339,7 +431,7 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-          <div className="mt-6 flex items-center gap-6 text-xs text-gray-500">
+          <div className="mt-4 flex items-center gap-6 text-xs text-gray-500">
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-primary/60" />
               Ingresos
@@ -355,61 +447,104 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
-            Desglose Gastos
-          </h3>
-          <div className="mt-6 space-y-4">
-            {expenseBreakdown.length === 0 && (
-              <p className="text-sm text-gray-400">
-                No hay gastos registrados aún.
-              </p>
-            )}
-            {expenseBreakdown.map((item) => {
-              const percent =
-                totalExpense === 0 ? 0 : (item.amount / totalExpense) * 100;
-              return (
-                <div key={item.category} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm text-gray-600">
-                    <span>
-                      {CATEGORY_LABELS[item.category] ?? item.category}
-                    </span>
-                    <span className="font-semibold">
-                      {percent.toFixed(0)}%
-                    </span>
-                  </div>
-                  <div className="h-2 rounded-full bg-gray-100">
-                    <div
-                      className="h-2 rounded-full bg-primary"
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+        <Link
+          href="/accounting"
+          aria-label="Ver desglose de gastos e ingresos"
+          className="group block rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
+              Desglose Gastos e Ingresos
+            </h3>
           </div>
-          {expenseBreakdown.length > 0 && (
-            <p className="mt-6 text-xs text-gray-500">
-              Los gastos de{" "}
-              {CATEGORY_LABELS[expenseBreakdown[0].category] ?? "la categoría"}{" "}
-              representan el {Math.round(
-                (expenseBreakdown[0].amount / totalExpense) * 100
+          <div className="mt-4 space-y-4">
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Gastos
+              </p>
+              {expenseBreakdown.length === 0 ? (
+                <p className="text-sm text-gray-400">
+                  No hay gastos registrados aún.
+                </p>
+              ) : (
+                expenseBreakdown.map((item) => {
+                  const percent =
+                    totalExpense === 0
+                      ? 0
+                      : (item.amount / totalExpense) * 100;
+                  return (
+                    <div key={item.category} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm text-gray-600">
+                        <span>
+                          {CATEGORY_LABELS[item.category] ?? item.category}
+                        </span>
+                        <span className="font-semibold">
+                          {percent.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-gray-100">
+                        <div
+                          className="h-2 rounded-full bg-orange-400"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
               )}
-              % del total este mes.
-            </p>
-          )}
-        </div>
+            </div>
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Ingresos
+              </p>
+              {incomeBreakdown.length === 0 ? (
+                <p className="text-sm text-gray-400">
+                  No hay ingresos registrados aún.
+                </p>
+              ) : (
+                incomeBreakdown.map((item) => {
+                  const percent =
+                    totalIncome === 0
+                      ? 0
+                      : (item.amount / totalIncome) * 100;
+                  return (
+                    <div key={item.category} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm text-gray-600">
+                        <span>
+                          {CATEGORY_LABELS[item.category] ?? item.category}
+                        </span>
+                        <span className="font-semibold">
+                          {percent.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-gray-100">
+                        <div
+                          className="h-2 rounded-full bg-emerald-500"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </Link>
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <Link
+          href="/events"
+          aria-label="Ir a eventos"
+          className="group block rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">
               Próximos Eventos
             </h3>
             <span className="text-sm font-semibold text-primary">Agenda</span>
           </div>
-          <div className="mt-6 space-y-4">
+          <div className="mt-4 space-y-3">
             {upcomingEvents.length === 0 && (
               <p className="text-sm text-gray-400">
                 No hay eventos activos.
@@ -423,10 +558,10 @@ export default function DashboardPage() {
               return (
                 <div
                   key={event.id}
-                  className="rounded-2xl border border-gray-200 p-4"
+                  className="rounded-2xl border border-gray-200 p-3"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 flex-col items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                    <div className="flex h-10 w-10 flex-col items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
                       <span className="text-xs font-semibold">
                         {date.toLocaleDateString("es-ES", {
                           month: "short",
@@ -448,14 +583,14 @@ export default function DashboardPage() {
                         })}
                       </p>
                       {capacity > 0 && (
-                        <div className="mt-3">
+                        <div className="mt-2">
                           <div className="flex items-center justify-between text-xs text-gray-500">
                             <span>
                               Cupos: {used}/{capacity}
                             </span>
                             <span>{Math.round(progress)}%</span>
                           </div>
-                          <div className="mt-2 h-2 rounded-full bg-gray-100">
+                          <div className="mt-1 h-2 rounded-full bg-gray-100">
                             <div
                               className="h-2 rounded-full bg-primary"
                               style={{ width: `${progress}%` }}
@@ -469,9 +604,13 @@ export default function DashboardPage() {
               );
             })}
           </div>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <Link
+          href="/social"
+          aria-label="Ir a redes sociales"
+          className="group block rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">
               Social Intelligence
@@ -480,12 +619,12 @@ export default function DashboardPage() {
               Live
             </span>
           </div>
-          <div className="mt-6 space-y-4">
+          <div className="mt-4 space-y-3">
             <div className="grid gap-3">
               {socialSummary.map((metric) => (
                 <div
                   key={metric.label}
-                  className="rounded-2xl border border-gray-200 p-4"
+                  className="rounded-2xl border border-gray-200 p-3"
                 >
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
                     {metric.label}
@@ -506,41 +645,45 @@ export default function DashboardPage() {
               </p>
             )}
           </div>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <Link
+          href="/documents"
+          aria-label="Ir a documentos"
+          className="group block rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">
               Documentos
             </h3>
             <span className="text-sm font-semibold text-primary">Nuevo</span>
           </div>
-          <div className="mt-6 space-y-4">
-            {pendingDocs.length === 0 && (
-              <div className="rounded-2xl border border-gray-200 p-4 text-sm text-gray-400">
-                No hay documentos pendientes.
+          <div className="mt-4 space-y-3">
+            {recentDocuments.length === 0 && (
+              <div className="rounded-2xl border border-gray-200 p-3 text-sm text-gray-400">
+                No hay documentos recientes.
               </div>
             )}
-            {pendingDocs.map((doc) => (
+            {recentDocuments.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between rounded-2xl border border-gray-200 p-4"
+                className="flex items-center justify-between rounded-2xl border border-gray-200 p-3"
               >
                 <div>
                   <p className="text-sm font-semibold text-gray-900">
-                    {doc.concept}
+                    {doc.name}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {new Date(doc.date).toLocaleDateString("es-ES")}
+                    {formatShortDate(doc.updatedAt)} - {doc.category}
                   </p>
                 </div>
-                <button className="rounded-xl bg-primary px-3 py-1 text-xs font-semibold text-white">
-                  Revisar
-                </button>
+                <span className="rounded-xl bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  Ver
+                </span>
               </div>
             ))}
           </div>
-        </div>
+        </Link>
       </section>
     </div>
   );
