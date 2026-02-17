@@ -541,7 +541,7 @@ export default function UsersSettingsPage() {
                 onClick={() => router.push("/settings")}
                 className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
               >
-                ← Volver a configuracion
+                ← Volver a configuración
               </button>
             </div>
           </div>
@@ -581,7 +581,7 @@ export default function UsersSettingsPage() {
               onClick={() => router.push("/settings")}
               className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
             >
-              ← Volver a configuracion
+              ← Volver a configuración
             </button>
             {isAdmin ? (
               <button
@@ -948,7 +948,7 @@ export default function UsersSettingsPage() {
                         person
                       </span>
                     </span>
-                    Informacion personal
+                    Información personal
                   </div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
@@ -981,7 +981,7 @@ export default function UsersSettingsPage() {
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-gray-500">
-                        DNI / Identificacion
+                        DNI / Identificación
                       </label>
                       <input
                         value={userForm.dni}

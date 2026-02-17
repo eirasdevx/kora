@@ -130,6 +130,14 @@ export default function ContactDetailPanel({
           </p>
           <p className="mt-1">{contact.dni || "—"}</p>
         </div>
+        {contact.kind === "person" && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Fecha de nacimiento
+            </p>
+            <p className="mt-1">{formatDate(contact.birthDate)}</p>
+          </div>
+        )}
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
             Email

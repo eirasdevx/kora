@@ -4,7 +4,503 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import { useSessionStore } from "@/core/session/session.store";
-import { type UserAccount, useUsersStore } from "@/core/users/users.store";
+import {
+  type UserAccount,
+  type UserPreferences,
+  createDefaultPreferences,
+  normalizeLanguage,
+  useUsersStore,
+} from "@/core/users/users.store";
+
+const SUPPORTED_LOCALES = ["es", "es-419", "gl", "eu", "ca", "va", "en"] as const;
+type LocaleCode = (typeof SUPPORTED_LOCALES)[number];
+
+const DEFAULT_LOCALE: LocaleCode = "es";
+const LOCALE_LOOKUP = new Set<string>(SUPPORTED_LOCALES);
+
+type Copy = {
+  breadcrumb: string;
+  pageTitle: string;
+  pageSubtitle: string;
+  backToSettings: string;
+  guestNotice: string;
+  guestTitle: string;
+  guestMessage: string;
+  profileMissing: string;
+  userFallback: string;
+  profileImageAlt: (name: string) => string;
+  roleLabels: {
+    admin: string;
+    manager: string;
+    reader: string;
+    user: string;
+  };
+  memberSince: (value: string) => string;
+  noDate: string;
+  changeImage: string;
+  removePhoto: string;
+  personalData: string;
+  fullName: string;
+  emailProfessional: string;
+  phoneContact: string;
+  dniLabel: string;
+  fullNamePlaceholder: string;
+  emailPlaceholder: string;
+  phonePlaceholder: string;
+  dniPlaceholder: string;
+  securityAccount: string;
+  password: string;
+  lastUpdate: (value: string) => string;
+  noChanges: string;
+  cancel: string;
+  change: string;
+  newPassword: string;
+  repeatPassword: string;
+  hidePassword: string;
+  showPassword: string;
+  auth2fa: string;
+  auth2faDescription: string;
+  activeSessions: string;
+  activeSessionsDescription: string;
+  viewDetails: string;
+  unsavedChanges: string;
+  lastUpdateAt: (value: string) => string;
+  noPendingChanges: string;
+  discard: string;
+  saveChanges: string;
+  preferencesTitle: string;
+  languageLabel: string;
+  timezoneLabel: string;
+  systemNotifications: string;
+  systemNotificationsDescription: string;
+  emailAlerts: string;
+  emailAlertsDescription: string;
+  browserNotifications: string;
+  browserNotificationsDescription: string;
+  errorRequired: string;
+  errorEmailTaken: string;
+  errorPasswordsMismatch: string;
+};
+
+const LOCALE_DATE_FORMATS: Record<LocaleCode, string> = {
+  es: "es-ES",
+  "es-419": "es-419",
+  gl: "gl-ES",
+  eu: "eu-ES",
+  ca: "ca-ES",
+  va: "ca-ES-valencia",
+  en: "en-US",
+};
+
+const LANGUAGE_OPTIONS: Array<{ value: LocaleCode; label: string }> = [
+  { value: "es", label: "Español (España)" },
+  { value: "es-419", label: "Español (Latam)" },
+  { value: "gl", label: "Galego" },
+  { value: "eu", label: "Euskara" },
+  { value: "ca", label: "Català" },
+  { value: "va", label: "Valencià" },
+  { value: "en", label: "English (US)" },
+];
+
+const COPY_ES: Copy = {
+  breadcrumb: "Configuración > Perfil",
+  pageTitle: "Configuración del perfil",
+  pageSubtitle: "Gestiona tu información personal y preferencias de cuenta.",
+  backToSettings: "← Volver a configuración",
+  guestNotice: "Esta sección solo está disponible en cuentas autenticadas.",
+  guestTitle: "Perfil no disponible en modo invitado",
+  guestMessage: "Inicia sesión para gestionar tu información y preferencias.",
+  profileMissing: "No hay un usuario activo para editar.",
+  userFallback: "Usuario",
+  profileImageAlt: (name) => `Perfil de ${name}`,
+  roleLabels: {
+    admin: "Administrador",
+    manager: "Gestor",
+    reader: "Lector",
+    user: "Usuario",
+  },
+  memberSince: (value) => `Miembro desde: ${value}`,
+  noDate: "Sin fecha",
+  changeImage: "Cambiar imagen",
+  removePhoto: "Eliminar foto",
+  personalData: "Datos personales",
+  fullName: "Nombre completo",
+  emailProfessional: "Correo electrónico profesional",
+  phoneContact: "Teléfono de contacto",
+  dniLabel: "DNI / Identificación",
+  fullNamePlaceholder: "Juan Pérez",
+  emailPlaceholder: "juan.perez@kora.org",
+  phonePlaceholder: "+34 612 345 678",
+  dniPlaceholder: "12345678X",
+  securityAccount: "Seguridad y cuenta",
+  password: "Contraseña",
+  lastUpdate: (value) => `Última actualización: ${value}`,
+  noChanges: "Sin cambios",
+  cancel: "Cancelar",
+  change: "Cambiar",
+  newPassword: "Nueva contraseña",
+  repeatPassword: "Repetir contraseña",
+  hidePassword: "Ocultar contraseña",
+  showPassword: "Ver contraseña",
+  auth2fa: "Autenticación 2FA",
+  auth2faDescription: "Activada vía app de autenticación",
+  activeSessions: "Sesiones activas",
+  activeSessionsDescription: "Conectado en 2 dispositivos",
+  viewDetails: "Ver detalles",
+  unsavedChanges: "Cambios sin guardar",
+  lastUpdateAt: (value) => `Última actualización: ${value}`,
+  noPendingChanges: "Sin cambios pendientes",
+  discard: "Descartar",
+  saveChanges: "Guardar cambios",
+  preferencesTitle: "Preferencias",
+  languageLabel: "Idioma de la interfaz",
+  timezoneLabel: "Zona horaria",
+  systemNotifications: "Notificaciones del sistema",
+  systemNotificationsDescription: "Avisos generales y cambios importantes.",
+  emailAlerts: "Alertas por correo electrónico",
+  emailAlertsDescription: "Recibe resúmenes y notificaciones clave.",
+  browserNotifications: "Notificaciones en el navegador",
+  browserNotificationsDescription: "Avisos en tiempo real desde el navegador.",
+  errorRequired: "Completa nombre, apellidos, DNI y correo.",
+  errorEmailTaken: "Ya existe un usuario con ese correo.",
+  errorPasswordsMismatch: "Las contraseñas no coinciden.",
+};
+
+const COPY: Record<LocaleCode, Copy> = {
+  es: COPY_ES,
+  "es-419": {
+    ...COPY_ES,
+    roleLabels: { ...COPY_ES.roleLabels },
+  },
+  gl: {
+    breadcrumb: "Configuración > Perfil",
+    pageTitle: "Configuración do perfil",
+    pageSubtitle:
+      "Xestiona a túa información persoal e as preferencias da conta.",
+    backToSettings: "← Volver á configuración",
+    guestNotice: "Esta sección só está dispoñible en contas autenticadas.",
+    guestTitle: "Perfil non dispoñible en modo convidado",
+    guestMessage: "Inicia sesión para xestionar a túa información e preferencias.",
+    profileMissing: "Non hai un usuario activo para editar.",
+    userFallback: "Usuario",
+    profileImageAlt: (name) => `Perfil de ${name}`,
+    roleLabels: {
+      admin: "Administrador",
+      manager: "Xestor",
+      reader: "Lector",
+      user: "Usuario",
+    },
+    memberSince: (value) => `Membro desde: ${value}`,
+    noDate: "Sen data",
+    changeImage: "Cambiar imaxe",
+    removePhoto: "Eliminar foto",
+    personalData: "Datos persoais",
+    fullName: "Nome completo",
+    emailProfessional: "Correo electrónico profesional",
+    phoneContact: "Teléfono de contacto",
+    dniLabel: "DNI / Identificación",
+    fullNamePlaceholder: "Juan Pérez",
+    emailPlaceholder: "juan.perez@kora.org",
+    phonePlaceholder: "+34 612 345 678",
+    dniPlaceholder: "12345678X",
+    securityAccount: "Seguridade e conta",
+    password: "Contrasinal",
+    lastUpdate: (value) => `Última actualización: ${value}`,
+    noChanges: "Sen cambios",
+    cancel: "Cancelar",
+    change: "Cambiar",
+    newPassword: "Novo contrasinal",
+    repeatPassword: "Repetir contrasinal",
+    hidePassword: "Agochar contrasinal",
+    showPassword: "Ver contrasinal",
+    auth2fa: "Autenticación 2FA",
+    auth2faDescription: "Activada vía app de autenticación",
+    activeSessions: "Sesións activas",
+    activeSessionsDescription: "Conectado en 2 dispositivos",
+    viewDetails: "Ver detalles",
+    unsavedChanges: "Cambios sen gardar",
+    lastUpdateAt: (value) => `Última actualización: ${value}`,
+    noPendingChanges: "Sen cambios pendentes",
+    discard: "Descartar",
+    saveChanges: "Gardar cambios",
+    preferencesTitle: "Preferencias",
+    languageLabel: "Idioma da interface",
+    timezoneLabel: "Fuso horario",
+    systemNotifications: "Notificacións do sistema",
+    systemNotificationsDescription: "Avisos xerais e cambios importantes.",
+    emailAlerts: "Alertas por correo electrónico",
+    emailAlertsDescription: "Recibe resumos e notificacións clave.",
+    browserNotifications: "Notificacións no navegador",
+    browserNotificationsDescription: "Avisos en tempo real desde o navegador.",
+    errorRequired: "Completa nome, apelidos, DNI e correo.",
+    errorEmailTaken: "Xa existe un usuario con ese correo.",
+    errorPasswordsMismatch: "Os contrasinais non coinciden.",
+  },
+  eu: {
+    breadcrumb: "Ezarpenak > Profila",
+    pageTitle: "Profilaren ezarpenak",
+    pageSubtitle:
+      "Kudeatu zure informazio pertsonala eta kontuaren hobespenak.",
+    backToSettings: "← Itzuli ezarpenetara",
+    guestNotice: "Atal hau kontu autentifikatuetan bakarrik dago eskuragarri.",
+    guestTitle: "Profila ez dago erabilgarri gonbidatu moduan",
+    guestMessage: "Hasi saioa zure informazioa eta hobespenak kudeatzeko.",
+    profileMissing: "Ez dago editatzeko erabiltzaile aktiborik.",
+    userFallback: "Erabiltzailea",
+    profileImageAlt: (name) => `Profilaren irudia: ${name}`,
+    roleLabels: {
+      admin: "Administratzailea",
+      manager: "Kudeatzailea",
+      reader: "Irakurlea",
+      user: "Erabiltzailea",
+    },
+    memberSince: (value) => `Kidea noiztik: ${value}`,
+    noDate: "Datarik gabe",
+    changeImage: "Aldatu irudia",
+    removePhoto: "Ezabatu argazkia",
+    personalData: "Datu pertsonalak",
+    fullName: "Izen osoa",
+    emailProfessional: "Posta elektroniko profesionala",
+    phoneContact: "Harremanetarako telefonoa",
+    dniLabel: "NAN / Identifikazioa",
+    fullNamePlaceholder: "Juan Pérez",
+    emailPlaceholder: "juan.perez@kora.org",
+    phonePlaceholder: "+34 612 345 678",
+    dniPlaceholder: "12345678X",
+    securityAccount: "Segurtasuna eta kontua",
+    password: "Pasahitza",
+    lastUpdate: (value) => `Azken eguneraketa: ${value}`,
+    noChanges: "Aldaketarik ez",
+    cancel: "Ezeztatu",
+    change: "Aldatu",
+    newPassword: "Pasahitz berria",
+    repeatPassword: "Errepikatu pasahitza",
+    hidePassword: "Ezkutatu pasahitza",
+    showPassword: "Erakutsi pasahitza",
+    auth2fa: "2FA autentifikazioa",
+    auth2faDescription: "Autentifikazio aplikazioaren bidez aktibatuta",
+    activeSessions: "Saio aktiboak",
+    activeSessionsDescription: "2 gailutan konektatuta",
+    viewDetails: "Ikusi xehetasunak",
+    unsavedChanges: "Gorde gabeko aldaketak",
+    lastUpdateAt: (value) => `Azken eguneraketa: ${value}`,
+    noPendingChanges: "Ez dago aldaketarik zain",
+    discard: "Baztertu",
+    saveChanges: "Gorde aldaketak",
+    preferencesTitle: "Hobespenak",
+    languageLabel: "Interfazearen hizkuntza",
+    timezoneLabel: "Ordu-eremua",
+    systemNotifications: "Sistemaren jakinarazpenak",
+    systemNotificationsDescription: "Abisu orokorrak eta aldaketa garrantzitsuak.",
+    emailAlerts: "Posta elektroniko bidezko alertak",
+    emailAlertsDescription: "Jaso laburpenak eta jakinarazpen nagusiak.",
+    browserNotifications: "Nabigatzaileko jakinarazpenak",
+    browserNotificationsDescription:
+      "Abisuak denbora errealean nabigatzailetik.",
+    errorRequired: "Bete izena, abizenak, NANa eta posta elektronikoa.",
+    errorEmailTaken: "Dagoeneko badago posta horrekin erabiltzaile bat.",
+    errorPasswordsMismatch: "Pasahitzak ez datoz bat.",
+  },
+  ca: {
+    breadcrumb: "Configuració > Perfil",
+    pageTitle: "Configuració del perfil",
+    pageSubtitle:
+      "Gestiona la teva informació personal i les preferències del compte.",
+    backToSettings: "← Torna a la configuració",
+    guestNotice: "Aquesta secció només està disponible en comptes autenticats.",
+    guestTitle: "Perfil no disponible en mode convidat",
+    guestMessage: "Inicia sessió per gestionar la teva informació i preferències.",
+    profileMissing: "No hi ha cap usuari actiu per editar.",
+    userFallback: "Usuari",
+    profileImageAlt: (name) => `Perfil de ${name}`,
+    roleLabels: {
+      admin: "Administrador",
+      manager: "Gestor",
+      reader: "Lector",
+      user: "Usuari",
+    },
+    memberSince: (value) => `Membre des de: ${value}`,
+    noDate: "Sense data",
+    changeImage: "Canvia la imatge",
+    removePhoto: "Elimina la foto",
+    personalData: "Dades personals",
+    fullName: "Nom complet",
+    emailProfessional: "Correu electrònic professional",
+    phoneContact: "Telèfon de contacte",
+    dniLabel: "DNI / Identificació",
+    fullNamePlaceholder: "Juan Pérez",
+    emailPlaceholder: "juan.perez@kora.org",
+    phonePlaceholder: "+34 612 345 678",
+    dniPlaceholder: "12345678X",
+    securityAccount: "Seguretat i compte",
+    password: "Contrasenya",
+    lastUpdate: (value) => `Última actualització: ${value}`,
+    noChanges: "Sense canvis",
+    cancel: "Cancel·la",
+    change: "Canvia",
+    newPassword: "Nova contrasenya",
+    repeatPassword: "Repeteix la contrasenya",
+    hidePassword: "Amaga la contrasenya",
+    showPassword: "Mostra la contrasenya",
+    auth2fa: "Autenticació 2FA",
+    auth2faDescription: "Activada mitjançant una aplicació d'autenticació",
+    activeSessions: "Sessions actives",
+    activeSessionsDescription: "Connectat a 2 dispositius",
+    viewDetails: "Veure detalls",
+    unsavedChanges: "Canvis sense desar",
+    lastUpdateAt: (value) => `Última actualització: ${value}`,
+    noPendingChanges: "Sense canvis pendents",
+    discard: "Descarta",
+    saveChanges: "Desa els canvis",
+    preferencesTitle: "Preferències",
+    languageLabel: "Idioma de la interfície",
+    timezoneLabel: "Zona horària",
+    systemNotifications: "Notificacions del sistema",
+    systemNotificationsDescription: "Avisos generals i canvis importants.",
+    emailAlerts: "Alertes per correu electrònic",
+    emailAlertsDescription: "Rep resums i notificacions clau.",
+    browserNotifications: "Notificacions al navegador",
+    browserNotificationsDescription: "Avisos en temps real des del navegador.",
+    errorRequired: "Completa el nom, els cognoms, el DNI i el correu.",
+    errorEmailTaken: "Ja existeix un usuari amb aquest correu.",
+    errorPasswordsMismatch: "Les contrasenyes no coincideixen.",
+  },
+  va: {
+    breadcrumb: "Configuració > Perfil",
+    pageTitle: "Configuració del perfil",
+    pageSubtitle:
+      "Gestiona la teua informació personal i les preferències del compte.",
+    backToSettings: "← Torna a la configuració",
+    guestNotice: "Aquesta secció només està disponible en comptes autenticats.",
+    guestTitle: "Perfil no disponible en mode convidat",
+    guestMessage: "Inicia sessió per gestionar la teua informació i preferències.",
+    profileMissing: "No hi ha cap usuari actiu per editar.",
+    userFallback: "Usuari",
+    profileImageAlt: (name) => `Perfil de ${name}`,
+    roleLabels: {
+      admin: "Administrador",
+      manager: "Gestor",
+      reader: "Lector",
+      user: "Usuari",
+    },
+    memberSince: (value) => `Membre des de: ${value}`,
+    noDate: "Sense data",
+    changeImage: "Canvia la imatge",
+    removePhoto: "Elimina la foto",
+    personalData: "Dades personals",
+    fullName: "Nom complet",
+    emailProfessional: "Correu electrònic professional",
+    phoneContact: "Telèfon de contacte",
+    dniLabel: "DNI / Identificació",
+    fullNamePlaceholder: "Juan Pérez",
+    emailPlaceholder: "juan.perez@kora.org",
+    phonePlaceholder: "+34 612 345 678",
+    dniPlaceholder: "12345678X",
+    securityAccount: "Seguretat i compte",
+    password: "Contrasenya",
+    lastUpdate: (value) => `Última actualització: ${value}`,
+    noChanges: "Sense canvis",
+    cancel: "Cancel·la",
+    change: "Canvia",
+    newPassword: "Nova contrasenya",
+    repeatPassword: "Repeteix la contrasenya",
+    hidePassword: "Amaga la contrasenya",
+    showPassword: "Mostra la contrasenya",
+    auth2fa: "Autenticació 2FA",
+    auth2faDescription: "Activada mitjançant una aplicació d'autenticació",
+    activeSessions: "Sessions actives",
+    activeSessionsDescription: "Connectat a 2 dispositius",
+    viewDetails: "Veure detalls",
+    unsavedChanges: "Canvis sense guardar",
+    lastUpdateAt: (value) => `Última actualització: ${value}`,
+    noPendingChanges: "Sense canvis pendents",
+    discard: "Descarta",
+    saveChanges: "Guarda els canvis",
+    preferencesTitle: "Preferències",
+    languageLabel: "Idioma de la interfície",
+    timezoneLabel: "Zona horària",
+    systemNotifications: "Notificacions del sistema",
+    systemNotificationsDescription: "Avisos generals i canvis importants.",
+    emailAlerts: "Alertes per correu electrònic",
+    emailAlertsDescription: "Rep resums i notificacions clau.",
+    browserNotifications: "Notificacions al navegador",
+    browserNotificationsDescription: "Avisos en temps real des del navegador.",
+    errorRequired: "Completa el nom, els cognoms, el DNI i el correu.",
+    errorEmailTaken: "Ja existeix un usuari amb aquest correu.",
+    errorPasswordsMismatch: "Les contrasenyes no coincideixen.",
+  },
+  en: {
+    breadcrumb: "Settings > Profile",
+    pageTitle: "Profile settings",
+    pageSubtitle: "Manage your personal information and account preferences.",
+    backToSettings: "← Back to settings",
+    guestNotice: "This section is only available for authenticated accounts.",
+    guestTitle: "Profile not available in guest mode",
+    guestMessage: "Sign in to manage your information and preferences.",
+    profileMissing: "There is no active user to edit.",
+    userFallback: "User",
+    profileImageAlt: (name) => `Profile of ${name}`,
+    roleLabels: {
+      admin: "Administrator",
+      manager: "Manager",
+      reader: "Reader",
+      user: "User",
+    },
+    memberSince: (value) => `Member since: ${value}`,
+    noDate: "No date",
+    changeImage: "Change image",
+    removePhoto: "Remove photo",
+    personalData: "Personal details",
+    fullName: "Full name",
+    emailProfessional: "Work email",
+    phoneContact: "Contact phone",
+    dniLabel: "ID / Identification",
+    fullNamePlaceholder: "Alex Johnson",
+    emailPlaceholder: "alex.johnson@kora.org",
+    phonePlaceholder: "+1 415 555 0190",
+    dniPlaceholder: "A1234567",
+    securityAccount: "Security and account",
+    password: "Password",
+    lastUpdate: (value) => `Last update: ${value}`,
+    noChanges: "No changes",
+    cancel: "Cancel",
+    change: "Change",
+    newPassword: "New password",
+    repeatPassword: "Repeat password",
+    hidePassword: "Hide password",
+    showPassword: "Show password",
+    auth2fa: "2FA authentication",
+    auth2faDescription: "Enabled via authenticator app",
+    activeSessions: "Active sessions",
+    activeSessionsDescription: "Connected on 2 devices",
+    viewDetails: "View details",
+    unsavedChanges: "Unsaved changes",
+    lastUpdateAt: (value) => `Last update: ${value}`,
+    noPendingChanges: "No pending changes",
+    discard: "Discard",
+    saveChanges: "Save changes",
+    preferencesTitle: "Preferences",
+    languageLabel: "Interface language",
+    timezoneLabel: "Time zone",
+    systemNotifications: "System notifications",
+    systemNotificationsDescription: "General alerts and important changes.",
+    emailAlerts: "Email alerts",
+    emailAlertsDescription: "Receive summaries and key notifications.",
+    browserNotifications: "Browser notifications",
+    browserNotificationsDescription: "Real-time alerts from the browser.",
+    errorRequired: "Complete first name, last name, ID, and email.",
+    errorEmailTaken: "A user with that email already exists.",
+    errorPasswordsMismatch: "Passwords do not match.",
+  },
+};
+
+const resolveLocale = (value?: string): LocaleCode => {
+  const normalized = normalizeLanguage(value);
+  if (LOCALE_LOOKUP.has(normalized)) {
+    return normalized as LocaleCode;
+  }
+  return DEFAULT_LOCALE;
+};
 
 type UserProfileFormState = {
   firstName: string;
@@ -47,6 +543,19 @@ function getUserFormState(user: UserAccount | null): UserProfileFormState {
   };
 }
 
+function resolvePreferences(preferences?: UserPreferences): UserPreferences {
+  const defaults = createDefaultPreferences();
+  return {
+    ...defaults,
+    ...(preferences ?? {}),
+    language: normalizeLanguage(preferences?.language ?? defaults.language),
+    notifications: {
+      ...defaults.notifications,
+      ...(preferences?.notifications ?? {}),
+    },
+  };
+}
+
 function EyeIcon({ open }: { open: boolean }) {
   return (
     <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
@@ -86,10 +595,20 @@ function ToggleSwitch({
 function UserProfileCard({
   user,
   users,
+  preferences,
+  copy,
+  dateLocale,
+  onPreferencesChange,
+  onResetPreferences,
   onSave,
 }: {
   user: UserAccount | null;
   users: UserAccount[];
+  preferences: UserPreferences;
+  copy: Copy;
+  dateLocale: string;
+  onPreferencesChange: (next: UserPreferences) => void;
+  onResetPreferences: () => void;
   onSave: (updates: Partial<UserAccount>) => void;
 }) {
   const [form, setForm] = useState<UserProfileFormState>(
@@ -98,7 +617,6 @@ function UserProfileCard({
   const [showPassword, setShowPassword] = useState(false);
   const [showRepeat, setShowRepeat] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -113,26 +631,36 @@ function UserProfileCard({
   }, [user?.id]);
 
   const fullName = `${form.firstName} ${form.lastName}`.trim();
-  const displayName = fullName || user?.name || "Usuario";
-  const initials = getInitials(displayName || "Usuario");
+  const displayName = fullName || user?.name || copy.userFallback;
+  const initials = getInitials(displayName || copy.userFallback);
   const roleLabel =
     user?.role === "Admin"
-      ? "Administrador"
+      ? copy.roleLabels.admin
       : user?.role === "Gestor"
-        ? "Gestor"
+        ? copy.roleLabels.manager
         : user?.role === "Lector"
-          ? "Lector"
-          : "Usuario";
-  const memberSinceLabel = user?.lastAccessAt
-    ? new Date(user.lastAccessAt).toLocaleDateString("es-ES", {
+          ? copy.roleLabels.reader
+          : copy.roleLabels.user;
+  const memberSinceValue = user?.lastAccessAt
+    ? new Date(user.lastAccessAt).toLocaleDateString(dateLocale, {
         month: "long",
         year: "numeric",
       })
-    : "Sin fecha";
+    : copy.noDate;
+  const memberSinceLabel = copy.memberSince(memberSinceValue);
 
   const hasChanges = useMemo(() => {
     if (!user) return false;
+    const baseline = resolvePreferences(user.preferences);
+    const preferencesChanged =
+      preferences.language !== baseline.language ||
+      preferences.timezone !== baseline.timezone ||
+      preferences.notifications.email !== baseline.notifications.email ||
+      preferences.notifications.browser !== baseline.notifications.browser ||
+      preferences.notifications.updates !== baseline.notifications.updates ||
+      preferences.twoFactorEnabled !== baseline.twoFactorEnabled;
     return (
+      preferencesChanged ||
       normalize(form.firstName) !== normalize(user.firstName ?? "") ||
       normalize(form.lastName) !== normalize(user.lastName ?? "") ||
       normalize(form.phone) !== normalize(user.phone ?? "") ||
@@ -142,7 +670,7 @@ function UserProfileCard({
       normalize(form.password) !== "" ||
       normalize(form.passwordRepeat) !== ""
     );
-  }, [form, user]);
+  }, [form, user, preferences]);
 
   const hasPassword =
     normalize(form.password).length > 0 ||
@@ -168,7 +696,7 @@ function UserProfileCard({
     const password = form.password;
 
     if (!firstName || !lastName || !dni || !email) {
-      setFormError("Completa nombre, apellidos, DNI y correo.");
+      setFormError(copy.errorRequired);
       return;
     }
 
@@ -178,12 +706,12 @@ function UserProfileCard({
         candidate.email.toLowerCase() === email.toLowerCase()
     );
     if (emailTaken) {
-      setFormError("Ya existe un usuario con ese correo.");
+      setFormError(copy.errorEmailTaken);
       return;
     }
 
     if (hasPassword && !passwordsMatch) {
-      setFormError("Las contraseñas no coinciden.");
+      setFormError(copy.errorPasswordsMismatch);
       return;
     }
 
@@ -195,6 +723,7 @@ function UserProfileCard({
       dni,
       email,
       name: `${firstName} ${lastName}`.trim(),
+      preferences: resolvePreferences(preferences),
     };
 
     if (hasPassword) {
@@ -221,6 +750,7 @@ function UserProfileCard({
     setForm(getUserFormState(user));
     setFormError(null);
     setPasswordOpen(false);
+    onResetPreferences();
   };
 
   const handlePhotoChange = (file?: File | null) => {
@@ -245,10 +775,16 @@ function UserProfileCard({
     }));
   };
 
+  const statusLabel = hasChanges
+    ? copy.unsavedChanges
+    : lastSavedAt
+      ? copy.lastUpdateAt(new Date(lastSavedAt).toLocaleString(dateLocale))
+      : copy.noPendingChanges;
+
   if (!user) {
     return (
       <section className="rounded-3xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">
-        No hay un usuario activo para editar.
+        {copy.profileMissing}
       </section>
     );
   }
@@ -262,7 +798,7 @@ function UserProfileCard({
               {form.photoUrl ? (
                 <img
                   src={form.photoUrl}
-                  alt={`Perfil de ${displayName}`}
+                  alt={copy.profileImageAlt(displayName)}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -272,14 +808,12 @@ function UserProfileCard({
             <div>
               <h2 className="text-xl font-semibold text-gray-900">{displayName}</h2>
               <p className="text-sm text-primary">{roleLabel}</p>
-              <p className="text-xs text-gray-400">
-                Miembro desde: {memberSinceLabel}
-              </p>
+              <p className="text-xs text-gray-400">{memberSinceLabel}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <label className="cursor-pointer rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 shadow-sm hover:bg-gray-50">
-              Cambiar imagen
+              {copy.changeImage}
               <input
                 ref={photoInputRef}
                 type="file"
@@ -299,7 +833,7 @@ function UserProfileCard({
                 }}
                 className="rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-500 shadow-sm hover:bg-rose-50"
               >
-                Eliminar foto
+                {copy.removePhoto}
               </button>
             ) : null}
           </div>
@@ -320,23 +854,23 @@ function UserProfileCard({
                 person
               </span>
             </span>
-            Datos Personales
+            {copy.personalData}
           </div>
           <div className="mt-5 space-y-4">
             <div>
               <label className="text-xs font-semibold text-gray-500">
-                Nombre completo
+                {copy.fullName}
               </label>
               <input
                 value={fullName}
                 onChange={(event) => handleFullNameChange(event.target.value)}
-                placeholder="Juan Perez"
+                placeholder={copy.fullNamePlaceholder}
                 className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
               />
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-500">
-                Correo electrónico profesional
+                {copy.emailProfessional}
               </label>
               <input
                 type="email"
@@ -344,33 +878,33 @@ function UserProfileCard({
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, email: event.target.value }))
                 }
-                placeholder="juan.perez@kora.org"
+                placeholder={copy.emailPlaceholder}
                 className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
               />
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-500">
-                Teléfono de contacto
+                {copy.phoneContact}
               </label>
               <input
                 value={form.phone}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, phone: event.target.value }))
                 }
-                placeholder="+34 612 345 678"
+                placeholder={copy.phonePlaceholder}
                 className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
               />
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-500">
-                DNI / Identificacion
+                {copy.dniLabel}
               </label>
               <input
                 value={form.dni}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, dni: event.target.value }))
                 }
-                placeholder="12345678X"
+                placeholder={copy.dniPlaceholder}
                 className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
               />
             </div>
@@ -382,14 +916,18 @@ function UserProfileCard({
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
               <span className="material-symbols-outlined text-[16px]">lock</span>
             </span>
-            Seguridad y Cuenta
+            {copy.securityAccount}
           </div>
           <div className="mt-5 space-y-4">
             <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-gray-800">Contraseña</p>
+                <p className="text-sm font-semibold text-gray-800">{copy.password}</p>
                 <p className="text-xs text-gray-400">
-                  Última actualización: {lastSavedAt ? new Date(lastSavedAt).toLocaleDateString() : "Sin cambios"}
+                  {lastSavedAt
+                    ? copy.lastUpdate(
+                        new Date(lastSavedAt).toLocaleDateString(dateLocale)
+                      )
+                    : copy.noChanges}
                 </p>
               </div>
               <button
@@ -410,7 +948,7 @@ function UserProfileCard({
                 }}
                 className="text-sm font-semibold text-primary"
               >
-                {passwordOpen ? "Cancelar" : "Cambiar"}
+                {passwordOpen ? copy.cancel : copy.change}
               </button>
             </div>
 
@@ -418,7 +956,7 @@ function UserProfileCard({
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-xs font-semibold text-gray-500">
-                    Nueva contraseña
+                    {copy.newPassword}
                   </label>
                   <div className="relative mt-2">
                     <input
@@ -438,7 +976,7 @@ function UserProfileCard({
                       onClick={() => setShowPassword((prev) => !prev)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       aria-label={
-                        showPassword ? "Ocultar contraseña" : "Ver contraseña"
+                        showPassword ? copy.hidePassword : copy.showPassword
                       }
                     >
                       <EyeIcon open={showPassword} />
@@ -447,7 +985,7 @@ function UserProfileCard({
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-gray-500">
-                    Repetir contraseña
+                    {copy.repeatPassword}
                   </label>
                   <div className="relative mt-2">
                     <input
@@ -467,7 +1005,7 @@ function UserProfileCard({
                       onClick={() => setShowRepeat((prev) => !prev)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       aria-label={
-                        showRepeat ? "Ocultar contraseña" : "Ver contraseña"
+                        showRepeat ? copy.hidePassword : copy.showPassword
                       }
                     >
                       <EyeIcon open={showRepeat} />
@@ -479,60 +1017,67 @@ function UserProfileCard({
 
             <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-gray-800">Autenticación 2FA</p>
-                <p className="text-xs text-gray-400">
-                  Activada vía App de autenticación
-                </p>
+                <p className="text-sm font-semibold text-gray-800">{copy.auth2fa}</p>
+                <p className="text-xs text-gray-400">{copy.auth2faDescription}</p>
               </div>
               <ToggleSwitch
-                checked={twoFactorEnabled}
-                onChange={() => setTwoFactorEnabled((prev) => !prev)}
+                checked={preferences.twoFactorEnabled}
+                onChange={() =>
+                  onPreferencesChange({
+                    ...preferences,
+                    twoFactorEnabled: !preferences.twoFactorEnabled,
+                  })
+                }
               />
             </div>
 
             <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-gray-800">Sesiones activas</p>
-                <p className="text-xs text-gray-400">Conectado en 2 dispositivos</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  {copy.activeSessions}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {copy.activeSessionsDescription}
+                </p>
               </div>
               <button type="button" className="text-sm font-semibold text-primary">
-                Ver detalles
+                {copy.viewDetails}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-end">
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={!hasChanges}
-          className={`rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold shadow-sm transition ${
-            hasChanges
-              ? "text-gray-600 hover:bg-gray-50"
-              : "cursor-not-allowed text-gray-300 opacity-60"
-          }`}
-        >
-          Descartar
-        </button>
-        <button
-          id="profile-user-save"
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave}
-          className={`rounded-2xl px-5 py-2 text-sm font-semibold text-white shadow transition ${
-            canSave ? "bg-primary hover:bg-primary/90" : "cursor-not-allowed bg-primary/50"
-          }`}
-        >
-          Guardar Cambios
-        </button>
+      <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-gray-400">{statusLabel}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={!hasChanges}
+            className={`rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold shadow-sm transition ${
+              hasChanges
+                ? "text-gray-600 hover:bg-gray-50"
+                : "cursor-not-allowed text-gray-300 opacity-60"
+            }`}
+          >
+            {copy.discard}
+          </button>
+          <button
+            id="profile-user-save"
+            type="button"
+            onClick={handleSave}
+            disabled={!canSave}
+            className={`rounded-2xl px-5 py-2 text-sm font-semibold text-white shadow transition ${
+              canSave
+                ? "bg-primary hover:bg-primary/90"
+                : "cursor-not-allowed bg-primary/50"
+            }`}
+          >
+            {copy.saveChanges}
+          </button>
+        </div>
       </div>
-      {lastSavedAt ? (
-        <p className="text-xs text-gray-400">
-          Última actualización: {new Date(lastSavedAt).toLocaleString()}
-        </p>
-      ) : null}
     </section>
   );
 }
@@ -549,11 +1094,17 @@ export default function ProfileSettingsPage() {
   const updateUser = useUsersStore((s) => s.updateUser);
   const activeUser = users.find((user) => user.id === activeUserId) ?? null;
 
-  const [uiLanguage, setUiLanguage] = useState("Español (España)");
-  const [uiTimezone, setUiTimezone] = useState("(GMT+01:00) Madrid");
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [browserNotifications, setBrowserNotifications] = useState(false);
-  const [updatesNotifications, setUpdatesNotifications] = useState(true);
+  const [preferences, setPreferences] = useState<UserPreferences>(() =>
+    resolvePreferences(activeUser?.preferences)
+  );
+
+  const locale = resolveLocale(preferences.language);
+  const copy = COPY[locale];
+  const dateLocale = LOCALE_DATE_FORMATS[locale];
+
+  useEffect(() => {
+    setPreferences(resolvePreferences(activeUser?.preferences));
+  }, [activeUser?.id]);
 
   useEffect(() => {
     if (!hydrated || mode !== "authenticated") return;
@@ -571,21 +1122,19 @@ export default function ProfileSettingsPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Configuración &nbsp;&gt;&nbsp; Perfil
+                {copy.breadcrumb}
               </p>
               <h1 className="text-2xl font-semibold text-gray-900">
-                Configuración del Perfil
+                {copy.pageTitle}
               </h1>
-              <p className="text-sm text-gray-500">
-                Esta sección solo está disponible en cuentas autenticadas.
-              </p>
+              <p className="text-sm text-gray-500">{copy.guestNotice}</p>
             </div>
             <button
               type="button"
               onClick={() => router.push("/settings")}
               className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
             >
-              ← Volver a configuracion
+              {copy.backToSettings}
             </button>
           </div>
         </PageTopbar>
@@ -595,11 +1144,9 @@ export default function ProfileSettingsPage() {
             <span className="material-symbols-outlined text-[24px]">info</span>
           </div>
           <h2 className="mt-4 text-lg font-semibold text-gray-900">
-            Perfil no disponible en modo invitado
+            {copy.guestTitle}
           </h2>
-          <p className="mt-2 text-sm text-gray-500">
-            Inicia sesión para gestionar tu información y preferencias.
-          </p>
+          <p className="mt-2 text-sm text-gray-500">{copy.guestMessage}</p>
         </div>
       </div>
     );
@@ -611,14 +1158,12 @@ export default function ProfileSettingsPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-              Configuración &nbsp;&gt;&nbsp; Perfil
+              {copy.breadcrumb}
             </p>
             <h1 className="text-2xl font-semibold text-gray-900">
-              Configuración del Perfil
+              {copy.pageTitle}
             </h1>
-            <p className="text-sm text-gray-500">
-              Gestiona tu información personal y preferencias de cuenta.
-            </p>
+            <p className="text-sm text-gray-500">{copy.pageSubtitle}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -626,16 +1171,7 @@ export default function ProfileSettingsPage() {
               onClick={() => router.push("/settings")}
               className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
             >
-              ← Volver a configuracion
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                document.getElementById("profile-user-save")?.click()
-              }
-              className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
-            >
-              Guardar Cambios
+              {copy.backToSettings}
             </button>
           </div>
         </div>
@@ -644,6 +1180,13 @@ export default function ProfileSettingsPage() {
       <UserProfileCard
         user={activeUser}
         users={users}
+        preferences={preferences}
+        copy={copy}
+        dateLocale={dateLocale}
+        onPreferencesChange={setPreferences}
+        onResetPreferences={() =>
+          setPreferences(resolvePreferences(activeUser?.preferences))
+        }
         onSave={(updates) => {
           if (!activeUser) return;
           updateUser(activeUser.id, updates);
@@ -655,31 +1198,43 @@ export default function ProfileSettingsPage() {
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
             <span className="material-symbols-outlined text-[16px]">settings</span>
           </span>
-          Preferencias
+          {copy.preferencesTitle}
         </div>
         <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="space-y-4">
             <div>
               <label className="text-xs font-semibold text-gray-500">
-                Idioma de la interfaz
+                {copy.languageLabel}
               </label>
               <select
-                value={uiLanguage}
-                onChange={(event) => setUiLanguage(event.target.value)}
+                value={preferences.language}
+                onChange={(event) =>
+                  setPreferences((prev) => ({
+                    ...prev,
+                    language: event.target.value,
+                  }))
+                }
                 className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
               >
-                <option>Español (España)</option>
-                <option>Español (Latam)</option>
-                <option>English (US)</option>
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-500">
-                Zona Horaria
+                {copy.timezoneLabel}
               </label>
               <select
-                value={uiTimezone}
-                onChange={(event) => setUiTimezone(event.target.value)}
+                value={preferences.timezone}
+                onChange={(event) =>
+                  setPreferences((prev) => ({
+                    ...prev,
+                    timezone: event.target.value,
+                  }))
+                }
                 className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
               >
                 <option>(GMT+01:00) Madrid</option>
@@ -692,43 +1247,67 @@ export default function ProfileSettingsPage() {
             <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-gray-800">
-                  Notificaciones del sistema
+                  {copy.systemNotifications}
                 </p>
                 <p className="text-xs text-gray-400">
-                  Avisos generales y cambios importantes.
+                  {copy.systemNotificationsDescription}
                 </p>
               </div>
               <ToggleSwitch
-                checked={updatesNotifications}
-                onChange={() => setUpdatesNotifications((prev) => !prev)}
+                checked={preferences.notifications.updates}
+                onChange={() =>
+                  setPreferences((prev) => ({
+                    ...prev,
+                    notifications: {
+                      ...prev.notifications,
+                      updates: !prev.notifications.updates,
+                    },
+                  }))
+                }
               />
             </div>
             <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-gray-800">
-                  Alertas por correo electrónico
+                  {copy.emailAlerts}
                 </p>
                 <p className="text-xs text-gray-400">
-                  Recibe resúmenes y notificaciones clave.
+                  {copy.emailAlertsDescription}
                 </p>
               </div>
               <ToggleSwitch
-                checked={emailNotifications}
-                onChange={() => setEmailNotifications((prev) => !prev)}
+                checked={preferences.notifications.email}
+                onChange={() =>
+                  setPreferences((prev) => ({
+                    ...prev,
+                    notifications: {
+                      ...prev.notifications,
+                      email: !prev.notifications.email,
+                    },
+                  }))
+                }
               />
             </div>
             <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-gray-800">
-                  Notificaciones en el navegador
+                  {copy.browserNotifications}
                 </p>
                 <p className="text-xs text-gray-400">
-                  Avisos en tiempo real desde el navegador.
+                  {copy.browserNotificationsDescription}
                 </p>
               </div>
               <ToggleSwitch
-                checked={browserNotifications}
-                onChange={() => setBrowserNotifications((prev) => !prev)}
+                checked={preferences.notifications.browser}
+                onChange={() =>
+                  setPreferences((prev) => ({
+                    ...prev,
+                    notifications: {
+                      ...prev.notifications,
+                      browser: !prev.notifications.browser,
+                    },
+                  }))
+                }
               />
             </div>
           </div>
@@ -737,3 +1316,7 @@ export default function ProfileSettingsPage() {
     </div>
   );
 }
+
+
+
+

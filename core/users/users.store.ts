@@ -7,6 +7,17 @@ import { type AdminAccount } from "@/core/session/session.store";
 export type UserRole = "Admin" | "Gestor" | "Lector";
 export type UserStatus = "Activo" | "Pendiente";
 
+export type UserPreferences = {
+  language: string;
+  timezone: string;
+  notifications: {
+    updates: boolean;
+    email: boolean;
+    browser: boolean;
+  };
+  twoFactorEnabled: boolean;
+};
+
 export type UserPermissions = {
   modules: {
     accounting: boolean;
@@ -36,6 +47,7 @@ export type UserAccount = {
   status: UserStatus;
   lastAccessAt: string | null;
   permissions?: UserPermissions;
+  preferences?: UserPreferences;
 };
 
 interface UsersState {
@@ -79,6 +91,44 @@ const createDefaultPermissions = (): UserPermissions => ({
     delete: false,
   },
 });
+
+export const createDefaultPreferences = (): UserPreferences => ({
+  language: "es",
+  timezone: "(GMT+01:00) Madrid",
+  notifications: {
+    updates: true,
+    email: true,
+    browser: false,
+  },
+  twoFactorEnabled: true,
+});
+
+const LANGUAGE_ALIASES: Record<string, string> = {
+  "es": "es",
+  "es-419": "es-419",
+  "español (españa)": "es",
+  "espanol (espana)": "es",
+  "español (latam)": "es-419",
+  "espanol (latam)": "es-419",
+  "galego": "gl",
+  "gallego": "gl",
+  "euskara": "eu",
+  "euskera": "eu",
+  "català": "ca",
+  "catalan": "ca",
+  "catalán": "ca",
+  "valencià": "va",
+  "valenciano": "va",
+  "english (us)": "en",
+  "inglés (us)": "en",
+  "ingles (us)": "en",
+};
+
+export const normalizeLanguage = (value?: string): string => {
+  if (!value) return "es";
+  const key = value.toLowerCase();
+  return LANGUAGE_ALIASES[key] ?? value;
+};
 
 const normalizeEnabled = (value?: string | boolean): boolean => {
   if (value === true) return true;
@@ -131,6 +181,16 @@ const normalizeUser = (user: UserAccount): UserAccount => {
     `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || name;
   const parts = composed.split(" ").filter(Boolean);
   const basePermissions = withDefaultPermissions(user.permissions);
+  const basePreferences = createDefaultPreferences();
+  const preferences: UserPreferences = {
+    ...basePreferences,
+    ...(user.preferences ?? {}),
+    language: normalizeLanguage(user.preferences?.language ?? basePreferences.language),
+    notifications: {
+      ...basePreferences.notifications,
+      ...(user.preferences?.notifications ?? {}),
+    },
+  };
   const permissions =
     user.role === "Admin"
       ? {
@@ -151,6 +211,7 @@ const normalizeUser = (user: UserAccount): UserAccount => {
     lastName: user.lastName ?? parts.slice(1).join(" "),
     dni: user.dni ?? "",
     permissions,
+    preferences,
   };
 };
 

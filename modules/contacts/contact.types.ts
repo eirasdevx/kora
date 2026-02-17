@@ -23,6 +23,7 @@ export interface Contact {
   address?: string;
   city?: string;
   region?: string;
+  birthDate?: string;
   photoUrl?: string;
   types: ContactType[];
   tags?: string[];

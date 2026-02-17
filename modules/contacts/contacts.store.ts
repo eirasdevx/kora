@@ -38,6 +38,7 @@ export const useContactsStore = create<ContactsState>((set) => ({
       return {
         ...c,
         kind,
+        birthDate: kind === "person" ? c.birthDate ?? undefined : undefined,
         firstName: c.firstName ?? nameParts[0] ?? "",
         lastName: c.lastName ?? nameParts.slice(1).join(" "),
         dni: c.dni ?? "",
@@ -62,6 +63,7 @@ export const useContactsStore = create<ContactsState>((set) => ({
       ...contact,
       kind,
       fullName,
+      birthDate: kind === "person" ? contact.birthDate ?? undefined : undefined,
       types: contact.types.filter(
         (t) =>
           allowedTypes.includes(t as "member" | "provider" | "collaborator")

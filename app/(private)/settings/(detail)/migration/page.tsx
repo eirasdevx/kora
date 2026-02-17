@@ -732,7 +732,7 @@ export default function MigrationSettingsPage() {
       } else {
         await exportScopedJson(exportScope);
       }
-      setMessage("Exportacion JSON completada.");
+      setMessage("Exportación JSON completada.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al exportar.");
     } finally {
@@ -900,7 +900,7 @@ export default function MigrationSettingsPage() {
       const result = await importJsonText(await file.text());
 
       setMessage(
-        `Importacion completada. Perfil: ${result.profile}, Contactos: ${result.contacts}, Eventos: ${result.events}, Contabilidad: ${result.transactions}, Redes: ${result.socialPosts}.`
+        `Importación completada. Perfil: ${result.profile}, Contactos: ${result.contacts}, Eventos: ${result.events}, Contabilidad: ${result.transactions}, Redes: ${result.socialPosts}.`
       );
 
       if (input) input.value = "";
@@ -944,7 +944,7 @@ export default function MigrationSettingsPage() {
             onClick={() => router.push("/settings")}
             className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
           >
-            ← Volver a configuracion
+            ← Volver a configuración
           </button>
         </div>
       </PageTopbar>
@@ -1106,9 +1106,9 @@ export default function MigrationSettingsPage() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Exportar datos</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Genera un respaldo o descarga tu informacion en JSON.
-              </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  Genera un respaldo o descarga tu información en JSON.
+                </p>
             </div>
           </div>
 

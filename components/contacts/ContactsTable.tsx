@@ -1,30 +1,12 @@
 "use client";
 
-import {
-  Contact,
-  ContactType,
-  ContactTypeLabels,
-  ContactKindLabels,
-} from "@/modules/contacts/contact.types";
+import { Contact } from "@/modules/contacts/contact.types";
 
 interface Props {
   contacts: Contact[];
   selectedId?: string;
   onSelect: (contact: Contact) => void;
 }
-
-// ORDEN VISUAL CANONICO (regla de negocio)
-const CONTACT_TYPE_ORDER: ContactType[] = [
-  "member",
-  "provider",
-  "collaborator",
-];
-
-const TYPE_BADGE_STYLES: Record<ContactType, string> = {
-  member: "bg-blue-50 text-blue-700",
-  provider: "bg-amber-50 text-amber-700",
-  collaborator: "bg-purple-50 text-purple-700",
-};
 
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
@@ -41,10 +23,16 @@ function getInitials(contact: Contact) {
     .join("");
 }
 
-function getTypesLabel(types: ContactType[]) {
-  if (!types.length) return "Sin tipo";
-  const ordered = CONTACT_TYPE_ORDER.filter((t) => types.includes(t));
-  return ordered.map((t) => ContactTypeLabels[t]).join(", ");
+function formatBirthDate(contact: Contact) {
+  if (contact.kind !== "person") return "-";
+  if (!contact.birthDate) return "-";
+  const date = new Date(contact.birthDate);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
 }
 
 export default function ContactsTable({
@@ -61,34 +49,30 @@ export default function ContactsTable({
   }
 
   return (
-    <table className="min-w-[1400px] w-full text-left text-sm">
+    <table className="min-w-[1100px] w-full text-left text-sm">
       <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
         <tr>
-          <th className="px-6 py-4">Perfil del contacto</th>
-          <th className="px-6 py-4">Todos los datos de los contactos</th>
-          <th className="px-6 py-4">Información de contacto</th>
-          <th className="px-6 py-4">Notas</th>
+          <th className="px-6 py-4">Perfil</th>
+          <th className="px-6 py-4">Nombre</th>
+          <th className="px-6 py-4">Apellidos</th>
+          <th className="px-6 py-4">Fecha nacimiento</th>
+          <th className="px-6 py-4">DNI</th>
+          <th className="px-6 py-4">Teléfono</th>
+          <th className="px-6 py-4">Correo</th>
         </tr>
       </thead>
 
       <tbody className="text-gray-700">
         {contacts.map((c) => {
-          const orderedTypes = CONTACT_TYPE_ORDER.filter((t) =>
-            c.types.includes(t)
-          );
           const displayName = getDisplayName(c);
-          const addressLine = [
-            c.address,
-            c.postalCode,
-            c.city,
-            c.region,
-          ]
-            .filter(Boolean)
-            .join(", ");
-          const representativeName = `${c.representativeFirstName ?? ""} ${
-            c.representativeLastName ?? ""
-          }`.trim();
-          const typesLabel = getTypesLabel(c.types);
+          const fallbackParts = displayName.split(" ").filter(Boolean);
+          const firstName =
+            c.firstName?.trim() || fallbackParts[0] || "Sin nombre";
+          const lastName =
+            c.lastName?.trim() || fallbackParts.slice(1).join(" ") || "-";
+          const phone =
+            c.phone?.trim() || c.secondaryPhone?.trim() || "-";
+          const email = c.email?.trim() || "-";
 
           return (
             <tr
@@ -100,98 +84,29 @@ export default function ContactsTable({
                   : "hover:bg-gray-50"
               }`}
             >
-              <td className="px-6 py-4 align-top">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                    {getInitials(c)}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">
-                      {displayName}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {ContactKindLabels[c.kind]}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {orderedTypes.length === 0 && (
-                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-500">
-                      Sin tipo
-                    </span>
-                  )}
-                  {orderedTypes.map((t) => (
-                    <span
-                      key={t}
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${TYPE_BADGE_STYLES[t]}`}
-                    >
-                      {ContactTypeLabels[t]}
-                    </span>
-                  ))}
-                </div>
-              </td>
-
-              <td className="px-6 py-4 align-top text-sm text-gray-600">
-                <div className="space-y-1">
-                  <p>
-                    <span className="text-gray-400">DNI:</span>{" "}
-                    {c.dni || "?"}
-                  </p>
-                  <p>
-                    <span className="text-gray-400">Tipo:</span>{" "}
-                    {ContactKindLabels[c.kind]}
-                  </p>
-                  <p>
-                    <span className="text-gray-400">Roles:</span>{" "}
-                    {typesLabel}
-                  </p>
-                  <p>
-                    <span className="text-gray-400">Dirección:</span>{" "}
-                    {addressLine || "?"}
-                  </p>
-                  {c.kind === "entity" && (
-                    <p>
-                      <span className="text-gray-400">Representante:</span>{" "}
-                      {representativeName || "?"}
-                    </p>
-                  )}
-                  {c.tags && c.tags.length > 0 && (
-                    <p>
-                      <span className="text-gray-400">Tags:</span>{" "}
-                      {c.tags.join(", ")}
-                    </p>
+              <td className="px-6 py-4">
+                <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                  {c.photoUrl ? (
+                    <img
+                      src={c.photoUrl}
+                      alt={displayName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    getInitials(c)
                   )}
                 </div>
               </td>
-
-              <td className="px-6 py-4 align-top text-sm text-gray-600">
-                <div className="space-y-1">
-                  <p>
-                    <span className="text-gray-400">Email:</span>{" "}
-                    {c.email || "?"}
-                  </p>
-                  <p>
-                    <span className="text-gray-400">Tel:</span>{" "}
-                    {c.phone || "?"}
-                  </p>
-                  <p>
-                    <span className="text-gray-400">Tel 2:</span>{" "}
-                    {c.secondaryPhone || "?"}
-                  </p>
-                  <p>
-                    <span className="text-gray-400">Web:</span>{" "}
-                    {c.website || "?"}
-                  </p>
-                  <p>
-                    <span className="text-gray-400">Redes:</span>{" "}
-                    {c.socialLinks || "?"}
-                  </p>
-                </div>
+              <td className="px-6 py-4 font-semibold text-gray-900">
+                {firstName}
               </td>
-
-              <td className="px-6 py-4 align-top text-sm text-gray-600">
-                {c.notes || "?"}
+              <td className="px-6 py-4 text-gray-700">{lastName}</td>
+              <td className="px-6 py-4 text-gray-600">
+                {formatBirthDate(c)}
               </td>
+              <td className="px-6 py-4 text-gray-600">{c.dni || "-"}</td>
+              <td className="px-6 py-4 text-gray-600">{phone}</td>
+              <td className="px-6 py-4 text-gray-600">{email}</td>
             </tr>
           );
         })}

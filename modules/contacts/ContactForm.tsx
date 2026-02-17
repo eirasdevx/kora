@@ -128,6 +128,9 @@ export default function ContactForm({
     initialData?.representativeLastName ?? ""
   );
   const [dni, setDni] = useState(initialData?.dni ?? "");
+  const [birthDate, setBirthDate] = useState(
+    toInputDate(initialData?.birthDate)
+  );
   const [types, setTypes] = useState<ContactType[]>(
     initialData?.types ?? []
   );
@@ -251,6 +254,7 @@ export default function ContactForm({
       lastName: trimmedLast,
       fullName,
       dni: trimmedDni,
+      birthDate: isEntity ? undefined : fromInputDate(birthDate),
       representativeFirstName: isEntity
         ? trimmedRepFirst || undefined
         : undefined,
@@ -564,6 +568,19 @@ export default function ContactForm({
                   </p>
                 )}
               </div>
+              {!isEntity && (
+                <div>
+                  <label className="text-xs font-semibold uppercase text-gray-400">
+                    Fecha de nacimiento
+                  </label>
+                  <input
+                    type="date"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                  />
+                </div>
+              )}
               {isEntity && (
                 <div className="md:col-span-2">
                   <label className="text-xs font-semibold uppercase text-gray-400">

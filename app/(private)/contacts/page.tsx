@@ -67,6 +67,63 @@ function getContactTypesLabel(contact: Contact) {
         .join(", ");
 }
 
+function formatDate(value?: string) {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return new Intl.DateTimeFormat("es-ES", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+    }).format(date);
+}
+
+function buildContactExportData(contact: Contact) {
+    const displayName = getContactDisplayName(contact);
+    const fallbackParts = displayName.split(" ").filter(Boolean);
+    const firstName =
+        contact.firstName?.trim() || fallbackParts[0] || "Sin nombre";
+    const lastName =
+        contact.lastName?.trim() || fallbackParts.slice(1).join(" ") || "";
+    const representative =
+        contact.kind === "entity"
+            ? `${contact.representativeFirstName ?? ""} ${contact.representativeLastName ?? ""}`.trim()
+            : "";
+    const tagsLabel =
+        contact.tags && contact.tags.length > 0
+            ? contact.tags.join(", ")
+            : "";
+    const birthDate =
+        contact.kind === "person"
+            ? formatDate(contact.birthDate)
+            : "-";
+
+    return {
+        displayName,
+        firstName,
+        lastName,
+        fullName: contact.fullName?.trim() ?? "",
+        dni: contact.dni || "",
+        birthDate,
+        kind: ContactKindLabels[contact.kind],
+        roles: getContactTypesLabel(contact),
+        email: contact.email ?? "",
+        phone: contact.phone ?? "",
+        phone2: contact.secondaryPhone ?? "",
+        website: contact.website ?? "",
+        socialLinks: contact.socialLinks ?? "",
+        address: contact.address ?? "",
+        city: contact.city ?? "",
+        region: contact.region ?? "",
+        postalCode: contact.postalCode ?? "",
+        representative,
+        tags: tagsLabel,
+        notes: contact.notes ?? "",
+        createdAt: formatDate(contact.createdAt),
+        deactivatedAt: formatDate(contact.deactivatedAt),
+    };
+}
+
 export default function ContactsPage() {
     const { contacts, loadContacts, removeContact } =
         useContactsStore();
@@ -136,60 +193,62 @@ export default function ContactsPage() {
         deactivatedTo,
     ]);
 
-    const exportRows = useMemo(() => {
+    const exportRowsXlsx = useMemo(() => {
         return filteredContacts.map((contact) => {
-            const displayName = getContactDisplayName(contact);
-            const typesLabel = getContactTypesLabel(contact);
-            const kindLabel = ContactKindLabels[contact.kind];
-            const address = [
-                contact.address,
-                contact.city,
-                contact.region,
-                contact.postalCode,
-            ]
-                .filter(Boolean)
-                .join(", ");
-            const representative =
-                contact.kind === "entity"
-                    ? `${contact.representativeFirstName ?? ""} ${
-                          contact.representativeLastName ?? ""
-                      }`
-                          .trim()
-                    : "";
-
-            const tagsLabel =
-                contact.tags && contact.tags.length > 0
-                    ? contact.tags.join(", ")
-                    : "";
-
-            const allData = [
-                `DNI: ${contact.dni || "?"}`,
-                `Tipo: ${kindLabel}`,
-                `Roles: ${typesLabel}`,
-                `Direcci?n: ${address || "?"}`,
-                representative ? `Representante: ${representative}` : "",
-                tagsLabel ? `Tags: ${tagsLabel}` : "",
-            ]
-                .filter(Boolean)
-                .join(" | ");
-
-            const contactInfo = [
-                contact.email ? `Email: ${contact.email}` : "Email: ?",
-                contact.phone ? `Tel: ${contact.phone}` : "Tel: ?",
-                contact.secondaryPhone
-                    ? `Tel2: ${contact.secondaryPhone}`
-                    : "Tel2: ?",
-                contact.website ? `Web: ${contact.website}` : "Web: ?",
-                contact.socialLinks
-                    ? `Redes: ${contact.socialLinks}`
-                    : "Redes: ?",
-            ].join(" | ");
-
+            const data = buildContactExportData(contact);
             return [
-                displayName,
-                allData,
-                contactInfo,
-                contact.notes ?? "â€”",
+                data.firstName || "-",
+                data.lastName || "-",
+                data.birthDate || "-",
+                data.fullName || "-",
+                data.dni || "-",
+                data.kind || "-",
+                data.roles || "-",
+                data.email || "-",
+                data.phone || "-",
+                data.phone2 || "-",
+                data.website || "-",
+                data.socialLinks || "-",
+                data.address || "-",
+                data.city || "-",
+                data.region || "-",
+                data.postalCode || "-",
+                data.representative || "-",
+                data.tags || "-",
+                data.notes || "-",
+                data.createdAt || "-",
+                data.deactivatedAt || "-",
+            ];
+        });
+    }, [filteredContacts]);
+
+    const exportRowsPdf = useMemo(() => {
+        return filteredContacts.flatMap((contact) => {
+            const data = buildContactExportData(contact);
+            return [
+                ["Contacto", data.displayName || "-"],
+                ["Nombre", data.firstName || "-"],
+                ["Apellidos", data.lastName || "-"],
+                ["Fecha nacimiento", data.birthDate || "-"],
+                ["Nombre completo", data.fullName || "-"],
+                ["DNI", data.dni || "-"],
+                ["Tipo", data.kind || "-"],
+                ["Roles", data.roles || "-"],
+                ["Email", data.email || "-"],
+                ["Teléfono", data.phone || "-"],
+                ["Teléfono 2", data.phone2 || "-"],
+                ["Web", data.website || "-"],
+                ["Redes", data.socialLinks || "-"],
+                ["Dirección", data.address || "-"],
+                ["Ciudad", data.city || "-"],
+                ["Región", data.region || "-"],
+                ["Código postal", data.postalCode || "-"],
+                ["Representante", data.representative || "-"],
+                ["Tags", data.tags || "-"],
+                ["Notas", data.notes || "-"],
+                ["Fecha alta", data.createdAt || "-"],
+                ["Fecha baja", data.deactivatedAt || "-"],
+                ["", ""],
             ];
         });
     }, [filteredContacts]);
@@ -241,28 +300,43 @@ export default function ContactsPage() {
     const handleExportXlsx = () => {
         const rows = [
             [
-                "Perfil del contacto",
-                "Todos los datos de los contactos",
-                "InformaciÃ³n de contacto",
+                "Nombre",
+                "Apellidos",
+                "Fecha nacimiento",
+                "Nombre completo",
+                "DNI",
+                "Tipo",
+                "Roles",
+                "Email",
+                "Teléfono",
+                "Teléfono 2",
+                "Web",
+                "Redes",
+                "Dirección",
+                "Ciudad",
+                "Región",
+                "Código postal",
+                "Representante",
+                "Tags",
                 "Notas",
+                "Fecha alta",
+                "Fecha baja",
             ],
-            ...exportRows,
+            ...exportRowsXlsx,
         ];
         downloadXlsx("contactos.xlsx", "Contactos", rows);
     };
 
     const handleExportPdf = () => {
         const columns = [
-            { label: "Perfil", width: 22 },
-            { label: "Datos", width: 40 },
-            { label: "Contacto", width: 36 },
-            { label: "Notas", width: 30 },
+            { label: "Campo", width: 20 },
+            { label: "Valor", width: 60 },
         ];
         downloadPdf(
             "contactos.pdf",
             "Listado de contactos",
             columns,
-            exportRows
+            exportRowsPdf
         );
     };
 
@@ -614,3 +688,19 @@ export default function ContactsPage() {
         </div>
     );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

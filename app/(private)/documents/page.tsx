@@ -71,11 +71,11 @@ function formatRelative(iso: string) {
   if (hours < 24) return `hace ${hours} horas`;
   const days = Math.floor(hours / 24);
   if (days === 1) return "ayer";
-  if (days < 30) return `hace ${days} dias`;
+    if (days < 30) return `hace ${days} días`;
   const months = Math.floor(days / 30);
   if (months < 12) return `hace ${months} meses`;
   const years = Math.floor(months / 12);
-  return `hace ${years} anos`;
+    return `hace ${years} años`;
 }
 
 function getExtension(name: string) {
@@ -187,8 +187,8 @@ export default function DocumentsPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [privacy, setPrivacy] = useState<"private" | "public">("private");
   const [activeTab, setActiveTab] = useState<
-    "Informacion" | "Historial" | "Acceso"
-  >("Informacion");
+    "Información" | "Historial" | "Acceso"
+  >("Información");
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [permissionsOpen, setPermissionsOpen] = useState(false);
@@ -759,9 +759,9 @@ export default function DocumentsPage() {
                   <h3 className="text-lg font-semibold text-gray-900">
                     Detalles del Archivo
                   </h3>
-                  <p className="text-xs text-gray-500">
-                    Informacion, versiones y accesos.
-                  </p>
+                    <p className="text-xs text-gray-500">
+                      Información, versiones y accesos.
+                    </p>
                 </div>
                 <button
                   type="button"
@@ -815,9 +815,9 @@ export default function DocumentsPage() {
                       <h4 className="text-sm font-semibold text-gray-900">
                         {selectedDoc.name}
                       </h4>
-                      <p className="text-xs text-gray-500">
-                        Ultima edicion {formatRelative(selectedDoc.updatedAt)}
-                      </p>
+                        <p className="text-xs text-gray-500">
+                          Última edición {formatRelative(selectedDoc.updatedAt)}
+                        </p>
                     </div>
                     <button
                       type="button"
@@ -831,17 +831,17 @@ export default function DocumentsPage() {
 
                 <div className="mt-4 border-b border-gray-100 pb-3">
                   <div className="flex gap-4 text-xs font-semibold text-gray-500">
-                    {["Informacion", "Historial", "Acceso"].map((tab) => {
+                    {["Información", "Historial", "Acceso"].map((tab) => {
                       const active = activeTab === tab;
                       return (
                         <button
                           key={tab}
                           type="button"
                           onClick={() =>
-                            setActiveTab(
-                              tab as "Informacion" | "Historial" | "Acceso"
-                            )
-                          }
+                              setActiveTab(
+                                tab as "Información" | "Historial" | "Acceso"
+                              )
+                            }
                           className={cx(
                             "pb-2",
                             active
@@ -856,7 +856,7 @@ export default function DocumentsPage() {
                   </div>
                 </div>
 
-                {activeTab === "Informacion" && (
+                {activeTab === "Información" && (
                   <div className="mt-4 space-y-5 text-sm text-gray-600">
                     <div>
                       <p className="text-xs font-semibold uppercase text-gray-400">
@@ -951,8 +951,8 @@ export default function DocumentsPage() {
 
                 {activeTab === "Historial" && (
                   <div className="mt-4 space-y-3 text-sm text-gray-600">
-                    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                      <p className="font-semibold text-gray-700">Ultima actividad</p>
+                      <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                        <p className="font-semibold text-gray-700">Última actividad</p>
                       <p className="mt-1 text-xs text-gray-500">
                         {formatDate(selectedDoc.updatedAt)} - {selectedDoc.owner}
                       </p>

@@ -74,7 +74,7 @@ export default function NotificationsSettingsPage() {
             onClick={() => router.push("/settings")}
             className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
           >
-            ← Volver a configuracion
+            ← Volver a configuración
           </button>
         </div>
       </PageTopbar>

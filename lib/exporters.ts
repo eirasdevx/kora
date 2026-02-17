@@ -256,6 +256,16 @@ export function downloadPdf(
   const formatCell = (value: string, width: number) =>
     value.padEnd(width, " ").slice(0, width);
 
+  const wrapCell = (value: string, width: number) => {
+    const safe = (value ?? "").replace(/\r?\n/g, " ");
+    if (safe.length === 0) return [""];
+    const lines: string[] = [];
+    for (let i = 0; i < safe.length; i += width) {
+      lines.push(safe.slice(i, i + width));
+    }
+    return lines;
+  };
+
   const headerLine = columns
     .map((col) => formatCell(col.label, col.width))
     .join(" | ");
@@ -263,11 +273,22 @@ export function downloadPdf(
     .map((col) => "-".repeat(col.width))
     .join("-+-");
 
-  const dataLines = rows.map((row) =>
-    columns
-      .map((col, idx) => formatCell(row[idx] ?? "", col.width))
-      .join(" | ")
-  );
+  const dataLines: string[] = [];
+  rows.forEach((row) => {
+    const wrapped = columns.map((col, idx) =>
+      wrapCell(row[idx] ?? "", col.width)
+    );
+    const rowLines = Math.max(...wrapped.map((lines) => lines.length), 1);
+    for (let lineIdx = 0; lineIdx < rowLines; lineIdx += 1) {
+      dataLines.push(
+        columns
+          .map((col, idx) =>
+            formatCell(wrapped[idx][lineIdx] ?? "", col.width)
+          )
+          .join(" | ")
+      );
+    }
+  });
 
   const pdfContent = buildPdf([
     title,

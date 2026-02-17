@@ -66,9 +66,9 @@ function matchesDateRange(
 }
 
 function formatDate(value?: string) {
-  if (!value) return "â€”";
+  if (!value) return "-";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "â€”";
+  if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("es-ES", {
     day: "2-digit",
     month: "short",
@@ -77,9 +77,9 @@ function formatDate(value?: string) {
 }
 
 function formatTime(value?: string) {
-  if (!value) return "â€”";
+  if (!value) return "-";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "â€”";
+  if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("es-ES", {
     hour: "2-digit",
     minute: "2-digit",
@@ -87,12 +87,51 @@ function formatTime(value?: string) {
 }
 
 function formatPrice(value?: number) {
-  if (value === null || value === undefined) return "â€”";
+  if (value === null || value === undefined) return "-";
   if (value === 0) return "Gratis";
   return new Intl.NumberFormat("es-ES", {
     style: "currency",
     currency: "EUR",
   }).format(value);
+}
+function formatYesNo(value?: boolean) {
+  if (value === undefined) return "-";
+  return value ? "Si" : "No";
+}
+
+function buildEventExportData(event: Event) {
+  const meetingType =
+    event.locationType === "online" ? "En linea" : "Presencial";
+  const location =
+    event.locationType === "online"
+      ? "En linea"
+      : event.location || "-";
+
+  return {
+    title: event.title,
+    category: event.category ?? "-",
+    description: event.description ?? "-",
+    status: event.status ?? "-",
+    startDate: formatDate(event.startDate),
+    startTime: formatTime(event.startDate),
+    endDate: formatDate(event.endDate),
+    endTime: formatTime(event.endDate),
+    meetingType,
+    location,
+    price: formatPrice(event.ticketPrice),
+    capacity: event.capacity?.toString() ?? "-",
+    registrationDeadline: formatDate(event.registrationDeadline),
+    waitlist: formatYesNo(event.waitlistEnabled),
+    participants:
+      event.participantIds && event.participantIds.length > 0
+        ? event.participantIds.join(", ")
+        : "-",
+    organizers:
+      event.organizerIds && event.organizerIds.length > 0
+        ? event.organizerIds.join(", ")
+        : "-",
+    createdAt: formatDate(event.createdAt),
+  };
 }
 
 /* =======================
@@ -118,7 +157,7 @@ export default function EventsPage() {
   const VIEW_OPTIONS: { label: string; value: EventsView }[] = [
     { label: "Mes", value: "month" },
     { label: "Semana", value: "week" },
-    { label: "D?a", value: "day" },
+    { label: "Día", value: "day" },
   ];
 
   /* -------- selección -------- */
@@ -170,27 +209,56 @@ export default function EventsPage() {
     });
   }, [events, search, categoryFilter, dateFrom, dateTo]);
 
-  const exportRows = useMemo(
+  const exportRowsXlsx = useMemo(
     () =>
       filteredEvents.map((event) => {
-        const meetingType =
-          event.locationType === "online" ? "En línea" : "Presencial";
-        const location =
-          event.locationType === "online"
-            ? "En línea"
-            : event.location || "â€”";
+        const data = buildEventExportData(event);
         return [
-          event.title,
-          event.category ?? "â€”",
-          event.description ?? "â€”",
-          formatDate(event.startDate),
-          formatDate(event.endDate),
-          formatTime(event.endDate),
-          meetingType,
-          location,
-          formatPrice(event.ticketPrice),
-          event.capacity?.toString() ?? "â€”",
-          formatDate(event.registrationDeadline),
+          data.title,
+          data.category,
+          data.description,
+          data.status,
+          data.startDate,
+          data.startTime,
+          data.endDate,
+          data.endTime,
+          data.meetingType,
+          data.location,
+          data.price,
+          data.capacity,
+          data.registrationDeadline,
+          data.waitlist,
+          data.participants,
+          data.organizers,
+          data.createdAt,
+        ];
+      }),
+    [filteredEvents]
+  );
+
+  const exportRowsPdf = useMemo(
+    () =>
+      filteredEvents.flatMap((event) => {
+        const data = buildEventExportData(event);
+          return [
+            ["Evento", data.title],
+            ["Categoría", data.category],
+            ["Descripción", data.description],
+            ["Estado", data.status],
+            ["Fecha inicio", data.startDate],
+            ["Hora inicio", data.startTime],
+            ["Fecha fin", data.endDate],
+          ["Hora fin", data.endTime],
+          ["Tipo de reunion", data.meetingType],
+          ["Lugar", data.location],
+          ["Precio de entrada", data.price],
+          ["Capacidad maxima", data.capacity],
+          ["Fecha cierre inscripcion", data.registrationDeadline],
+          ["Lista de espera", data.waitlist],
+          ["Participantes", data.participants],
+          ["Organizadores", data.organizers],
+          ["Creado", data.createdAt],
+          ["", ""],
         ];
       }),
     [filteredEvents]
@@ -198,43 +266,40 @@ export default function EventsPage() {
 
   const handleExportXlsx = () => {
     const rows = [
-      [
-        "Titulo",
-        "Categoria",
-        "Descripcion",
-        "Fecha del Evento",
-        "Fecha fin del Evento",
+        [
+          "Título",
+          "Categoría",
+          "Descripción",
+          "Estado",
+          "Fecha inicio",
+          "Hora inicio",
+          "Fecha fin",
         "Hora fin",
         "Tipo de reunion",
         "Lugar",
         "Precio de entrada",
         "Capacidad maxima",
         "Fecha cierre inscripcion",
+        "Lista de espera",
+        "Participantes",
+        "Organizadores",
+        "Creado",
       ],
-      ...exportRows,
+      ...exportRowsXlsx,
     ];
     downloadXlsx("eventos.xlsx", "Eventos", rows);
   };
 
   const handleExportPdf = () => {
     const columns = [
-      { label: "Titulo", width: 18 },
-      { label: "Categoria", width: 12 },
-      { label: "Descripcion", width: 24 },
-      { label: "Fecha", width: 12 },
-      { label: "Fin", width: 12 },
-      { label: "Hora fin", width: 8 },
-      { label: "Tipo", width: 10 },
-      { label: "Lugar", width: 14 },
-      { label: "Precio", width: 10 },
-      { label: "Cap.", width: 6 },
-      { label: "Cierre", width: 12 },
+      { label: "Campo", width: 20 },
+      { label: "Valor", width: 60 },
     ];
     downloadPdf(
       "eventos.pdf",
       "Listado de eventos",
       columns,
-      exportRows
+      exportRowsPdf
     );
   };
 
@@ -331,9 +396,9 @@ export default function EventsPage() {
           <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <label className="text-xs font-semibold uppercase text-gray-400">
-                  CategorÃ­a
-                </label>
+                  <label className="text-xs font-semibold uppercase text-gray-400">
+                    Categoría
+                  </label>
                 <select
                   value={categoryFilter}
                   onChange={(event) => setCategoryFilter(event.target.value)}
@@ -458,3 +523,8 @@ export default function EventsPage() {
     </div>
   );
 }
+
+
+
+
+

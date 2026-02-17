@@ -109,7 +109,7 @@ export default function TransactionForm({
         currency: "EUR",
       }).format(numericAmount || 0);
     } catch {
-      return `EUR ${numericAmount.toFixed(2)}`;
+      return `€ ${numericAmount.toFixed(2)}`;
     }
   }, [numericAmount]);
 
