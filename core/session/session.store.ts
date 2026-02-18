@@ -2,6 +2,10 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import {
+  type PasswordDigest,
+  createPasswordDigest,
+} from "@/core/security/passwords";
 
 const COMPANY_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -27,7 +31,8 @@ export type AdminAccount = {
   lastName: string;
   dni: string;
   email: string;
-  password: string;
+  passwordDigest?: PasswordDigest;
+  password?: string;
 };
 
 export type AssociationRepresentative = {
@@ -72,6 +77,15 @@ export type AssociationEntry = {
   companyCode: string;
 };
 
+const sanitizeAdmin = (admin: AdminAccount | null): AdminAccount | null => {
+  if (!admin) return null;
+  if (admin.passwordDigest && admin.password) {
+    const { password, ...rest } = admin;
+    return rest;
+  }
+  return admin;
+};
+
 interface SessionState {
   mode: SessionMode | null;
   association: AssociationProfile | null;
@@ -82,6 +96,7 @@ interface SessionState {
   activeUserId: string | null;
   hydrated: boolean;
   setHydrated: (hydrated: boolean) => void;
+  setAdmin: (admin: AdminAccount | null) => void;
   setAssociation: (association: AssociationProfile | null) => void;
   addAssociation: (association: AssociationProfile) => AssociationEntry;
   setActiveAssociation: (id: string) => void;
@@ -109,6 +124,7 @@ export const useSessionStore = create<SessionState>()(
       activeUserId: null,
       hydrated: false,
       setHydrated: (hydrated) => set({ hydrated }),
+      setAdmin: (admin) => set({ admin: sanitizeAdmin(admin) }),
       setAssociation: (association) =>
         set((state) => {
           if (!association) {
@@ -196,7 +212,7 @@ export const useSessionStore = create<SessionState>()(
             companyCode,
           };
           return {
-            admin,
+            admin: sanitizeAdmin(admin),
             association,
             associations: [entry],
             activeAssociationId: entry.id,
@@ -218,13 +234,29 @@ export const useSessionStore = create<SessionState>()(
         association: state.association,
         associations: state.associations,
         activeAssociationId: state.activeAssociationId,
-        admin: state.admin,
+        admin: sanitizeAdmin(state.admin),
         companyCode: state.companyCode,
         activeUserId: state.activeUserId,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true);
         state?.ensureAssociations();
+        if (state?.admin) {
+          state.setAdmin(state.admin);
+          if (state.admin.password && !state.admin.passwordDigest) {
+            const legacyAdmin = state.admin;
+            void (async () => {
+              try {
+                const passwordDigest = await createPasswordDigest(
+                  legacyAdmin.password ?? ""
+                );
+                state.setAdmin({ ...legacyAdmin, passwordDigest });
+              } catch (error) {
+                console.error(error);
+              }
+            })();
+          }
+        }
       },
     }
   )

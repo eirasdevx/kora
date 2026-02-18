@@ -8,6 +8,7 @@ import {
   useSessionStore,
 } from "@/core/session/session.store";
 import { resetKoraData } from "@/core/storage/kora.db";
+import { createPasswordDigest } from "@/core/security/passwords";
 
 const COMPANY_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -67,7 +68,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showRepeat, setShowRepeat] = useState(false);
 
-  const handleAdminSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleAdminSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);
     const data = new FormData(event.currentTarget);
@@ -95,14 +96,22 @@ export default function RegisterPage() {
       return;
     }
 
-    setPendingAdmin({
-      firstName,
-      lastName,
-      dni,
-      email,
-      password,
-    });
-    setStep("association");
+    try {
+      const passwordDigest = await createPasswordDigest(password);
+      setPendingAdmin({
+        firstName,
+        lastName,
+        dni,
+        email,
+        passwordDigest,
+      });
+      setStep("association");
+    } catch (error) {
+      console.error(error);
+      setFormError(
+        "No se pudo proteger la contraseña en este navegador. Inténtalo de nuevo."
+      );
+    }
   };
 
   const handleAssociationSubmit = async (

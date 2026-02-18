@@ -3,6 +3,10 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { type AdminAccount } from "@/core/session/session.store";
+import {
+  type PasswordDigest,
+  createPasswordDigest,
+} from "@/core/security/passwords";
 
 export type UserRole = "Admin" | "Gestor" | "Lector";
 export type UserStatus = "Activo" | "Pendiente";
@@ -42,6 +46,7 @@ export type UserAccount = {
   phone?: string;
   dni?: string;
   email: string;
+  passwordDigest?: PasswordDigest;
   password?: string;
   role: UserRole;
   status: UserStatus;
@@ -59,7 +64,7 @@ interface UsersState {
     lastName: string;
     dni: string;
     email: string;
-    password: string;
+    passwordDigest: PasswordDigest;
     role: UserRole;
     status?: UserStatus;
     permissions?: UserPermissions;
@@ -176,6 +181,10 @@ const withDefaultPermissions = (
 };
 
 const normalizeUser = (user: UserAccount): UserAccount => {
+  const sanitized: UserAccount = {
+    ...user,
+    password: user.passwordDigest ? undefined : user.password,
+  };
   const name = user.name?.trim() ?? "";
   const composed =
     `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || name;
@@ -205,7 +214,7 @@ const normalizeUser = (user: UserAccount): UserAccount => {
         }
       : basePermissions;
   return {
-    ...user,
+    ...sanitized,
     name: name || composed || "Usuario",
     firstName: user.firstName ?? parts[0] ?? "",
     lastName: user.lastName ?? parts.slice(1).join(" "),
@@ -223,7 +232,7 @@ const toAdminUser = (admin: AdminAccount): UserAccount =>
     name: `${admin.firstName} ${admin.lastName}`.trim() || "Administrador",
     dni: admin.dni ?? "",
     email: admin.email,
-    password: admin.password,
+    passwordDigest: admin.passwordDigest,
     role: "Admin",
     status: "Activo",
     lastAccessAt: new Date().toISOString(),
@@ -269,7 +278,7 @@ export const useUsersStore = create<UsersState>()(
         lastName,
         dni,
         email,
-        password,
+        passwordDigest,
         role,
         status,
         permissions,
@@ -284,7 +293,7 @@ export const useUsersStore = create<UsersState>()(
               lastName,
               dni,
               email,
-              password,
+              passwordDigest,
               role,
               status: status ?? "Pendiente",
               lastAccessAt: null,
@@ -297,7 +306,13 @@ export const useUsersStore = create<UsersState>()(
       updateUser: (id, updates) =>
         set((state) => ({
           users: state.users.map((user) =>
-            user.id === id ? normalizeUser({ ...user, ...updates }) : user
+            user.id === id
+              ? normalizeUser({
+                  ...user,
+                  ...updates,
+                  password: updates.passwordDigest ? undefined : updates.password ?? user.password,
+                })
+              : user
           ),
         })),
       removeUser: (id) =>
@@ -311,8 +326,29 @@ export const useUsersStore = create<UsersState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         companyCode: state.companyCode,
-        users: state.users,
+        users: state.users.map((user) =>
+          user.passwordDigest ? { ...user, password: undefined } : user
+        ),
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const legacyUsers = state.users.filter(
+          (user) => user.password && !user.passwordDigest
+        );
+        if (legacyUsers.length === 0) return;
+        legacyUsers.forEach((user) => {
+          void (async () => {
+            try {
+              const passwordDigest = await createPasswordDigest(
+                user.password ?? ""
+              );
+              state.updateUser(user.id, { passwordDigest });
+            } catch (error) {
+              console.error(error);
+            }
+          })();
+        });
+      },
     }
   )
 );

@@ -13,6 +13,7 @@ import {
   type UserStatus,
   useUsersStore,
 } from "@/core/users/users.store";
+import { createPasswordDigest } from "@/core/security/passwords";
 
 const ROLE_OPTIONS: UserRole[] = ["Admin", "Gestor", "Lector"];
 const STATUS_OPTIONS: UserStatus[] = ["Activo", "Pendiente"];
@@ -369,7 +370,9 @@ export default function UsersSettingsPage() {
   const canDeleteSummaryUser =
     isAdmin && selectedUser?.id && selectedUser.id !== activeUserId;
 
-  const handleUserFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleUserFormSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
     setFormError(null);
 
@@ -425,10 +428,19 @@ export default function UsersSettingsPage() {
     };
 
     if (isCreate) {
-      addUser({
-        ...payload,
-        password,
-      });
+      try {
+        const passwordDigest = await createPasswordDigest(password);
+        addUser({
+          ...payload,
+          passwordDigest,
+        });
+      } catch (error) {
+        console.error(error);
+        setFormError(
+          "No se pudo proteger la contraseña. Actualiza el navegador e inténtalo de nuevo."
+        );
+        return;
+      }
       const created =
         useUsersStore
           .getState()
@@ -442,11 +454,27 @@ export default function UsersSettingsPage() {
     }
 
     if (panelMode === "edit" && userForm.id) {
-      updateUser(userForm.id, {
-        ...payload,
-        name,
-        ...(hasPassword ? { password } : {}),
-      });
+      if (hasPassword) {
+        try {
+          const passwordDigest = await createPasswordDigest(password);
+          updateUser(userForm.id, {
+            ...payload,
+            name,
+            passwordDigest,
+          });
+        } catch (error) {
+          console.error(error);
+          setFormError(
+            "No se pudo proteger la contraseña. Actualiza el navegador e inténtalo de nuevo."
+          );
+          return;
+        }
+      } else {
+        updateUser(userForm.id, {
+          ...payload,
+          name,
+        });
+      }
       setUserForm((prev) => ({ ...prev, password: "", passwordRepeat: "" }));
       setPanelMode("summary");
       setShowPassword(false);

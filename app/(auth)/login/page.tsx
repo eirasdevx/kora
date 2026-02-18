@@ -10,6 +10,11 @@ import { useDocumentsStore } from "@/modules/documents/documents.store";
 import { useEventsStore } from "@/modules/events/events.store";
 import { useSocialPostsStore } from "@/modules/social/social.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
+import {
+  createPasswordDigest,
+  verifyPassword,
+} from "@/core/security/passwords";
+import { getSecureItem, setSecureItem } from "@/core/security/secure-storage";
 
 const LAST_LOGIN_KEY = "kora-last-login";
 
@@ -21,6 +26,7 @@ export default function LoginPage() {
   const companyCode = useSessionStore((s) => s.companyCode);
   const setGuest = useSessionStore((s) => s.setGuest);
   const setAuthenticated = useSessionStore((s) => s.setAuthenticated);
+  const setAdmin = useSessionStore((s) => s.setAdmin);
   const ensureUsersSeed = useUsersStore((s) => s.ensureSeed);
   const resetContacts = useContactsStore((s) => s.resetContacts);
   const resetDocuments = useDocumentsStore((s) => s.resetDocuments);
@@ -40,36 +46,41 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    try {
-      const raw = localStorage.getItem(LAST_LOGIN_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as {
-        identifier?: string;
-        companyCode?: string;
-      };
-      if (typeof saved.identifier === "string") {
-        setIdentifierValue(saved.identifier);
+    let active = true;
+    void (async () => {
+      try {
+        const saved = await getSecureItem<{
+          identifier?: string;
+          companyCode?: string;
+        }>(LAST_LOGIN_KEY);
+        if (!saved || !active) return;
+        if (typeof saved.identifier === "string") {
+          setIdentifierValue(saved.identifier);
+        }
+        if (typeof saved.companyCode === "string") {
+          setCompanyCodeValue(saved.companyCode);
+        }
+      } catch {
+        // ignore invalid storage
       }
-      if (typeof saved.companyCode === "string") {
-        setCompanyCodeValue(saved.companyCode);
-      }
-    } catch {
-      // ignore invalid storage
-    }
+    })();
+    return () => {
+      active = false;
+    };
   }, [hydrated]);
 
-  const persistLastLogin = (identifier: string, companyCode: string) => {
+  const persistLastLogin = async (
+    identifier: string,
+    companyCode: string
+  ) => {
     try {
-      localStorage.setItem(
-        LAST_LOGIN_KEY,
-        JSON.stringify({ identifier, companyCode })
-      );
+      await setSecureItem(LAST_LOGIN_KEY, { identifier, companyCode });
     } catch {
       // ignore storage failures
     }
   };
 
-  const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoginError(null);
 
@@ -102,14 +113,53 @@ export default function LoginPage() {
       return;
     }
 
-    ensureUsersSeed(companyCode, admin);
-    const { users, updateUser } = useUsersStore.getState();
     const identifierLower = identifier.toLowerCase();
     const identifierUpper = identifier.toUpperCase();
     const matchesAdminIdentifier =
       identifierLower === admin.email.toLowerCase() ||
       identifierUpper === admin.dni;
-    const matchesAdminPassword = password === admin.password;
+    let matchesAdminPassword = false;
+    let resolvedAdmin = admin;
+
+    if (matchesAdminIdentifier) {
+      try {
+        if (admin.passwordDigest) {
+          matchesAdminPassword = await verifyPassword(
+            password,
+            admin.passwordDigest
+          );
+        } else if (admin.password) {
+          matchesAdminPassword = password === admin.password;
+        }
+      } catch (error) {
+        console.error(error);
+        setLoginError(
+          "No se pudo validar la contraseña. Actualiza el navegador e inténtalo de nuevo."
+        );
+        return;
+      }
+
+      if (matchesAdminPassword && !admin.passwordDigest) {
+        try {
+          const passwordDigest = await createPasswordDigest(password);
+          resolvedAdmin = {
+            ...admin,
+            passwordDigest,
+          };
+          delete (resolvedAdmin as { password?: string }).password;
+          setAdmin(resolvedAdmin);
+        } catch (error) {
+          console.error(error);
+          setLoginError(
+            "No se pudo proteger la contraseña. Inténtalo de nuevo."
+          );
+          return;
+        }
+      }
+    }
+
+    ensureUsersSeed(companyCode, resolvedAdmin);
+    const { users, updateUser } = useUsersStore.getState();
     const candidate = users.find((user) => {
       const email = user.email.toLowerCase();
       const dni = (user.dni ?? "").toUpperCase();
@@ -122,10 +172,12 @@ export default function LoginPage() {
           (user) => user.email.toLowerCase() === admin.email.toLowerCase()
         );
         if (adminUser) {
-          if (!adminUser.password) {
-            updateUser(adminUser.id, { password: admin.password });
+          if (!adminUser.passwordDigest && resolvedAdmin.passwordDigest) {
+            updateUser(adminUser.id, {
+              passwordDigest: resolvedAdmin.passwordDigest,
+            });
           }
-          persistLastLogin(identifier, code);
+          await persistLastLogin(identifier, code);
           setAuthenticated(adminUser.id);
           router.push("/dashboard");
           return;
@@ -137,25 +189,57 @@ export default function LoginPage() {
       return;
     }
 
-    const storedPassword = candidate.password?.trim();
-    if (!storedPassword || storedPassword !== password) {
+    let matchesCandidatePassword = false;
+    try {
+      if (candidate.passwordDigest) {
+        matchesCandidatePassword = await verifyPassword(
+          password,
+          candidate.passwordDigest
+        );
+      } else if (candidate.password) {
+        matchesCandidatePassword = candidate.password.trim() === password;
+      }
+    } catch (error) {
+      console.error(error);
+      setLoginError(
+        "No se pudo validar la contraseña. Actualiza el navegador e inténtalo de nuevo."
+      );
+      return;
+    }
+
+    if (!matchesCandidatePassword) {
       if (
         candidate.role === "Admin" &&
-        !storedPassword &&
+        !candidate.passwordDigest &&
         matchesAdminIdentifier &&
         matchesAdminPassword
       ) {
-        updateUser(candidate.id, { password: admin.password });
+        if (resolvedAdmin.passwordDigest) {
+          updateUser(candidate.id, {
+            passwordDigest: resolvedAdmin.passwordDigest,
+          });
+        }
       } else {
         setLoginError(
           "Credenciales incorrectas o código de empresa inválido."
         );
         return;
       }
+    } else if (candidate.password && !candidate.passwordDigest) {
+      try {
+        const passwordDigest = await createPasswordDigest(password);
+        updateUser(candidate.id, { passwordDigest });
+      } catch (error) {
+        console.error(error);
+        setLoginError(
+          "No se pudo proteger la contraseña. Inténtalo de nuevo."
+        );
+        return;
+      }
     }
 
     setAuthenticated(candidate.id);
-    persistLastLogin(identifier, code);
+    await persistLastLogin(identifier, code);
     router.push("/dashboard");
   };
 

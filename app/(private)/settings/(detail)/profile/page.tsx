@@ -11,6 +11,7 @@ import {
   normalizeLanguage,
   useUsersStore,
 } from "@/core/users/users.store";
+import { createPasswordDigest } from "@/core/security/passwords";
 
 const SUPPORTED_LOCALES = ["es", "es-419", "gl", "eu", "ca", "va", "en"] as const;
 type LocaleCode = (typeof SUPPORTED_LOCALES)[number];
@@ -684,7 +685,7 @@ function UserProfileCard({
     normalizeEmail(form.email).length > 0 &&
     (!hasPassword || passwordsMatch);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!user) return;
     setFormError(null);
     const firstName = normalize(form.firstName);
@@ -727,7 +728,16 @@ function UserProfileCard({
     };
 
     if (hasPassword) {
-      updates.password = password;
+      try {
+        const passwordDigest = await createPasswordDigest(password);
+        updates.passwordDigest = passwordDigest;
+      } catch (error) {
+        console.error(error);
+        setFormError(
+          "No se pudo proteger la contraseña. Actualiza el navegador e inténtalo de nuevo."
+        );
+        return;
+      }
     }
 
     onSave(updates);
