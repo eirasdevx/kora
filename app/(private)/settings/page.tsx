@@ -46,6 +46,18 @@ const cards = [
     ),
   },
   {
+    title: "Mensajeria",
+    description:
+      "Guarda credenciales de correo y numeros para envios masivos.",
+    href: "/settings/messaging",
+    tone: "bg-sky-50 text-sky-600",
+    icon: (
+      <span className="material-symbols-outlined text-[20px]">
+        mail
+      </span>
+    ),
+  },
+  {
     title: "Seguridad",
     description:
       "Ajustes de 2FA, políticas de contraseñas, sesiones activas y logs de seguridad.",

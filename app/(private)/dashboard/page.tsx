@@ -10,6 +10,7 @@ import { useEventsStore } from "@/modules/events/events.store";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
 import { useSocialPostsStore } from "@/modules/social/social.store";
 import { SocialPostStatus } from "@/modules/social/social.types";
+import { useMessagingSettingsStore } from "@/modules/messaging/messaging.settings.store";
 
 const CATEGORY_LABELS: Record<string, string> = {
   membership: "Membresía",
@@ -57,6 +58,14 @@ const formatShortDate = (value: string) =>
     month: "short",
   }).format(new Date(value));
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+
+const parseRecipientList = (value: string) =>
+  value
+    .split(/[\n,;]+/g)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
 export default function DashboardPage() {
   const association = useSessionStore((s) => s.association);
   const { transactions, loadTransactions } = useTransactionsStore();
@@ -64,7 +73,20 @@ export default function DashboardPage() {
   const { events, loadEvents } = useEventsStore();
   const { documents, loadDocuments } = useDocumentsStore();
   const { posts, loadPosts } = useSocialPostsStore();
+  const { settings, loadSettings } = useMessagingSettingsStore();
   const [monthsRange, setMonthsRange] = useState(6);
+  const [emailForm, setEmailForm] = useState({
+    recipients: "",
+    subject: "Comunicado general",
+    htmlMessage: "<p>Hola socios,</p><p>Gracias por su apoyo.</p>",
+  });
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailResult, setEmailResult] = useState<{
+    sentCount: number;
+    failedCount: number;
+    errors?: Array<{ recipient: string; message: string }>;
+  } | null>(null);
 
   useEffect(() => {
     loadTransactions();
@@ -73,6 +95,10 @@ export default function DashboardPage() {
     loadDocuments();
     loadPosts();
   }, [loadTransactions, loadContacts, loadEvents, loadDocuments, loadPosts]);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -267,6 +293,83 @@ export default function DashboardPage() {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+
+  const senderName = settings.senderName || association?.name || "";
+  const senderEmail = settings.emailAddress || association?.contactEmail || "";
+  const senderPassword = settings.emailAppPassword || "";
+
+  // Demo simple para consumir la API de envio masivo.
+  const handleEmailSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+    setEmailError(null);
+    setEmailResult(null);
+
+    const recipients = parseRecipientList(emailForm.recipients).filter(
+      (email) => EMAIL_REGEX.test(email)
+    );
+    const recipientPayloads = recipients.map((email) => ({ email }));
+
+    if (
+      !senderName ||
+      !senderEmail ||
+      !senderPassword ||
+      !emailForm.subject ||
+      !emailForm.htmlMessage
+    ) {
+      setEmailError("Completa las credenciales en Ajustes > Mensajeria.");
+      return;
+    }
+
+    if (recipients.length === 0) {
+      setEmailError("Ingresa al menos un destinatario valido.");
+      return;
+    }
+
+    setEmailSending(true);
+
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          associationName: senderName,
+          associationEmail: senderEmail,
+          associationAppPassword: senderPassword,
+          emailProvider: settings.emailProvider,
+          smtpHost: settings.smtpHost,
+          smtpPort: settings.smtpPort,
+          smtpSecure: settings.smtpSecure,
+          recipients: recipientPayloads,
+          subject: emailForm.subject,
+          htmlMessage: emailForm.htmlMessage,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error("Error de envio.");
+      }
+
+      const errors = Array.isArray(data.errors) ? data.errors : [];
+      setEmailResult({
+        sentCount: data.sentCount ?? 0,
+        failedCount: data.failedCount ?? 0,
+        errors,
+      });
+      if (errors.length > 0) {
+        const first = errors[0];
+        setEmailError(
+          `Error en ${errors.length} envios. Ejemplo: ${first.recipient} - ${first.message}`
+        );
+      }
+    } catch {
+      setEmailError("No se pudo enviar el correo. Revisa los datos.");
+    } finally {
+      setEmailSending(false);
+    }
+  };
 
   return (
     <div className="space-y-6 lg:space-y-5">
@@ -797,6 +900,117 @@ export default function DashboardPage() {
             ))}
           </div>
         </Link>
+      </section>
+
+      <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Envio de correos (demo)
+            </h2>
+            <p className="text-sm text-gray-500">
+              Ejemplo simple que consume la API de envio masivo.
+            </p>
+          </div>
+          <Link
+            href="/messaging"
+            className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+          >
+            Ir a mensajeria
+          </Link>
+        </div>
+
+        <form
+          onSubmit={handleEmailSubmit}
+          className="mt-5 grid gap-4 lg:grid-cols-2"
+        >
+          <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 lg:col-span-2">
+            <p>
+              Remitente:{" "}
+              <span className="font-semibold text-gray-800">
+                {senderName || "Sin configurar"}
+              </span>
+            </p>
+            <p>
+              Correo:{" "}
+              <span className="font-semibold text-gray-800">
+                {senderEmail || "Sin configurar"}
+              </span>
+            </p>
+            <p className="text-xs text-gray-400">
+              Configura las credenciales en Ajustes &gt; Mensajeria.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">
+              Asunto
+            </label>
+            <input
+              value={emailForm.subject}
+              onChange={(event) =>
+                setEmailForm((prev) => ({
+                  ...prev,
+                  subject: event.target.value,
+                }))
+              }
+              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
+            />
+          </div>
+          <div className="space-y-2 lg:col-span-2">
+            <label className="text-sm font-semibold text-gray-700">
+              Destinatarios (separados por coma o salto de linea)
+            </label>
+            <textarea
+              value={emailForm.recipients}
+              onChange={(event) =>
+                setEmailForm((prev) => ({
+                  ...prev,
+                  recipients: event.target.value,
+                }))
+              }
+              className="min-h-[90px] w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
+            />
+          </div>
+          <div className="space-y-2 lg:col-span-2">
+            <label className="text-sm font-semibold text-gray-700">
+              Mensaje HTML
+            </label>
+            <textarea
+              value={emailForm.htmlMessage}
+              onChange={(event) =>
+                setEmailForm((prev) => ({
+                  ...prev,
+                  htmlMessage: event.target.value,
+                }))
+              }
+              className="min-h-[120px] w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-4 lg:col-span-2">
+            <p className="text-xs text-gray-400">
+              Se enviara un correo por destinatario con delay de 1500ms.
+            </p>
+            <button
+              type="submit"
+              disabled={emailSending}
+              className="rounded-2xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {emailSending ? "Enviando..." : "Enviar demo"}
+            </button>
+          </div>
+        </form>
+
+        {emailError ? (
+          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+            {emailError}
+          </div>
+        ) : null}
+        {emailResult ? (
+          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            Enviados: {emailResult.sentCount} · Fallidos:{" "}
+            {emailResult.failedCount}
+          </div>
+        ) : null}
       </section>
     </div>
   );

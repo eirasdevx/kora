@@ -11,6 +11,7 @@
   "dependencies": {
     "clsx": "^2.1.1",
     "dexie": "^4.2.1",
+    "nodemailer": "^6.9.14",
     "next": "16.1.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",

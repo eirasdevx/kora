@@ -39,6 +39,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
   const mainItems: NavItem[] = [
     { label: "Panel de control", href: "/dashboard" },
+    { label: "Mensajeria", href: "/messaging" },
     { label: "Contabilidad", href: "/accounting", moduleKey: "accounting" },
     { label: "Eventos", href: "/events", moduleKey: "events" },
     { label: "Contactos", href: "/contacts", moduleKey: "contacts" },
