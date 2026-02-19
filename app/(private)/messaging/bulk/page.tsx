@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import { useSessionStore } from "@/core/session/session.store";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
@@ -108,8 +109,10 @@ export default function MessagingBulkPage() {
     loadSettings,
   } = useMessagingSettingsStore();
   const { contacts, loadContacts } = useContactsStore();
+  const searchParams = useSearchParams();
 
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
+  const [queryApplied, setQueryApplied] = useState(false);
   const [filter, setFilter] = useState<"all" | ContactType>("all");
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -134,6 +137,21 @@ export default function MessagingBulkPage() {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  useEffect(() => {
+    if (queryApplied) return;
+    if (!templates.length) return;
+    const templateFromQuery = searchParams.get("templateId");
+    if (!templateFromQuery) {
+      setQueryApplied(true);
+      return;
+    }
+    const exists = templates.some((item) => item.id === templateFromQuery);
+    if (exists) {
+      setTemplateId(templateFromQuery);
+    }
+    setQueryApplied(true);
+  }, [queryApplied, searchParams, templates]);
 
   useEffect(() => {
     if (!hydrated) return;
