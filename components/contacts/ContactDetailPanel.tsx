@@ -158,12 +158,6 @@ export default function ContactDetailPanel({
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Redes sociales
-          </p>
-          <p className="mt-1">{contact.socialLinks || "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
             Notas
           </p>
           <p className="mt-1">{contact.notes || "—"}</p>

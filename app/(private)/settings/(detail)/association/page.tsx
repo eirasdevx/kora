@@ -6,58 +6,9 @@ import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import {
   type AssociationRepresentative,
-  type AssociationSocialLinks,
-  type AssociationSocialStats,
   useSessionStore,
 } from "@/core/session/session.store";
 import { useUsersStore } from "@/core/users/users.store";
-
-const SOCIAL_LINKS = [
-  {
-    key: "instagram",
-    label: "Instagram",
-    placeholder: "https://instagram.com/tuasociacion",
-    icon: "photo_camera",
-  },
-  {
-    key: "facebook",
-    label: "Facebook",
-    placeholder: "https://facebook.com/tuasociacion",
-    icon: "public",
-  },
-  {
-    key: "x",
-    label: "X (Twitter)",
-    placeholder: "https://x.com/tuasociacion",
-    icon: "alternate_email",
-  },
-  {
-    key: "tiktok",
-    label: "TikTok",
-    placeholder: "https://tiktok.com/@tuasociacion",
-    icon: "videocam",
-  },
-  {
-    key: "youtube",
-    label: "YouTube",
-    placeholder: "https://youtube.com/@tuasociacion",
-    icon: "smart_display",
-  },
-  {
-    key: "linkedin",
-    label: "LinkedIn",
-    placeholder: "https://linkedin.com/company/tuasociacion",
-    icon: "work",
-  },
-] as const;
-
-type SocialLinkKey = (typeof SOCIAL_LINKS)[number]["key"];
-type SocialLinksFormState = Record<SocialLinkKey, string>;
-type SocialStatsFormState = {
-  followers: string;
-  views: string;
-  likes: string;
-};
 
 type ProfileFormState = {
   name: string;
@@ -68,8 +19,6 @@ type ProfileFormState = {
   location: string;
   address: string;
   representatives: AssociationRepresentative[];
-  socialLinks: SocialLinksFormState;
-  socialStats: SocialStatsFormState;
 };
 
 type RepresentativeField = "role" | "name" | "email" | "phone";
@@ -78,89 +27,6 @@ function normalize(value: string) {
   return value.trim();
 }
 
-function createEmptySocialLinks(): SocialLinksFormState {
-  return SOCIAL_LINKS.reduce((acc, link) => {
-    acc[link.key] = "";
-    return acc;
-  }, {} as SocialLinksFormState);
-}
-
-function normalizeSocialLinks(
-  links?: AssociationSocialLinks
-): SocialLinksFormState {
-  const base = createEmptySocialLinks();
-  SOCIAL_LINKS.forEach((link) => {
-    const value = links?.[link.key];
-    base[link.key] = value ? String(value) : "";
-  });
-  return base;
-}
-
-function serializeSocialLinks(links: SocialLinksFormState) {
-  return JSON.stringify(
-    SOCIAL_LINKS.map((link) => normalize(links[link.key] ?? ""))
-  );
-}
-
-function normalizeSocialStats(
-  stats?: AssociationSocialStats
-): SocialStatsFormState {
-  return {
-    followers:
-      stats?.followers !== undefined ? String(stats.followers) : "",
-    views: stats?.views !== undefined ? String(stats.views) : "",
-    likes: stats?.likes !== undefined ? String(stats.likes) : "",
-  };
-}
-
-function serializeSocialStats(stats: SocialStatsFormState) {
-  return JSON.stringify({
-    followers: normalize(stats.followers ?? ""),
-    views: normalize(stats.views ?? ""),
-    likes: normalize(stats.likes ?? ""),
-  });
-}
-
-function parseStatValue(value: string): number | null {
-  const raw = value.trim();
-  if (!raw) return null;
-  const normalized =
-    raw.includes(",") && !raw.includes(".") ? raw.replace(",", ".") : raw;
-  const parsed = Number(normalized);
-  if (!Number.isFinite(parsed)) return null;
-  return Math.max(0, parsed);
-}
-
-function cleanSocialLinks(
-  links: SocialLinksFormState
-): AssociationSocialLinks | undefined {
-  const cleaned = SOCIAL_LINKS.reduce((acc, link) => {
-    const value = normalize(links[link.key] ?? "");
-    if (value) {
-      acc[link.key] = value;
-    }
-    return acc;
-  }, {} as AssociationSocialLinks);
-
-  return Object.keys(cleaned).length ? cleaned : undefined;
-}
-
-function cleanSocialStats(
-  stats: SocialStatsFormState
-): AssociationSocialStats | undefined {
-  const followers = parseStatValue(stats.followers);
-  const views = parseStatValue(stats.views);
-  const likes = parseStatValue(stats.likes);
-  const hasAny = [followers, views, likes].some((value) => value !== null);
-
-  if (!hasAny) return undefined;
-
-  return {
-    followers: followers ?? 0,
-    views: views ?? 0,
-    likes: likes ?? 0,
-  };
-}
 
 function createRepresentativeId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -223,8 +89,6 @@ function getAssociationFormState(
     contactEmail: association?.contactEmail ?? "",
     location: association?.location ?? "",
     address: association?.address ?? "",
-    socialLinks: normalizeSocialLinks(association?.socialLinks),
-    socialStats: normalizeSocialStats(association?.socialStats),
     representatives:
       association?.representatives?.map((rep) => ({
         id: rep.id || createRepresentativeId(),
@@ -279,10 +143,6 @@ export default function AssociationProfilePage() {
       normalize(form.contactEmail) !== normalize(initialForm.contactEmail) ||
       normalize(form.location) !== normalize(initialForm.location) ||
       normalize(form.address) !== normalize(initialForm.address) ||
-      serializeSocialLinks(form.socialLinks) !==
-        serializeSocialLinks(initialForm.socialLinks) ||
-      serializeSocialStats(form.socialStats) !==
-        serializeSocialStats(initialForm.socialStats) ||
       serializeRepresentatives(form.representatives) !==
         serializeRepresentatives(initialForm.representatives)
     );
@@ -333,8 +193,6 @@ export default function AssociationProfilePage() {
     const name = normalize(form.name);
     if (!name) return;
     const representatives = cleanRepresentatives(form.representatives);
-    const socialLinks = cleanSocialLinks(form.socialLinks);
-    const socialStats = cleanSocialStats(form.socialStats);
 
     setAssociation({
       name,
@@ -345,8 +203,6 @@ export default function AssociationProfilePage() {
       location: normalize(form.location) || undefined,
       address: normalize(form.address) || undefined,
       representatives: representatives.length ? representatives : undefined,
-      socialLinks,
-      socialStats,
     });
     setLastSavedAt(Date.now());
   };
@@ -581,138 +437,6 @@ export default function AssociationProfilePage() {
             </div>
           </section>
 
-          <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Redes sociales
-              </h2>
-              <p className="mt-2 text-sm text-gray-500">
-                Añade los enlaces oficiales y las métricas globales de tu
-                comunidad.
-              </p>
-            </div>
-            <div className="space-y-6">
-              <div>
-                <p className="text-sm font-semibold text-gray-800">
-                  Enlaces oficiales
-                </p>
-                <p className="mt-1 text-xs text-gray-400">
-                  Solo se mostrarán las redes que tengan un enlace asociado.
-                </p>
-                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {SOCIAL_LINKS.map((link) => (
-                    <div key={link.key}>
-                      <label className="text-sm font-semibold text-gray-700">
-                        {link.label}
-                      </label>
-                      <div className="relative mt-2">
-                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                          <span className="material-symbols-outlined text-[18px]">
-                            {link.icon}
-                          </span>
-                        </span>
-                        <input
-                          value={form.socialLinks[link.key]}
-                          onChange={(event) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              socialLinks: {
-                                ...prev.socialLinks,
-                                [link.key]: event.target.value,
-                              },
-                            }))
-                          }
-                          placeholder={link.placeholder}
-                          className="w-full rounded-2xl border border-gray-200 bg-white px-10 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-3 text-xs text-gray-400">
-                  Estos enlaces se mostrarán en el dashboard y el módulo de
-                  redes.
-                </p>
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-gray-800">
-                  Métricas globales
-                </p>
-                <p className="mt-1 text-xs text-gray-400">
-                  Se usan para el resumen del dashboard y del módulo de redes.
-                </p>
-                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <div>
-                    <label className="text-sm font-semibold text-gray-700">
-                      Seguidores totales
-                    </label>
-                    <input
-                      inputMode="numeric"
-                      type="number"
-                      min="0"
-                      value={form.socialStats.followers}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          socialStats: {
-                            ...prev.socialStats,
-                            followers: event.target.value,
-                          },
-                        }))
-                      }
-                      placeholder="15000"
-                      className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-gray-700">
-                      Visualizaciones totales
-                    </label>
-                    <input
-                      inputMode="numeric"
-                      type="number"
-                      min="0"
-                      value={form.socialStats.views}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          socialStats: {
-                            ...prev.socialStats,
-                            views: event.target.value,
-                          },
-                        }))
-                      }
-                      placeholder="245000"
-                      className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-gray-700">
-                      Me gustas totales
-                    </label>
-                    <input
-                      inputMode="numeric"
-                      type="number"
-                      min="0"
-                      value={form.socialStats.likes}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          socialStats: {
-                            ...prev.socialStats,
-                            likes: event.target.value,
-                          },
-                        }))
-                      }
-                      placeholder="8200"
-                      className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
 
           <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
             <div>

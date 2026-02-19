@@ -42,10 +42,6 @@ const FEATURE_ITEMS = [
     icon: "description",
   },
   {
-    title: "Redes sociales",
-    description: "Publicaciones y campañas.",
-    icon: "share",
-  },
   {
     title: "Panel de control",
     description: "Indicadores clave en tiempo real.",

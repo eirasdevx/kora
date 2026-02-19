@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/core/session/session.store";
 import { type UserRole, useUsersStore } from "@/core/users/users.store";
 
-type NavModule = "accounting" | "events" | "contacts" | "documents" | "social";
+type NavModule = "accounting" | "events" | "contacts" | "documents";
 type NavItem = {
   label: string;
   href: string;
@@ -44,7 +44,6 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
     { label: "Eventos", href: "/events", moduleKey: "events" },
     { label: "Contactos", href: "/contacts", moduleKey: "contacts" },
     { label: "Documentos", href: "/documents", moduleKey: "documents" },
-    { label: "Redes sociales", href: "/social", moduleKey: "social" },
   ];
 
   const isActive = (href: string) =>

@@ -7,8 +7,6 @@ import { db } from "@/core/storage/kora.db";
 import {
   type AssociationProfile,
   type AssociationRepresentative,
-  type AssociationSocialLinks,
-  type AssociationSocialStats,
   useSessionStore,
 } from "@/core/session/session.store";
 import type {
@@ -23,15 +21,13 @@ import type {
   TransactionStatus,
   TransactionType,
 } from "@/modules/accounting/transaction.types";
-import type { SocialPost, SocialPostStatus } from "@/modules/social/social.types";
 
 type DataScope =
   | "all"
   | "associationProfile"
   | "contacts"
   | "events"
-  | "transactions"
-  | "socialPosts";
+  | "transactions";
 
 type ImportMode = "merge" | "replace";
 
@@ -42,7 +38,6 @@ type KoraExportPayloadV1 = {
   contacts: Contact[];
   events: Event[];
   transactions: Transaction[];
-  socialPosts: SocialPost[];
 };
 
 const CONTACT_TYPES: ContactType[] = ["member", "provider", "collaborator"];
@@ -56,11 +51,6 @@ const TRANSACTION_CATEGORIES: TransactionCategory[] = [
   "other",
 ];
 const TRANSACTION_STATUSES: TransactionStatus[] = ["completed", "pending"];
-const SOCIAL_POST_STATUSES: SocialPostStatus[] = [
-  "draft",
-  "scheduled",
-  "published",
-];
 
 const DATA_SCOPE_OPTIONS: Array<{
   value: DataScope;
@@ -70,7 +60,7 @@ const DATA_SCOPE_OPTIONS: Array<{
   {
     value: "all",
     label: "Todos los módulos",
-    description: "Perfil, contactos, eventos, contabilidad y redes.",
+    description: "Perfil, contactos, eventos, contabilidad.",
   },
   {
     value: "associationProfile",
@@ -93,10 +83,6 @@ const DATA_SCOPE_OPTIONS: Array<{
     description: "Ingresos, gastos y transacciones.",
   },
   {
-    value: "socialPosts",
-    label: "Redes sociales",
-    description: "Publicaciones y campañas.",
-  },
 ];
 
 function safeString(value: unknown): string {
@@ -210,79 +196,6 @@ function normalizeRepresentatives(value: unknown): AssociationRepresentative[] {
   return entry ? [entry] : [];
 }
 
-const SOCIAL_LINK_KEYS = [
-  "instagram",
-  "facebook",
-  "x",
-  "tiktok",
-  "youtube",
-  "linkedin",
-] as const;
-
-function normalizeAssociationSocialLinks(
-  value: unknown
-): AssociationSocialLinks | undefined {
-  if (!value) return undefined;
-
-  if (typeof value === "string") {
-    const raw = value.trim();
-    if (!raw) return undefined;
-    try {
-      return normalizeAssociationSocialLinks(JSON.parse(raw));
-    } catch {
-      return undefined;
-    }
-  }
-
-  if (typeof value !== "object") return undefined;
-  const obj = value as Record<string, unknown>;
-  const links = SOCIAL_LINK_KEYS.reduce((acc, key) => {
-    const link = safeString(obj[key]).trim();
-    if (link) acc[key] = link;
-    return acc;
-  }, {} as AssociationSocialLinks);
-
-  return Object.keys(links).length ? links : undefined;
-}
-
-function normalizeAssociationSocialStats(
-  value: unknown
-): AssociationSocialStats | undefined {
-  if (!value) return undefined;
-
-  if (typeof value === "string") {
-    const raw = value.trim();
-    if (!raw) return undefined;
-    try {
-      return normalizeAssociationSocialStats(JSON.parse(raw));
-    } catch {
-      return undefined;
-    }
-  }
-
-  if (typeof value !== "object") return undefined;
-  const obj = value as Record<string, unknown>;
-  const followers = parseNumber(
-    obj.followers ?? obj.totalFollowers ?? obj.seguidores
-  );
-  const views = parseNumber(
-    obj.views ?? obj.visualizations ?? obj.totalViews ?? obj.visualizaciones
-  );
-  const likes = parseNumber(
-    obj.likes ?? obj.totalLikes ?? obj.meGustas ?? obj.megustas
-  );
-
-  if (followers === undefined && views === undefined && likes === undefined) {
-    return undefined;
-  }
-
-  return {
-    followers: followers ?? 0,
-    views: views ?? 0,
-    likes: likes ?? 0,
-  };
-}
-
 function normalizeAssociationProfile(value: unknown): AssociationProfile | null {
   if (!value || typeof value !== "object") return null;
   const obj = value as Record<string, unknown>;
@@ -320,12 +233,6 @@ function normalizeAssociationProfile(value: unknown): AssociationProfile | null 
   const representatives = normalizeRepresentatives(
     obj.representatives ?? obj.boardMembers ?? obj.committee
   );
-  const socialLinks = normalizeAssociationSocialLinks(
-    obj.socialLinks ?? obj.social ?? obj.socialMedia ?? obj.networks
-  );
-  const socialStats = normalizeAssociationSocialStats(
-    obj.socialStats ?? obj.socialMetrics ?? obj.metrics ?? obj.socialMediaMetrics
-  );
 
   return {
     name,
@@ -335,8 +242,6 @@ function normalizeAssociationProfile(value: unknown): AssociationProfile | null 
     location: location || undefined,
     address: address || undefined,
     representatives: representatives.length ? representatives : undefined,
-    socialLinks,
-    socialStats,
   };
 }
 
@@ -407,7 +312,6 @@ function normalizeContact(value: unknown): Contact | null {
     phone: safeString(obj.phone) || undefined,
     secondaryPhone: safeString(obj.secondaryPhone) || undefined,
     website: safeString(obj.website) || undefined,
-    socialLinks: safeString(obj.socialLinks) || undefined,
     postalCode: safeString(obj.postalCode) || undefined,
     address: safeString(obj.address) || undefined,
     city: safeString(obj.city) || undefined,
@@ -521,31 +425,6 @@ function normalizeTransaction(value: unknown): Transaction | null {
   };
 }
 
-function normalizeSocialPost(value: unknown): SocialPost | null {
-  if (!value || typeof value !== "object") return null;
-  const obj = value as Record<string, unknown>;
-
-  const channels = splitList(obj.channels);
-
-  const statusRaw = safeString(obj.status).trim();
-  const status: SocialPostStatus = SOCIAL_POST_STATUSES.includes(
-    statusRaw as SocialPostStatus
-  )
-    ? (statusRaw as SocialPostStatus)
-    : "draft";
-
-  const mediaUrls = splitList(obj.mediaUrls);
-
-  return {
-    id: ensureId(obj.id),
-    content: safeString(obj.content),
-    channels: channels.length ? channels : ["Instagram"],
-    status,
-    mediaUrls: mediaUrls.length ? mediaUrls : undefined,
-    scheduledAt: safeString(obj.scheduledAt) || undefined,
-    createdAt: safeString(obj.createdAt) || nowIso(),
-  };
-}
 
 function downloadTextFile(filename: string, text: string, mime: string) {
   const blob = new Blob([text], { type: mime });
@@ -637,11 +516,10 @@ export default function MigrationSettingsPage() {
   };
 
   const exportAllJson = async () => {
-    const [contacts, events, transactions, socialPosts] = await Promise.all([
+    const [contacts, events, transactions] = await Promise.all([
       db.contacts.toArray(),
       db.events.toArray(),
       db.transactions.toArray(),
-      db.socialPosts.toArray(),
     ]);
 
     const payload: KoraExportPayloadV1 = {
@@ -651,7 +529,6 @@ export default function MigrationSettingsPage() {
       contacts,
       events,
       transactions,
-      socialPosts,
     };
 
     downloadTextFile(
@@ -710,14 +587,6 @@ export default function MigrationSettingsPage() {
       );
       return;
     }
-
-    const socialPosts = await db.socialPosts.toArray();
-    const payload = { version: 1 as const, exportedAt, socialPosts };
-    downloadTextFile(
-      "kora-socialPosts.json",
-      JSON.stringify(payload, null, 2),
-      "application/json"
-    );
   };
 
   const handleExport = async () => {
@@ -754,16 +623,11 @@ export default function MigrationSettingsPage() {
     const transactions = (payload.transactions ?? [])
       .map(normalizeTransaction)
       .filter(Boolean) as Transaction[];
-    const socialPosts = (payload.socialPosts ?? [])
-      .map(normalizeSocialPost)
-      .filter(Boolean) as SocialPost[];
-
     await db.transaction(
       "rw",
       db.contacts,
       db.events,
       db.transactions,
-      db.socialPosts,
       async () => {
         if (importMode === "replace") {
           if (importScope === "all" || importScope === "contacts") {
@@ -775,9 +639,6 @@ export default function MigrationSettingsPage() {
           if (importScope === "all" || importScope === "transactions") {
             await db.transactions.clear();
           }
-          if (importScope === "all" || importScope === "socialPosts") {
-            await db.socialPosts.clear();
-          }
         }
 
         if (importScope === "all" || importScope === "contacts") {
@@ -788,9 +649,6 @@ export default function MigrationSettingsPage() {
         }
         if (importScope === "all" || importScope === "transactions") {
           if (transactions.length) await db.transactions.bulkPut(transactions);
-        }
-        if (importScope === "all" || importScope === "socialPosts") {
-          if (socialPosts.length) await db.socialPosts.bulkPut(socialPosts);
         }
       }
     );
@@ -804,7 +662,6 @@ export default function MigrationSettingsPage() {
       contacts: contacts.length,
       events: events.length,
       transactions: transactions.length,
-      socialPosts: socialPosts.length,
     };
   };
 
@@ -825,9 +682,6 @@ export default function MigrationSettingsPage() {
         events: Array.isArray(obj.events) ? (obj.events as Event[]) : [],
         transactions: Array.isArray(obj.transactions)
           ? (obj.transactions as Transaction[])
-          : [],
-        socialPosts: Array.isArray(obj.socialPosts)
-          ? (obj.socialPosts as SocialPost[])
           : [],
       });
     }
@@ -870,13 +724,7 @@ export default function MigrationSettingsPage() {
           : [];
       return applyImport({ transactions });
     }
-
-    const socialPosts = Array.isArray(obj.socialPosts)
-      ? (obj.socialPosts as SocialPost[])
-      : Array.isArray(data)
-        ? (data as SocialPost[])
-        : [];
-    return applyImport({ socialPosts });
+    return applyImport({});
   };
 
   const handleImport = async () => {
@@ -900,7 +748,7 @@ export default function MigrationSettingsPage() {
       const result = await importJsonText(await file.text());
 
       setMessage(
-        `Importación completada. Perfil: ${result.profile}, Contactos: ${result.contacts}, Eventos: ${result.events}, Contabilidad: ${result.transactions}, Redes: ${result.socialPosts}.`
+        `Importación completada. Perfil: ${result.profile}, Contactos: ${result.contacts}, Eventos: ${result.events}, Contabilidad: ${result.transactions}.`
       );
 
       if (input) input.value = "";

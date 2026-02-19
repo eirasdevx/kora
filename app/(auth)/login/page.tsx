@@ -8,7 +8,6 @@ import { useUsersStore } from "@/core/users/users.store";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
 import { useEventsStore } from "@/modules/events/events.store";
-import { useSocialPostsStore } from "@/modules/social/social.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import {
   createPasswordDigest,
@@ -31,7 +30,6 @@ export default function LoginPage() {
   const resetContacts = useContactsStore((s) => s.resetContacts);
   const resetDocuments = useDocumentsStore((s) => s.resetDocuments);
   const resetEvents = useEventsStore((s) => s.resetEvents);
-  const resetPosts = useSocialPostsStore((s) => s.resetPosts);
   const resetTransactions = useTransactionsStore((s) => s.resetTransactions);
   const [guestOpen, setGuestOpen] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -248,7 +246,6 @@ export default function LoginPage() {
     resetContacts();
     resetDocuments();
     resetEvents();
-    resetPosts();
     resetTransactions();
     setGuest();
     setGuestOpen(false);
@@ -280,7 +277,7 @@ export default function LoginPage() {
                 Gestiona tu asociación con elegancia.
               </h1>
               <p className="text-base text-white/80">
-                Centraliza contabilidad, eventos y redes sociales en una sola plataforma
+                Centraliza contabilidad y eventos en una sola plataforma
                 intuitiva diseñada para el crecimiento comunitario.
               </p>
             </div>

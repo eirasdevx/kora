@@ -140,9 +140,6 @@ export default function ContactForm({
     initialData?.secondaryPhone ?? ""
   );
   const [website, setWebsite] = useState(initialData?.website ?? "");
-  const [socialLinks, setSocialLinks] = useState(
-    initialData?.socialLinks ?? ""
-  );
   const [postalCode, setPostalCode] = useState(
     initialData?.postalCode ?? ""
   );
@@ -266,7 +263,6 @@ export default function ContactForm({
       phone: phone || undefined,
       secondaryPhone: secondaryPhone || undefined,
       website: website || undefined,
-      socialLinks: socialLinks || undefined,
       postalCode: postalCode || undefined,
       address: address || undefined,
       city: city || undefined,
@@ -760,17 +756,6 @@ export default function ContactForm({
                   onChange={(e) => setWebsite(e.target.value)}
                   className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                   placeholder="https://www.ejemplo.com"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="text-xs font-semibold uppercase text-gray-400">
-                  Redes sociales (LinkedIn, Twitter, etc.)
-                </label>
-                <input
-                  value={socialLinks}
-                  onChange={(e) => setSocialLinks(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                  placeholder="Enlaces separados por comas"
                 />
               </div>
             </div>

@@ -41,7 +41,6 @@ const DEFAULT_PERMISSIONS: UserPermissions = {
     events: true,
     contacts: true,
     documents: true,
-    social: true,
   },
   actions: {
     view: true,
@@ -63,7 +62,6 @@ const normalizePermissions = (
       events: Boolean(modules.events ?? DEFAULT_PERMISSIONS.modules.events),
       contacts: Boolean(modules.contacts ?? DEFAULT_PERMISSIONS.modules.contacts),
       documents: Boolean(modules.documents ?? DEFAULT_PERMISSIONS.modules.documents),
-      social: Boolean(modules.social ?? DEFAULT_PERMISSIONS.modules.social),
     },
     actions: {
       view: edit ? false : true,
@@ -117,7 +115,6 @@ const MODULE_LABELS: Record<keyof UserPermissions["modules"], string> = {
   events: "Eventos",
   contacts: "Contactos",
   documents: "Documentos",
-  social: "Redes sociales",
 };
 
 const clonePermissions = (permissions: UserPermissions): UserPermissions => ({
@@ -213,12 +210,6 @@ const MODULE_ITEMS = [
         description
       </span>
     ),
-  },
-  {
-    key: "social",
-    label: "Redes Sociales",
-    description: "Publicaciones y campañas",
-    icon: <span className="material-symbols-outlined text-[20px]">share</span>,
   },
 ] as const;
 

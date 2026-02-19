@@ -18,7 +18,6 @@ export interface Contact {
   phone?: string;
   secondaryPhone?: string;
   website?: string;
-  socialLinks?: string;
   postalCode?: string;
   address?: string;
   city?: string;

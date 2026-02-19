@@ -8,8 +8,6 @@ import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useEventsStore } from "@/modules/events/events.store";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
-import { useSocialPostsStore } from "@/modules/social/social.store";
-import { SocialPostStatus } from "@/modules/social/social.types";
 import { useMessagingSettingsStore } from "@/modules/messaging/messaging.settings.store";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -22,17 +20,6 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const MONTH_OPTIONS = [3, 4, 5, 6];
 
-const POST_STATUS_LABELS: Record<SocialPostStatus, string> = {
-  draft: "Borrador",
-  scheduled: "Programado",
-  published: "Publicado",
-};
-
-const POST_STATUS_STYLES: Record<SocialPostStatus, string> = {
-  draft: "bg-amber-50 text-amber-700",
-  scheduled: "bg-blue-50 text-blue-600",
-  published: "bg-emerald-50 text-emerald-700",
-};
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("es-ES", {
@@ -72,7 +59,6 @@ export default function DashboardPage() {
   const { contacts, loadContacts } = useContactsStore();
   const { events, loadEvents } = useEventsStore();
   const { documents, loadDocuments } = useDocumentsStore();
-  const { posts, loadPosts } = useSocialPostsStore();
   const { settings, loadSettings } = useMessagingSettingsStore();
   const [monthsRange, setMonthsRange] = useState(6);
   const [emailForm, setEmailForm] = useState({
@@ -93,8 +79,7 @@ export default function DashboardPage() {
     loadContacts();
     loadEvents();
     loadDocuments();
-    loadPosts();
-  }, [loadTransactions, loadContacts, loadEvents, loadDocuments, loadPosts]);
+  }, [loadTransactions, loadContacts, loadEvents, loadDocuments]);
 
   useEffect(() => {
     loadSettings();
@@ -242,8 +227,6 @@ export default function DashboardPage() {
 
   const totalEvents = events.length;
 
-  const socialFollowers = association?.socialStats?.followers ?? 0;
-
   const activeEvents = useMemo(() => {
     return events.filter((event) => {
       const start = new Date(event.startDate);
@@ -260,15 +243,6 @@ export default function DashboardPage() {
       )
       .slice(0, 3);
   }, [activeEvents]);
-
-  const recentPosts = useMemo(() => {
-    const sorted = [...posts].sort((a, b) => {
-      const aDate = new Date(a.scheduledAt ?? a.createdAt).getTime();
-      const bDate = new Date(b.scheduledAt ?? b.createdAt).getTime();
-      return bDate - aDate;
-    });
-    return sorted.slice(0, 3);
-  }, [posts]);
 
   const recentDocuments = useMemo(() => {
     const sorted = [...documents].sort(
@@ -533,45 +507,6 @@ export default function DashboardPage() {
           </div>
         </Link>
 
-        <Link
-          href="/social"
-          aria-label="Ir a redes sociales"
-          className="group relative block overflow-hidden rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 120 80"
-            className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 text-pink-400/20"
-            fill="none"
-          >
-            <path
-              d="M60 64 C60 64, 30 46, 30 30 C30 22, 36 16, 44 16 C50 16, 56 20, 60 26 C64 20, 70 16, 76 16 C84 16, 90 22, 90 30 C90 46, 60 64, 60 64 Z"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M20 60 C28 54, 36 54, 44 60 C52 66, 60 66, 68 60"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              opacity="0.6"
-            />
-            <circle cx="96" cy="18" r="4" fill="currentColor" opacity="0.6" />
-          </svg>
-          <div className="relative z-10">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">Seguidores en redes</p>
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-pink-50 text-pink-500">
-                ♥
-              </span>
-            </div>
-            <p className="mt-2 text-2xl font-semibold text-gray-900">
-              {formatNumber(socialFollowers)}
-            </p>
-          </div>
-        </Link>
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
@@ -808,58 +743,6 @@ export default function DashboardPage() {
                 </div>
               );
             })}
-          </div>
-        </Link>
-
-        <Link
-          href="/social"
-          aria-label="Ir a redes sociales"
-          className="group block rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Publicaciones recientes
-            </h3>
-            <span className="text-sm font-semibold text-primary">Ver todo</span>
-          </div>
-          <div className="mt-4 space-y-3">
-            {recentPosts.length === 0 && (
-              <div className="rounded-2xl border border-gray-200 p-3 text-sm text-gray-400">
-                No hay publicaciones recientes.
-              </div>
-            )}
-            {recentPosts.map((post) => (
-              <div
-                key={post.id}
-                className="space-y-2 rounded-2xl border border-gray-200 p-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${POST_STATUS_STYLES[post.status]}`}
-                  >
-                    {POST_STATUS_LABELS[post.status]}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {formatShortDate(post.scheduledAt ?? post.createdAt)}
-                  </span>
-                </div>
-                <p className="text-sm font-semibold text-gray-900">
-                  {post.content.slice(0, 72) || "Sin contenido"}
-                </p>
-                {post.channels.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {post.channels.map((channel) => (
-                      <span
-                        key={`${post.id}-${channel}`}
-                        className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-600"
-                      >
-                        {channel}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
           </div>
         </Link>
 

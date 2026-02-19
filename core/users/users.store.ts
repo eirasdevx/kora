@@ -28,7 +28,6 @@ export type UserPermissions = {
     events: boolean;
     contacts: boolean;
     documents: boolean;
-    social: boolean;
   };
   actions: {
     view: boolean;
@@ -88,7 +87,6 @@ const createDefaultPermissions = (): UserPermissions => ({
     events: true,
     contacts: true,
     documents: true,
-    social: true,
   },
   actions: {
     view: true,
@@ -146,7 +144,6 @@ type LegacyModules = Partial<{
   events: string | boolean;
   contacts: string | boolean;
   documents: string | boolean;
-  social: string | boolean;
   treasury: string | boolean;
 }>;
 
@@ -170,7 +167,6 @@ const withDefaultPermissions = (
       events: resolveEnabled(modules.events, defaults.modules.events),
       contacts: resolveEnabled(modules.contacts, defaults.modules.contacts),
       documents: resolveEnabled(modules.documents, defaults.modules.documents),
-      social: resolveEnabled(modules.social, defaults.modules.social),
     },
     actions: {
       view: edit ? false : true,
@@ -209,7 +205,6 @@ const normalizeUser = (user: UserAccount): UserAccount => {
             events: true,
             contacts: true,
             documents: true,
-            social: true,
           },
         }
       : basePermissions;

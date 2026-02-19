@@ -43,21 +43,6 @@ export type AssociationRepresentative = {
   phone?: string;
 };
 
-export type AssociationSocialLinks = {
-  instagram?: string;
-  facebook?: string;
-  x?: string;
-  tiktok?: string;
-  youtube?: string;
-  linkedin?: string;
-};
-
-export type AssociationSocialStats = {
-  followers: number;
-  views: number;
-  likes: number;
-};
-
 export type AssociationProfile = {
   name: string;
   logoUrl?: string;
@@ -67,8 +52,6 @@ export type AssociationProfile = {
   location?: string;
   address?: string;
   representatives?: AssociationRepresentative[];
-  socialLinks?: AssociationSocialLinks;
-  socialStats?: AssociationSocialStats;
 };
 
 export type AssociationEntry = {
