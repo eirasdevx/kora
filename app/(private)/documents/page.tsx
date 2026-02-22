@@ -194,6 +194,9 @@ export default function DocumentsPage() {
   const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [permissionDraft, setPermissionDraft] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState<DocumentItem | null>(null);
+  const [confirmDeleteFinal, setConfirmDeleteFinal] =
+    useState<DocumentItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const pageSize = 5;
@@ -241,6 +244,8 @@ export default function DocumentsPage() {
   }, [filteredDocuments, selectedId]);
 
   const selectedDoc = documents.find((doc) => doc.id === selectedId);
+  const confirmDeleteLabel =
+    confirmDelete?.name?.trim() || "este documento";
 
   useEffect(() => {
     setNameDraft(selectedDoc?.name ?? "");
@@ -281,10 +286,11 @@ export default function DocumentsPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleDelete = async () => {
-    if (!selectedDoc) return;
-    await deleteDocument(selectedDoc.id);
-    setSelectedId("");
+  const handleDelete = async (doc: DocumentItem) => {
+    await deleteDocument(doc.id);
+    if (selectedId === doc.id) {
+      setSelectedId("");
+    }
   };
 
   const handleRename = async () => {
@@ -997,7 +1003,7 @@ export default function DocumentsPage() {
                   <button
                     className="flex-1 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600"
                     type="button"
-                    onClick={handleDelete}
+                    onClick={() => selectedDoc && setConfirmDelete(selectedDoc)}
                   >
                     Eliminar
                   </button>
@@ -1006,6 +1012,66 @@ export default function DocumentsPage() {
           </aside>
         ) : null}
       </div>
+
+      <Modal
+        isOpen={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        title="¿Eliminar documento?"
+      >
+        <p className="mb-6">
+          ¿Seguro que quieres eliminar <strong>{confirmDeleteLabel}</strong>?
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setConfirmDelete(null)}
+            className="px-4 py-2 border rounded-lg"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+              if (confirmDelete) {
+                setConfirmDeleteFinal(confirmDelete);
+              }
+              setConfirmDelete(null);
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg"
+          >
+            Sí, eliminar
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!confirmDeleteFinal}
+        onClose={() => setConfirmDeleteFinal(null)}
+        title="Confirmación final"
+      >
+        <p className="mb-6 text-red-600 font-medium">
+          Esta acción no se puede deshacer.
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setConfirmDeleteFinal(null)}
+            className="px-4 py-2 border rounded-lg"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={async () => {
+              if (confirmDeleteFinal) {
+                await handleDelete(confirmDeleteFinal);
+              }
+              setConfirmDeleteFinal(null);
+            }}
+            className="px-4 py-2 bg-red-700 text-white rounded-lg"
+          >
+            Eliminar definitivamente
+          </button>
+        </div>
+      </Modal>
 
       <Modal isOpen={uploadOpen} onClose={closeUpload} title="Subir Archivo">
         <div className="space-y-6">

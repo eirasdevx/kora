@@ -9,6 +9,7 @@ import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useEventsStore } from "@/modules/events/events.store";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
 import { useMessagingSettingsStore } from "@/modules/messaging/messaging.settings.store";
+import { useMessagingStore } from "@/modules/messaging/messaging.store";
 
 const CATEGORY_LABELS: Record<string, string> = {
   membership: "Membresía",
@@ -45,13 +46,6 @@ const formatShortDate = (value: string) =>
     month: "short",
   }).format(new Date(value));
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
-
-const parseRecipientList = (value: string) =>
-  value
-    .split(/[\n,;]+/g)
-    .map((item) => item.trim())
-    .filter(Boolean);
 
 export default function DashboardPage() {
   const association = useSessionStore((s) => s.association);
@@ -60,19 +54,8 @@ export default function DashboardPage() {
   const { events, loadEvents } = useEventsStore();
   const { documents, loadDocuments } = useDocumentsStore();
   const { settings, loadSettings } = useMessagingSettingsStore();
+  const { templates } = useMessagingStore();
   const [monthsRange, setMonthsRange] = useState(6);
-  const [emailForm, setEmailForm] = useState({
-    recipients: "",
-    subject: "Comunicado general",
-    htmlMessage: "<p>Hola socios,</p><p>Gracias por su apoyo.</p>",
-  });
-  const [emailSending, setEmailSending] = useState(false);
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [emailResult, setEmailResult] = useState<{
-    sentCount: number;
-    failedCount: number;
-    errors?: Array<{ recipient: string; message: string }>;
-  } | null>(null);
 
   useEffect(() => {
     loadTransactions();
@@ -93,7 +76,6 @@ export default function DashboardPage() {
   const {
     balance,
     monthBalance,
-    prevMonthBalance,
     balanceChange,
     totalIncome,
     totalExpense,
@@ -204,7 +186,6 @@ export default function DashboardPage() {
     return {
       balance: net,
       monthBalance: monthNet,
-      prevMonthBalance: prevNet,
       balanceChange: change,
       totalIncome: rangeIncome,
       totalExpense: rangeExpense,
@@ -225,7 +206,6 @@ export default function DashboardPage() {
     return contacts.filter((c) => c.types.includes("member")).length;
   }, [contacts]);
 
-  const totalEvents = events.length;
 
   const activeEvents = useMemo(() => {
     return events.filter((event) => {
@@ -271,250 +251,236 @@ export default function DashboardPage() {
   const senderName = settings.senderName || association?.name || "";
   const senderEmail = settings.emailAddress || association?.contactEmail || "";
   const senderPassword = settings.emailAppPassword || "";
-
-  // Demo simple para consumir la API de envio masivo.
-  const handleEmailSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
-    event.preventDefault();
-    setEmailError(null);
-    setEmailResult(null);
-
-    const recipients = parseRecipientList(emailForm.recipients).filter(
-      (email) => EMAIL_REGEX.test(email)
+  const safeRange = Math.min(6, Math.max(3, monthsRange));
+  const messagingReady = Boolean(senderName && senderEmail && senderPassword);
+  const recentTemplates = useMemo(() => {
+    const sorted = [...templates].sort((a, b) =>
+      b.updatedAt.localeCompare(a.updatedAt)
     );
-    const recipientPayloads = recipients.map((email) => ({ email }));
-
-    if (
-      !senderName ||
-      !senderEmail ||
-      !senderPassword ||
-      !emailForm.subject ||
-      !emailForm.htmlMessage
-    ) {
-      setEmailError("Completa las credenciales en Ajustes > Mensajeria.");
-      return;
-    }
-
-    if (recipients.length === 0) {
-      setEmailError("Ingresa al menos un destinatario valido.");
-      return;
-    }
-
-    setEmailSending(true);
-
-    try {
-      const response = await fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          associationName: senderName,
-          associationEmail: senderEmail,
-          associationAppPassword: senderPassword,
-          emailProvider: settings.emailProvider,
-          smtpHost: settings.smtpHost,
-          smtpPort: settings.smtpPort,
-          smtpSecure: settings.smtpSecure,
-          recipients: recipientPayloads,
-          subject: emailForm.subject,
-          htmlMessage: emailForm.htmlMessage,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error("Error de envio.");
-      }
-
-      const errors = Array.isArray(data.errors) ? data.errors : [];
-      setEmailResult({
-        sentCount: data.sentCount ?? 0,
-        failedCount: data.failedCount ?? 0,
-        errors,
-      });
-      if (errors.length > 0) {
-        const first = errors[0];
-        setEmailError(
-          `Error en ${errors.length} envios. Ejemplo: ${first.recipient} - ${first.message}`
-        );
-      }
-    } catch {
-      setEmailError("No se pudo enviar el correo. Revisa los datos.");
-    } finally {
-      setEmailSending(false);
-    }
-  };
+    return sorted.slice(0, 3);
+  }, [templates]);
+  const lastTemplateUpdate = recentTemplates[0]?.updatedAt;
+  const totalTemplates = templates.length;
 
   return (
-    <div className="space-y-6 lg:space-y-5">
+    <div className="space-y-6 lg:space-y-8">
       <PageTopbar>
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm">
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt={associationName}
-                className="h-10 w-10 rounded-xl object-cover"
-              />
-            ) : (
-              <span className="text-sm font-semibold text-gray-600">
-                {logoInitials || "KA"}
-              </span>
-            )}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={associationName}
+                  className="h-10 w-10 rounded-xl object-cover"
+                />
+              ) : (
+                <span className="text-sm font-semibold text-gray-600">
+                  {logoInitials || "KA"}
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
+                Panel de control
+              </p>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                {associationName}
+              </h1>
+              <p className="text-sm text-gray-500">
+                Resumen operativo y financiero en tiempo real.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              {associationName}
-            </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm">
+              Balance mensual: {formatCurrency(monthBalance)}
+            </span>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                balanceChange >= 0
+                  ? "bg-emerald-50 text-emerald-600"
+                  : "bg-rose-50 text-rose-600"
+              }`}
+            >
+              {formatPercent(balanceChange)} vs mes anterior
+            </span>
           </div>
         </div>
       </PageTopbar>
 
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        <Link
-          href="/accounting"
-          aria-label="Ir a contabilidad"
-          className="group relative block overflow-hidden rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 140 80"
-            className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 text-primary/20"
-            fill="none"
-          >
-            <path
-              d="M6 60 C26 40, 44 68, 64 46 C84 24, 104 52, 130 30"
-              stroke="currentColor"
-              strokeWidth="4"
-              strokeLinecap="round"
-            />
-            <path
-              d="M8 70 H132"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeDasharray="6 6"
-              strokeLinecap="round"
-              opacity="0.6"
-            />
-            <circle cx="26" cy="50" r="4" fill="currentColor" />
-            <circle cx="64" cy="46" r="4" fill="currentColor" />
-            <circle cx="104" cy="52" r="4" fill="currentColor" />
-          </svg>
-          <div className="relative z-10">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">Saldo Total</p>
-              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
-                {formatPercent(balanceChange)}
+      <section className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
+        <div className="relative overflow-hidden rounded-3xl border border-gray-200 bg-gradient-to-br from-white via-slate-50 to-indigo-50 p-6 shadow-sm">
+          <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-primary/10 blur-2xl" />
+          <div className="absolute -left-16 bottom-0 h-32 w-32 rounded-full bg-emerald-100/70 blur-2xl" />
+          <div className="relative z-10 flex flex-col gap-6">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
+                Pulso operativo
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-gray-900">
+                Acciones rapidas para hoy
+              </h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Gestiona socios, eventos y comunicaciones desde un solo lugar.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Link
+                href="/contacts/new"
+                className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <span className="material-symbols-outlined text-[18px]">
+                    person_add
+                  </span>
+                </span>
+                Nuevo socio
+              </Link>
+              <Link
+                href="/events/new"
+                className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+                  <span className="material-symbols-outlined text-[18px]">
+                    event
+                  </span>
+                </span>
+                Nuevo evento
+              </Link>
+              <Link
+                href="/documents"
+                className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+                  <span className="material-symbols-outlined text-[18px]">
+                    upload_file
+                  </span>
+                </span>
+                Subir documento
+              </Link>
+              <Link
+                href="/messaging/templates/new"
+                className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <span className="material-symbols-outlined text-[18px]">
+                    mail
+                  </span>
+                </span>
+                Nueva plantilla
+              </Link>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+              <span className="rounded-full border border-white/80 bg-white/80 px-3 py-1">
+                Ingresos: {formatCurrency(totalIncome)}
+              </span>
+              <span className="rounded-full border border-white/80 bg-white/80 px-3 py-1">
+                Gastos: {formatCurrency(totalExpense)}
+              </span>
+              <span className="rounded-full border border-white/80 bg-white/80 px-3 py-1">
+                Rango: ultimos {safeRange} meses
               </span>
             </div>
-            <p className="mt-2 text-2xl font-semibold text-gray-900">
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Saldo total
+              </p>
+              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <span className="material-symbols-outlined text-[18px]">
+                  account_balance
+                </span>
+              </span>
+            </div>
+            <p className="mt-3 text-2xl font-semibold text-gray-900">
               {formatCurrency(balance)}
             </p>
-            <div className="mt-3 flex items-end gap-1">
-              {monthlySeries.map((month) => (
-                <div
-                  key={month.label}
-                  className="h-10 w-2 rounded-full bg-primary/20"
-                  style={{
-                    height: `${(month.income / maxBar) * 40 + 6}px`,
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </Link>
-
-        <Link
-          href="/contacts"
-          aria-label="Ir a contactos"
-          className="group relative block overflow-hidden rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 120 80"
-            className="pointer-events-none absolute -right-5 -top-6 h-28 w-28 text-blue-400/20"
-            fill="none"
-          >
-            <circle cx="78" cy="24" r="16" stroke="currentColor" strokeWidth="3" />
-            <circle cx="52" cy="48" r="24" stroke="currentColor" strokeWidth="3" />
-            <circle cx="98" cy="58" r="10" fill="currentColor" opacity="0.5" />
-          </svg>
-          <div className="relative z-10">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">Total de Socios</p>
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                +
+            <div className="mt-2 flex items-center gap-2 text-xs font-semibold">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  balanceChange >= 0 ? "bg-emerald-500" : "bg-rose-500"
+                }`}
+              />
+              <span
+                className={
+                  balanceChange >= 0 ? "text-emerald-600" : "text-rose-600"
+                }
+              >
+                {formatPercent(balanceChange)} vs mes anterior
               </span>
             </div>
-            <p className="mt-2 text-2xl font-semibold text-gray-900">
-              {totalMembers}
-            </p>
           </div>
-        </Link>
 
-        <Link
-          href="/events"
-          aria-label="Ir a eventos"
-          className="group relative block overflow-hidden rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 120 80"
-            className="pointer-events-none absolute -right-5 -top-6 h-28 w-28 text-orange-400/20"
-            fill="none"
-          >
-            <rect
-              x="18"
-              y="16"
-              width="84"
-              height="50"
-              rx="12"
-              stroke="currentColor"
-              strokeWidth="3"
-            />
-            <path
-              d="M18 32H102"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-            <path
-              d="M38 16V8"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-            <path
-              d="M82 16V8"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-            <circle cx="40" cy="44" r="3.5" fill="currentColor" />
-            <circle cx="60" cy="44" r="3.5" fill="currentColor" />
-            <circle cx="80" cy="44" r="3.5" fill="currentColor" />
-          </svg>
-          <div className="relative z-10">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">Total de Eventos</p>
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
-                !
+          <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Ingresos periodo
+              </p>
+              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                <span className="material-symbols-outlined text-[18px]">
+                  trending_up
+                </span>
               </span>
             </div>
-            <p className="mt-2 text-2xl font-semibold text-gray-900">
-              {totalEvents}
+            <p className="mt-3 text-2xl font-semibold text-gray-900">
+              {formatCurrency(totalIncome)}
+            </p>
+            <p className="mt-2 text-xs text-gray-500">
+              Ultimos {safeRange} meses
             </p>
           </div>
-        </Link>
 
+          <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Gastos periodo
+              </p>
+              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
+                <span className="material-symbols-outlined text-[18px]">
+                  trending_down
+                </span>
+              </span>
+            </div>
+            <p className="mt-3 text-2xl font-semibold text-gray-900">
+              {formatCurrency(totalExpense)}
+            </p>
+            <p className="mt-2 text-xs text-gray-500">
+              Ultimos {safeRange} meses
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Socios activos
+              </p>
+              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                <span className="material-symbols-outlined text-[18px]">
+                  group
+                </span>
+              </span>
+            </div>
+            <p className="mt-3 text-2xl font-semibold text-gray-900">
+              {formatNumber(totalMembers)}
+            </p>
+            <p className="mt-2 text-xs text-gray-500">
+              {formatNumber(contacts.length)} contactos en total
+            </p>
+          </div>
+        </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
-        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
+      <section className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
-                Análisis de Flujo de Caja
+                Flujo de caja
               </h2>
               <p className="text-sm text-gray-500">
                 Comparativa de ingresos y gastos operativos
@@ -534,7 +500,7 @@ export default function DashboardPage() {
               >
                 {MONTH_OPTIONS.map((value) => (
                   <option key={value} value={value}>
-                    {`Últimos ${value} meses`}
+                    {`Ultimos ${value} meses`}
                   </option>
                 ))}
               </select>
@@ -571,7 +537,7 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-          <div className="mt-4 flex items-center gap-6 text-xs text-gray-500">
+          <div className="mt-4 flex flex-wrap items-center gap-6 text-xs text-gray-500">
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-primary/60" />
               Ingresos
@@ -580,182 +546,201 @@ export default function DashboardPage() {
               <span className="h-2 w-2 rounded-full bg-orange-400/60" />
               Gastos
             </span>
-            <span className="ml-auto text-sm text-gray-400">
-              Total ingresos: {formatCurrency(totalIncome)} · Total gastos:{" "}
+            <span className="text-sm text-gray-400">
+              Total ingresos: {formatCurrency(totalIncome)} / Total gastos:{" "}
               {formatCurrency(totalExpense)}
             </span>
           </div>
         </div>
 
-        <Link
-          href="/accounting"
-          aria-label="Ver desglose de gastos e ingresos"
-          className="group block rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
-              Desglose Gastos e Ingresos
-            </h3>
-          </div>
-          <div className="mt-4 space-y-4">
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Gastos
-              </p>
-              {expenseBreakdown.length === 0 ? (
-                <p className="text-sm text-gray-400">
-                  No hay gastos registrados aún.
-                </p>
-              ) : (
-                expenseBreakdown.map((item) => {
-                  const percent =
-                    totalExpense === 0
-                      ? 0
-                      : (item.amount / totalExpense) * 100;
-                  return (
-                    <div key={item.category} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm text-gray-600">
-                        <span>
-                          {CATEGORY_LABELS[item.category] ?? item.category}
-                        </span>
-                        <span className="font-semibold">
-                          {percent.toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="h-2 rounded-full bg-gray-100">
-                        <div
-                          className="h-2 rounded-full bg-orange-400"
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+        <div className="grid gap-4">
+          <Link
+            href="/accounting"
+            aria-label="Ver desglose de gastos e ingresos"
+            className="group block rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Desglose financiero
+              </h3>
+              <span className="text-sm font-semibold text-primary">
+                Detalle
+              </span>
             </div>
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Ingresos
-              </p>
-              {incomeBreakdown.length === 0 ? (
-                <p className="text-sm text-gray-400">
-                  No hay ingresos registrados aún.
+            <div className="mt-4 space-y-4">
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                  Gastos
                 </p>
-              ) : (
-                incomeBreakdown.map((item) => {
-                  const percent =
-                    totalIncome === 0
-                      ? 0
-                      : (item.amount / totalIncome) * 100;
-                  return (
-                    <div key={item.category} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm text-gray-600">
-                        <span>
-                          {CATEGORY_LABELS[item.category] ?? item.category}
-                        </span>
-                        <span className="font-semibold">
-                          {percent.toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="h-2 rounded-full bg-gray-100">
-                        <div
-                          className="h-2 rounded-full bg-emerald-500"
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </Link>
-      </section>
-
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Link
-          href="/events"
-          aria-label="Ir a eventos"
-          className="group block rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Próximos Eventos
-            </h3>
-            <span className="text-sm font-semibold text-primary">Agenda</span>
-          </div>
-          <div className="mt-4 space-y-3">
-            {upcomingEvents.length === 0 && (
-              <p className="text-sm text-gray-400">
-                No hay eventos activos.
-              </p>
-            )}
-            {upcomingEvents.map((event) => {
-              const capacity = event.capacity ?? 0;
-              const used = event.participantIds?.length ?? 0;
-              const progress = capacity ? (used / capacity) * 100 : 0;
-              const date = new Date(event.startDate);
-              return (
-                <div
-                  key={event.id}
-                  className="rounded-2xl border border-gray-200 p-3"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 flex-col items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                      <span className="text-xs font-semibold">
-                        {date.toLocaleDateString("es-ES", {
-                          month: "short",
-                        })}
-                      </span>
-                      <span className="text-sm font-bold">
-                        {date.getDate().toString().padStart(2, "0")}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {event.title}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {event.location || "Ubicación por confirmar"} ·{" "}
-                        {date.toLocaleTimeString("es-ES", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                      {capacity > 0 && (
-                        <div className="mt-2">
-                          <div className="flex items-center justify-between text-xs text-gray-500">
-                            <span>
-                              Cupos: {used}/{capacity}
-                            </span>
-                            <span>{Math.round(progress)}%</span>
-                          </div>
-                          <div className="mt-1 h-2 rounded-full bg-gray-100">
-                            <div
-                              className="h-2 rounded-full bg-primary"
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
+                {expenseBreakdown.length === 0 ? (
+                  <p className="text-sm text-gray-400">
+                    No hay gastos registrados aun.
+                  </p>
+                ) : (
+                  expenseBreakdown.map((item) => {
+                    const percent =
+                      totalExpense === 0
+                        ? 0
+                        : (item.amount / totalExpense) * 100;
+                    return (
+                      <div key={item.category} className="space-y-2">
+                        <div className="flex items-center justify-between text-sm text-gray-600">
+                          <span>
+                            {CATEGORY_LABELS[item.category] ?? item.category}
+                          </span>
+                          <span className="font-semibold">
+                            {percent.toFixed(0)}%
+                          </span>
                         </div>
-                      )}
+                        <div className="h-2 rounded-full bg-gray-100">
+                          <div
+                            className="h-2 rounded-full bg-orange-400"
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                  Ingresos
+                </p>
+                {incomeBreakdown.length === 0 ? (
+                  <p className="text-sm text-gray-400">
+                    No hay ingresos registrados aun.
+                  </p>
+                ) : (
+                  incomeBreakdown.map((item) => {
+                    const percent =
+                      totalIncome === 0
+                        ? 0
+                        : (item.amount / totalIncome) * 100;
+                    return (
+                      <div key={item.category} className="space-y-2">
+                        <div className="flex items-center justify-between text-sm text-gray-600">
+                          <span>
+                            {CATEGORY_LABELS[item.category] ?? item.category}
+                          </span>
+                          <span className="font-semibold">
+                            {percent.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="h-2 rounded-full bg-gray-100">
+                          <div
+                            className="h-2 rounded-full bg-emerald-500"
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/events"
+            aria-label="Ir a eventos"
+            className="group block rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Agenda activa
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {activeEvents.length} eventos en curso
+                </p>
+              </div>
+              <span className="text-sm font-semibold text-primary">
+                Ver agenda
+              </span>
+            </div>
+            <div className="mt-4 space-y-3">
+              {upcomingEvents.length === 0 && (
+                <p className="text-sm text-gray-400">
+                  No hay eventos activos.
+                </p>
+              )}
+              {upcomingEvents.map((event) => {
+                const capacity = event.capacity ?? 0;
+                const used = event.participantIds?.length ?? 0;
+                const progress = capacity ? (used / capacity) * 100 : 0;
+                const date = new Date(event.startDate);
+                return (
+                  <div
+                    key={event.id}
+                    className="rounded-2xl border border-gray-200 p-3"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-10 w-10 flex-col items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                        <span className="text-xs font-semibold">
+                          {date.toLocaleDateString("es-ES", {
+                            month: "short",
+                          })}
+                        </span>
+                        <span className="text-sm font-bold">
+                          {date.getDate().toString().padStart(2, "0")}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {event.title}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {event.location || "Ubicacion por confirmar"} /{" "}
+                          {date.toLocaleTimeString("es-ES", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                        {capacity > 0 && (
+                          <div className="mt-2">
+                            <div className="flex items-center justify-between text-xs text-gray-500">
+                              <span>
+                                Cupos: {used}/{capacity}
+                              </span>
+                              <span>{Math.round(progress)}%</span>
+                            </div>
+                            <div className="mt-1 h-2 rounded-full bg-gray-100">
+                              <div
+                                className="h-2 rounded-full bg-primary"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </Link>
+                );
+              })}
+            </div>
+          </Link>
+        </div>
+      </section>
 
+      <section className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         <Link
           href="/documents"
           aria-label="Ir a documentos"
-          className="group block rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="group block rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Documentos
-            </h3>
-            <span className="text-sm font-semibold text-primary">Nuevo</span>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Documentos recientes
+              </h3>
+              <p className="text-sm text-gray-500">
+                {documents.length} documentos en biblioteca
+              </p>
+            </div>
+            <span className="text-sm font-semibold text-primary">
+              Biblioteca
+            </span>
           </div>
           <div className="mt-4 space-y-3">
             {recentDocuments.length === 0 && (
@@ -783,117 +768,122 @@ export default function DashboardPage() {
             ))}
           </div>
         </Link>
-      </section>
 
-      <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Envio de correos (demo)
-            </h2>
-            <p className="text-sm text-gray-500">
-              Ejemplo simple que consume la API de envio masivo.
-            </p>
+        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">
+                Mensajeria
+              </p>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Centro de campanas
+              </h3>
+              <p className="text-sm text-gray-500">
+                Plantillas, segmentos y envios masivos.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/messaging"
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+              >
+                Abrir
+              </Link>
+              <Link
+                href="/messaging/templates/new"
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow"
+              >
+                Nueva plantilla
+              </Link>
+            </div>
           </div>
-          <Link
-            href="/messaging"
-            className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-          >
-            Ir a mensajeria
-          </Link>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase text-gray-400">
+                Estado del remitente
+              </p>
+              <div className="mt-2 flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-900">
+                  {messagingReady
+                    ? "Listo para enviar"
+                    : "Pendiente de configuracion"}
+                </p>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    messagingReady
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "bg-amber-50 text-amber-600"
+                  }`}
+                >
+                  {messagingReady ? "Activo" : "Pendiente"}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Remitente: {senderEmail || "Sin configurar"}
+              </p>
+              {!messagingReady ? (
+                <Link
+                  href="/settings/messaging"
+                  className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-primary"
+                >
+                  Configurar mensajeria
+                  <span className="material-symbols-outlined text-[14px]">
+                    arrow_forward
+                  </span>
+                </Link>
+              ) : null}
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase text-gray-400">
+                Plantillas activas
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-gray-900">
+                {totalTemplates}
+              </p>
+              <p className="text-xs text-gray-500">
+                Ultima actualizacion:{" "}
+                {lastTemplateUpdate
+                  ? formatShortDate(lastTemplateUpdate)
+                  : "-"}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+              Recientes
+            </p>
+            {recentTemplates.length === 0 ? (
+              <div className="rounded-2xl border border-gray-200 p-3 text-sm text-gray-400">
+                No hay plantillas recientes.
+              </div>
+            ) : (
+              recentTemplates.map((template) => (
+                <div
+                  key={template.id}
+                  className="flex items-center justify-between rounded-2xl border border-gray-200 p-3"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {template.title}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {template.subject || "Sin asunto"} /{" "}
+                      {formatShortDate(template.updatedAt)}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/messaging/templates/new?id=${template.id}`}
+                    className="rounded-xl bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
+                  >
+                    Ver
+                  </Link>
+                </div>
+              ))
+            )}
+          </div>
         </div>
-
-        <form
-          onSubmit={handleEmailSubmit}
-          className="mt-5 grid gap-4 lg:grid-cols-2"
-        >
-          <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 lg:col-span-2">
-            <p>
-              Remitente:{" "}
-              <span className="font-semibold text-gray-800">
-                {senderName || "Sin configurar"}
-              </span>
-            </p>
-            <p>
-              Correo:{" "}
-              <span className="font-semibold text-gray-800">
-                {senderEmail || "Sin configurar"}
-              </span>
-            </p>
-            <p className="text-xs text-gray-400">
-              Configura las credenciales en Ajustes &gt; Mensajeria.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">
-              Asunto
-            </label>
-            <input
-              value={emailForm.subject}
-              onChange={(event) =>
-                setEmailForm((prev) => ({
-                  ...prev,
-                  subject: event.target.value,
-                }))
-              }
-              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
-            />
-          </div>
-          <div className="space-y-2 lg:col-span-2">
-            <label className="text-sm font-semibold text-gray-700">
-              Destinatarios (separados por coma o salto de linea)
-            </label>
-            <textarea
-              value={emailForm.recipients}
-              onChange={(event) =>
-                setEmailForm((prev) => ({
-                  ...prev,
-                  recipients: event.target.value,
-                }))
-              }
-              className="min-h-[90px] w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
-            />
-          </div>
-          <div className="space-y-2 lg:col-span-2">
-            <label className="text-sm font-semibold text-gray-700">
-              Mensaje HTML
-            </label>
-            <textarea
-              value={emailForm.htmlMessage}
-              onChange={(event) =>
-                setEmailForm((prev) => ({
-                  ...prev,
-                  htmlMessage: event.target.value,
-                }))
-              }
-              className="min-h-[120px] w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
-            />
-          </div>
-          <div className="flex items-center justify-between gap-4 lg:col-span-2">
-            <p className="text-xs text-gray-400">
-              Se enviara un correo por destinatario con delay de 1500ms.
-            </p>
-            <button
-              type="submit"
-              disabled={emailSending}
-              className="rounded-2xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {emailSending ? "Enviando..." : "Enviar demo"}
-            </button>
-          </div>
-        </form>
-
-        {emailError ? (
-          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-            {emailError}
-          </div>
-        ) : null}
-        {emailResult ? (
-          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            Enviados: {emailResult.sentCount} · Fallidos:{" "}
-            {emailResult.failedCount}
-          </div>
-        ) : null}
       </section>
     </div>
   );

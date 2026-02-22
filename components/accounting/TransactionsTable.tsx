@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Modal from "@/components/Modal";
 import {
   Transaction,
   TransactionCategoryLabels,
@@ -300,8 +301,9 @@ export default function TransactionsTable({ transactions }: Props) {
   const deleteTransaction = useTransactionsStore(
     (s) => s.deleteTransaction
   );
-  const [confirmDeleteId, setConfirmDeleteId] =
-    useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Transaction | null>(null);
+  const [confirmDeleteFinal, setConfirmDeleteFinal] =
+    useState<Transaction | null>(null);
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<
@@ -532,6 +534,9 @@ export default function TransactionsTable({ transactions }: Props) {
 
   const showEmptyState = transactions.length === 0;
   const showNoResults = !showEmptyState && filteredTransactions.length === 0;
+  const confirmDeleteLabel = confirmDelete
+    ? confirmDelete.concept?.trim() || "esta transacción"
+    : "esta transacción";
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -758,37 +763,20 @@ export default function TransactionsTable({ transactions }: Props) {
                 </td>
 
                 <td className="px-6 py-4 text-right">
-                  {confirmDeleteId === tx.id ? (
-                    <div className="inline-flex items-center gap-2">
-                      <button
-                        onClick={() => setConfirmDeleteId(null)}
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-500"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        onClick={() => deleteTransaction(tx.id)}
-                        className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600"
-                      >
-                        Confirmar
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="inline-flex items-center gap-2">
-                      <Link
-                        href={`/accounting/${tx.id}/edit`}
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
-                      >
-                        Editar
-                      </Link>
-                      <button
-                        onClick={() => setConfirmDeleteId(tx.id)}
-                        className="rounded-lg border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  )}
+                  <div className="inline-flex items-center gap-2">
+                    <Link
+                      href={`/accounting/${tx.id}/edit`}
+                      className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+                    >
+                      Editar
+                    </Link>
+                    <button
+                      onClick={() => setConfirmDelete(tx)}
+                      className="rounded-lg border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -843,6 +831,66 @@ export default function TransactionsTable({ transactions }: Props) {
           </button>
         </div>
       </div>
+
+      <Modal
+        isOpen={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        title="¿Eliminar transacción?"
+      >
+        <p className="mb-6">
+          ¿Seguro que quieres eliminar <strong>{confirmDeleteLabel}</strong>?
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setConfirmDelete(null)}
+            className="px-4 py-2 border rounded-lg"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+              if (confirmDelete) {
+                setConfirmDeleteFinal(confirmDelete);
+              }
+              setConfirmDelete(null);
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg"
+          >
+            Sí, eliminar
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!confirmDeleteFinal}
+        onClose={() => setConfirmDeleteFinal(null)}
+        title="Confirmación final"
+      >
+        <p className="mb-6 text-red-600 font-medium">
+          Esta acción no se puede deshacer.
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setConfirmDeleteFinal(null)}
+            className="px-4 py-2 border rounded-lg"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={async () => {
+              if (confirmDeleteFinal) {
+                await deleteTransaction(confirmDeleteFinal.id);
+              }
+              setConfirmDeleteFinal(null);
+            }}
+            className="px-4 py-2 bg-red-700 text-white rounded-lg"
+          >
+            Eliminar definitivamente
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

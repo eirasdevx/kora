@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Event } from "@/modules/events/event.types";
 import { useEventsStore } from "@/modules/events/events.store";
+import Modal from "@/components/Modal";
 
 interface Props {
   event: Event;
@@ -21,6 +22,9 @@ export default function EventDetailsPanel({
 }: Props) {
   const deleteEvent = useEventsStore((s) => s.deleteEvent);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDeleteFinal, setConfirmDeleteFinal] = useState(false);
+
+  const eventLabel = event.title?.trim() || "este evento";
 
   const formatted = useMemo(() => {
     const dateFormatter = new Intl.DateTimeFormat("es-ES", {
@@ -210,30 +214,62 @@ export default function EventDetailsPanel({
           </button>
         </div>
 
-        {confirmDelete && (
-          <div className="mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-600">
-            <p className="font-semibold">
-              ¿Seguro? Esta acción no se puede deshacer.
-            </p>
-            <div className="mt-3 flex gap-2">
-              <button
-                onClick={async () => {
-                  await deleteEvent(event.id);
-                  onClose();
-                }}
-                className="flex-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white"
-              >
-                Eliminar definitivamente
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="flex-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600"
-              >
-                Cancelar
-              </button>
-            </div>
+        <Modal
+          isOpen={confirmDelete}
+          onClose={() => setConfirmDelete(false)}
+          title="¿Eliminar evento?"
+        >
+          <p className="mb-6">
+            ¿Seguro que quieres eliminar <strong>{eventLabel}</strong>?
+          </p>
+
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="px-4 py-2 border rounded-lg"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => {
+                setConfirmDeleteFinal(true);
+                setConfirmDelete(false);
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg"
+            >
+              Sí, eliminar
+            </button>
           </div>
-        )}
+        </Modal>
+
+        <Modal
+          isOpen={confirmDeleteFinal}
+          onClose={() => setConfirmDeleteFinal(false)}
+          title="Confirmación final"
+        >
+          <p className="mb-6 text-red-600 font-medium">
+            Esta acción no se puede deshacer.
+          </p>
+
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setConfirmDeleteFinal(false)}
+              className="px-4 py-2 border rounded-lg"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={async () => {
+                await deleteEvent(event.id);
+                setConfirmDeleteFinal(false);
+                onClose();
+              }}
+              className="px-4 py-2 bg-red-700 text-white rounded-lg"
+            >
+              Eliminar definitivamente
+            </button>
+          </div>
+        </Modal>
       </div>
     </aside>
   );

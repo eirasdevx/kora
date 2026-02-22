@@ -10,6 +10,7 @@ type NavModule = "accounting" | "events" | "contacts" | "documents";
 type NavItem = {
   label: string;
   href: string;
+  icon: string;
   moduleKey?: NavModule;
 };
 
@@ -38,12 +39,27 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const users = useUsersStore((s) => s.users);
 
   const mainItems: NavItem[] = [
-    { label: "Panel de control", href: "/dashboard" },
-    { label: "Mensajeria", href: "/messaging" },
-    { label: "Contabilidad", href: "/accounting", moduleKey: "accounting" },
-    { label: "Eventos", href: "/events", moduleKey: "events" },
-    { label: "Contactos", href: "/contacts", moduleKey: "contacts" },
-    { label: "Documentos", href: "/documents", moduleKey: "documents" },
+    { label: "Panel de control", href: "/dashboard", icon: "space_dashboard" },
+    { label: "Mensajeria", href: "/messaging", icon: "mail" },
+    {
+      label: "Contabilidad",
+      href: "/accounting",
+      icon: "receipt_long",
+      moduleKey: "accounting",
+    },
+    { label: "Eventos", href: "/events", icon: "event", moduleKey: "events" },
+    {
+      label: "Contactos",
+      href: "/contacts",
+      icon: "groups",
+      moduleKey: "contacts",
+    },
+    {
+      label: "Documentos",
+      href: "/documents",
+      icon: "description",
+      moduleKey: "documents",
+    },
   ];
 
   const isActive = (href: string) =>
@@ -273,12 +289,17 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                     href={item.href}
                     onClick={closeSidebar}
                     className={cx(
-                      "block px-4 py-3 rounded-xl font-medium transition",
+                      "flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition",
                       active
                         ? "bg-primary/10 text-primary"
                         : "text-gray-700 hover:bg-gray-50"
                     )}
                   >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg">
+                      <span className="material-symbols-outlined text-[20px]">
+                        {item.icon}
+                      </span>
+                    </span>
                     {item.label}
                   </Link>
                 </li>
@@ -295,12 +316,17 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                 href="/settings"
                 onClick={closeSidebar}
                 className={cx(
-                  "block px-4 py-3 rounded-xl font-medium transition",
+                  "flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition",
                   isActive("/settings")
                     ? "bg-primary/10 text-primary"
                     : "text-gray-700 hover:bg-gray-50"
                 )}
               >
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg">
+                  <span className="material-symbols-outlined text-[20px]">
+                    settings
+                  </span>
+                </span>
                 Configuración
               </Link>
             </div>

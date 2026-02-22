@@ -2,9 +2,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
+import Modal from "@/components/Modal";
 import { useSessionStore } from "@/core/session/session.store";
 import {
   type UserAccount,
@@ -284,7 +284,10 @@ export default function UsersSettingsPage() {
     id: string;
     label: string;
   } | null>(null);
-  const [portalReady, setPortalReady] = useState(false);
+  const [deleteRequestFinal, setDeleteRequestFinal] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
   const canDeleteUser =
     isAdmin && panelMode === "edit" && userForm.id && userForm.id !== activeUserId;
   const isAdminSelected = userForm.role === "Admin";
@@ -293,10 +296,6 @@ export default function UsersSettingsPage() {
     if (!hydrated || mode !== "authenticated") return;
     ensureSeed(companyCode, admin);
   }, [hydrated, mode, companyCode, admin, ensureSeed]);
-
-  useEffect(() => {
-    setPortalReady(true);
-  }, []);
 
   const normalizedUsers = useMemo(
     () =>
@@ -360,6 +359,7 @@ export default function UsersSettingsPage() {
       : summaryPermissionsRaw;
   const canDeleteSummaryUser =
     isAdmin && selectedUser?.id && selectedUser.id !== activeUserId;
+  const confirmDeleteLabel = deleteRequest?.label || "este usuario";
 
   const handleUserFormSubmit = async (
     event: React.FormEvent<HTMLFormElement>
@@ -526,9 +526,9 @@ export default function UsersSettingsPage() {
   };
 
   const confirmDeleteRequest = () => {
-    if (!deleteRequest) return;
-    removeUser(deleteRequest.id);
-    setDeleteRequest(null);
+    if (!deleteRequestFinal) return;
+    removeUser(deleteRequestFinal.id);
+    setDeleteRequestFinal(null);
     setSelectedId(null);
     setUserForm(createEmptyForm());
     setPanelMode("summary");
@@ -1289,50 +1289,60 @@ export default function UsersSettingsPage() {
         </div>
       ) : null}
 
-      {portalReady && deleteRequest
-        ? createPortal(
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-              <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                onClick={() => setDeleteRequest(null)}
-              />
-              <div className="relative w-full max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
-                    <span className="material-symbols-outlined text-[20px]">
-                      delete
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Confirmar eliminación
-                    </h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      ¿Eliminar a {deleteRequest.label}? Esta acción no se puede deshacer.
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setDeleteRequest(null)}
-                    className="rounded-2xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={confirmDeleteRequest}
-                    className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
-                  >
-                    Eliminar usuario
-                  </button>
-                </div>
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
+      <Modal
+        isOpen={!!deleteRequest}
+        onClose={() => setDeleteRequest(null)}
+        title="¿Eliminar usuario?"
+      >
+        <p className="mb-6">
+          ¿Seguro que quieres eliminar <strong>{confirmDeleteLabel}</strong>?
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setDeleteRequest(null)}
+            className="px-4 py-2 border rounded-lg"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+              if (deleteRequest) {
+                setDeleteRequestFinal(deleteRequest);
+              }
+              setDeleteRequest(null);
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg"
+          >
+            Sí, eliminar
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!deleteRequestFinal}
+        onClose={() => setDeleteRequestFinal(null)}
+        title="Confirmación final"
+      >
+        <p className="mb-6 text-red-600 font-medium">
+          Esta acción no se puede deshacer.
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setDeleteRequestFinal(null)}
+            className="px-4 py-2 border rounded-lg"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={confirmDeleteRequest}
+            className="px-4 py-2 bg-red-700 text-white rounded-lg"
+          >
+            Eliminar definitivamente
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

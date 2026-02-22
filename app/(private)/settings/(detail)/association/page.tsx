@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
+import Modal from "@/components/Modal";
 import {
   type AssociationRepresentative,
   useSessionStore,
@@ -116,8 +116,8 @@ export default function AssociationProfilePage() {
   const canEditAssociation = activeUser?.role === "Admin";
 
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [portalReady, setPortalReady] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDeleteFinal, setConfirmDeleteFinal] = useState(false);
 
   const initialForm = useMemo(
     () => getAssociationFormState(association),
@@ -129,10 +129,6 @@ export default function AssociationProfilePage() {
   useEffect(() => {
     setForm(initialForm);
   }, [initialForm]);
-
-  useEffect(() => {
-    setPortalReady(true);
-  }, []);
 
   const hasChanges = useMemo(() => {
     return (
@@ -213,6 +209,8 @@ export default function AssociationProfilePage() {
     logout();
     router.replace("/login");
   };
+
+  const associationLabel = association?.name?.trim() || "esta asociación";
 
   if (!hydrated) {
     return <div className="min-h-screen bg-background-light" aria-busy="true" />;
@@ -576,7 +574,7 @@ export default function AssociationProfilePage() {
               <div className="flex items-center justify-start lg:justify-end">
                 <button
                   type="button"
-                  onClick={() => setDeleteOpen(true)}
+                  onClick={() => setConfirmDelete(true)}
                   className="rounded-2xl border border-rose-200 bg-white px-5 py-2.5 text-sm font-semibold text-rose-600 shadow-sm hover:bg-rose-100"
                 >
                   Eliminar asociación
@@ -629,51 +627,61 @@ export default function AssociationProfilePage() {
         </>
       )}
 
-      {portalReady && deleteOpen
-        ? createPortal(
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-              <div
-                className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
-                onClick={() => setDeleteOpen(false)}
-              />
-              <div className="relative w-full max-w-md rounded-3xl border border-rose-200 bg-white p-6 shadow-2xl">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
-                    <span className="material-symbols-outlined text-[20px]">
-                      delete
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Confirmar eliminación
-                    </h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      ¿Eliminar la asociación activa? Esta acción no se puede
-                      deshacer.
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setDeleteOpen(false)}
-                    className="rounded-2xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDeleteAssociation}
-                    className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
-                  >
-                    Eliminar asociación
-                  </button>
-                </div>
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
+      <Modal
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title="¿Eliminar asociación?"
+      >
+        <p className="mb-6">
+          ¿Seguro que quieres eliminar <strong>{associationLabel}</strong>?
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setConfirmDelete(false)}
+            className="px-4 py-2 border rounded-lg"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+              setConfirmDeleteFinal(true);
+              setConfirmDelete(false);
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg"
+          >
+            Sí, eliminar
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={confirmDeleteFinal}
+        onClose={() => setConfirmDeleteFinal(false)}
+        title="Confirmación final"
+      >
+        <p className="mb-6 text-red-600 font-medium">
+          Esta acción no se puede deshacer y cerrará tu sesión.
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setConfirmDeleteFinal(false)}
+            className="px-4 py-2 border rounded-lg"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+              handleDeleteAssociation();
+              setConfirmDeleteFinal(false);
+            }}
+            className="px-4 py-2 bg-red-700 text-white rounded-lg"
+          >
+            Eliminar definitivamente
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
