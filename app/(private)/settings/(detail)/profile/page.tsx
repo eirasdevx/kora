@@ -767,8 +767,9 @@ function UserProfileCard({
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setForm((prev) => ({ ...prev, photoUrl: reader.result }));
+      const result = reader.result;
+      if (typeof result === "string") {
+        setForm((prev) => ({ ...prev, photoUrl: result }));
       }
     };
     reader.readAsDataURL(file);

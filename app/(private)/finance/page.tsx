@@ -1,0 +1,301 @@
+"use client";
+
+import { useEffect, useMemo } from "react";
+import Link from "next/link";
+import PageHeader from "@/components/shared/PageHeader";
+import SectionBlock from "@/components/shared/SectionBlock";
+import DataTable from "@/components/shared/DataTable";
+import { downloadXlsx } from "@/lib/exporters";
+import { useTransactionsStore } from "@/modules/accounting/transactions.store";
+import {
+  TransactionCategoryLabels,
+  TransactionStatusLabels,
+  Transaction,
+} from "@/modules/accounting/transaction.types";
+
+const STATUS_STYLES: Record<keyof typeof TransactionStatusLabels, string> =
+  {
+    completed: "bg-emerald-50 text-emerald-700",
+    pending: "bg-amber-50 text-amber-700",
+  };
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("es-ES", {
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function formatSignedAmount(amount: number, type: Transaction["type"]) {
+  const value = type === "expense" ? -amount : amount;
+  return formatCurrency(value);
+}
+
+export default function FinancePage() {
+  const { transactions, loadTransactions } = useTransactionsStore();
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
+
+  const feeTransactions = useMemo(
+    () =>
+      transactions.filter(
+        (tx) => tx.category === "membership" && tx.type === "income"
+      ),
+    [transactions]
+  );
+
+  const feePaidCount = feeTransactions.filter(
+    (tx) => tx.status === "completed"
+  ).length;
+  const feePendingCount = feeTransactions.filter(
+    (tx) => tx.status === "pending"
+  ).length;
+  const feeCollectedAmount = feeTransactions
+    .filter((tx) => tx.status === "completed")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  const accountingTotals = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+
+    for (const tx of transactions) {
+      if (tx.status !== "completed") continue;
+      if (tx.type === "income") income += tx.amount;
+      else expense += tx.amount;
+    }
+
+    return {
+      income,
+      expense,
+      balance: income - expense,
+    };
+  }, [transactions]);
+
+  const recentTransactions = useMemo(() => {
+    return [...transactions]
+      .sort(
+        (a, b) =>
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+      .slice(0, 6);
+  }, [transactions]);
+
+  const exportRows = useMemo(
+    () =>
+      transactions.map((tx) => [
+        formatDate(tx.date),
+        tx.concept,
+        TransactionCategoryLabels[tx.category],
+        formatSignedAmount(tx.amount, tx.type),
+        TransactionStatusLabels[tx.status],
+      ]),
+    [transactions]
+  );
+
+  const handleExport = () => {
+    if (transactions.length === 0) return;
+    downloadXlsx("finanzas-transacciones.xlsx", "Transacciones", [
+      ["Fecha", "Concepto", "Categoria", "Importe", "Estado"],
+      ...exportRows,
+    ]);
+  };
+
+  const rows = recentTransactions.map((tx) => ({
+    key: tx.id,
+    cells: [
+      <div key={`${tx.id}-concept`}>
+        <p className="font-semibold text-gray-900">{tx.concept}</p>
+        {tx.description ? (
+          <p className="text-xs text-gray-500">{tx.description}</p>
+        ) : null}
+      </div>,
+      <span
+        key={`${tx.id}-category`}
+        className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600"
+      >
+        {TransactionCategoryLabels[tx.category]}
+      </span>,
+      <span
+        key={`${tx.id}-amount`}
+        className={`font-semibold ${
+          tx.type === "income" ? "text-emerald-600" : "text-rose-600"
+        }`}
+      >
+        {formatSignedAmount(tx.amount, tx.type)}
+      </span>,
+      <span key={`${tx.id}-date`} className="text-sm text-gray-600">
+        {formatDate(tx.date)}
+      </span>,
+      <span
+        key={`${tx.id}-status`}
+        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[tx.status]}`}
+      >
+        {TransactionStatusLabels[tx.status]}
+      </span>,
+    ],
+    className: "hover:bg-gray-50",
+  }));
+
+  return (
+    <div className="space-y-6 lg:space-y-8">
+      <PageHeader
+        title="Finanzas"
+        subtitle="Control de cuotas y contabilidad general"
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={transactions.length === 0}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                download
+              </span>
+              Export
+            </button>
+            <Link
+              href="/accounting/new"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                add
+              </span>
+              + New Record
+            </Link>
+          </>
+        }
+      />
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <SectionBlock
+          title="Fee Management"
+          subtitle="Estado de cuotas y pagos"
+          actions={
+            <Link
+              href="/finance/fees"
+              className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white shadow"
+            >
+              Go to Fees
+            </Link>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Paid
+              </p>
+              <p className="mt-2 text-xl font-semibold text-gray-900">
+                {formatNumber(feePaidCount)}
+              </p>
+              <p className="text-xs text-gray-500">Cuotas completadas</p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Pending
+              </p>
+              <p className="mt-2 text-xl font-semibold text-gray-900">
+                {formatNumber(feePendingCount)}
+              </p>
+              <p className="text-xs text-gray-500">Cuotas en curso</p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Total Collected
+              </p>
+              <p className="mt-2 text-xl font-semibold text-emerald-600">
+                {formatCurrency(feeCollectedAmount)}
+              </p>
+              <p className="text-xs text-gray-500">Ingresos confirmados</p>
+            </div>
+          </div>
+        </SectionBlock>
+
+        <SectionBlock
+          title="General Accounting"
+          subtitle="Ingresos y gastos operativos"
+          actions={
+            <Link
+              href="/finance/accounting"
+              className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+            >
+              Go to Accounting
+            </Link>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Income
+              </p>
+              <p className="mt-2 text-xl font-semibold text-emerald-600">
+                {formatCurrency(accountingTotals.income)}
+              </p>
+              <p className="text-xs text-gray-500">Ingresos realizados</p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Expenses
+              </p>
+              <p className="mt-2 text-xl font-semibold text-rose-600">
+                {formatCurrency(accountingTotals.expense)}
+              </p>
+              <p className="text-xs text-gray-500">Gastos confirmados</p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Balance
+              </p>
+              <p className="mt-2 text-xl font-semibold text-gray-900">
+                {formatCurrency(accountingTotals.balance)}
+              </p>
+              <p className="text-xs text-gray-500">Saldo neto</p>
+            </div>
+          </div>
+        </SectionBlock>
+      </section>
+
+      <SectionBlock
+        title="Recent Transactions"
+        subtitle="Movimientos financieros recientes"
+        actions={
+          <Link
+            href="/accounting"
+            className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+          >
+            Ver contabilidad
+          </Link>
+        }
+      >
+        <DataTable
+          columns={[
+            { key: "concept", label: "Concept" },
+            { key: "category", label: "Category" },
+            { key: "amount", label: "Amount", align: "right" },
+            { key: "date", label: "Date" },
+            { key: "status", label: "Status", align: "right" },
+          ]}
+          rows={rows}
+          emptyLabel="No hay transacciones recientes."
+        />
+      </SectionBlock>
+    </div>
+  );
+}

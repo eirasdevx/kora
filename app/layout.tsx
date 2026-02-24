@@ -1,6 +1,8 @@
 import "./globals.css";
+import type { Metadata } from "next";
 import { Inter, Sora } from "next/font/google";
 import AppearanceSync from "@/components/AppearanceSync";
+import PwaRegister from "@/components/PwaRegister";
 
 const bodyFont = Inter({
   subsets: ["latin"],
@@ -15,9 +17,24 @@ const headingFont = Sora({
   display: "swap",
 });
 
-export const metadata = {
-  title: "Kora",
+export const metadata: Metadata = {
+  title: {
+    default: "Kora",
+    template: "%s | Kora",
+  },
   description: "Plataforma de gestión para asociaciones",
+  applicationName: "Kora",
+  manifest: "/manifest.webmanifest",
+  themeColor: "#1152d4",
+  appleWebApp: {
+    capable: true,
+    title: "Kora",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -39,6 +56,7 @@ export default function RootLayout({
       </head>
       <body>
         <AppearanceSync />
+        <PwaRegister />
         {children}
       </body>
     </html>

@@ -1,7 +1,9 @@
 export type ContactType =
   | "member"
   | "provider"
-  | "collaborator";
+  | "collaborator"
+  | "sponsor"
+  | "other";
 
 export type ContactKind = "person" | "entity";
 
@@ -35,6 +37,8 @@ export const ContactTypeLabels: Record<ContactType, string> = {
   member: "Socio",
   provider: "Proveedor",
   collaborator: "Colaborador",
+  sponsor: "Patrocinador",
+  other: "Otro",
 };
 
 export const ContactKindLabels: Record<ContactKind, string> = {

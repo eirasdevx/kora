@@ -15,6 +15,8 @@ const FILTERS: { label: string; value: FilterValue }[] = [
   { label: "Socios", value: "member" },
   { label: "Proveedores", value: "provider" },
   { label: "Colaboradores", value: "collaborator" },
+  { label: "Patrocinadores", value: "sponsor" },
+  { label: "Otros", value: "other" },
 ];
 
 export default function ContactsFilters({

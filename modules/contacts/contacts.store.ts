@@ -27,13 +27,17 @@ export const useContactsStore = create<ContactsState>((set) => ({
       const nameParts = fullName.split(" ").filter(Boolean);
       const kind = c.kind === "entity" ? "entity" : "person";
       const allowedTypes =
-        kind === "entity" ? ["provider", "collaborator"] : ["member", "provider", "collaborator"];
-      const types = Array.isArray(c.types)
-        ? c.types.filter(
-            (t) =>
-              allowedTypes.includes(t as "member" | "provider" | "collaborator")
-          )
-        : [];
+        kind === "entity"
+          ? ["provider", "collaborator", "sponsor", "other"]
+          : ["member", "provider", "collaborator", "sponsor", "other"];
+      const rawTypes = Array.isArray(c.types)
+        ? c.types
+        : typeof c.types === "string"
+          ? c.types.split(",").map((value) => value.trim())
+          : [];
+      const types = rawTypes.filter((t) =>
+        allowedTypes.includes(t as "member" | "provider" | "collaborator")
+      );
       const createdAt = c.createdAt ?? new Date().toISOString();
       return {
         ...c,
@@ -58,15 +62,21 @@ export const useContactsStore = create<ContactsState>((set) => ({
       `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
     const kind = contact.kind === "entity" ? "entity" : "person";
     const allowedTypes =
-      kind === "entity" ? ["provider", "collaborator"] : ["member", "provider", "collaborator"];
+      kind === "entity"
+        ? ["provider", "collaborator", "sponsor", "other"]
+        : ["member", "provider", "collaborator", "sponsor", "other"];
+    const rawTypes = Array.isArray(contact.types)
+      ? contact.types
+      : typeof contact.types === "string"
+        ? contact.types.split(",").map((value) => value.trim())
+        : [];
     const normalized = {
       ...contact,
       kind,
       fullName,
       birthDate: kind === "person" ? contact.birthDate ?? undefined : undefined,
-      types: contact.types.filter(
-        (t) =>
-          allowedTypes.includes(t as "member" | "provider" | "collaborator")
+      types: rawTypes.filter((t) =>
+        allowedTypes.includes(t as "member" | "provider" | "collaborator")
       ),
       createdAt: contact.createdAt ?? new Date().toISOString(),
       deactivatedAt: contact.deactivatedAt ?? undefined,

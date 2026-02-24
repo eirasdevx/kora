@@ -18,6 +18,8 @@ const CONTACT_TYPES: ContactType[] = [
   "member",
   "provider",
   "collaborator",
+  "sponsor",
+  "other",
 ];
 
 const REGION_OPTIONS = [
@@ -96,6 +98,10 @@ function TypeIcon({ type }: { type: ContactType }) {
       ? "storefront"
       : type === "collaborator"
         ? "groups"
+        : type === "sponsor"
+          ? "workspace_premium"
+          : type === "other"
+            ? "label"
         : "person";
   return (
     <span className="material-symbols-outlined text-[16px]">
@@ -163,7 +169,7 @@ export default function ContactForm({
   );
   const isEntity = contactKind === "entity";
   const allowedTypes = isEntity
-    ? (["provider", "collaborator"] as ContactType[])
+    ? (["provider", "collaborator", "sponsor", "other"] as ContactType[])
     : CONTACT_TYPES;
 
   const [errors, setErrors] = useState<{

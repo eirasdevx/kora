@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import PageTopbar from "@/components/PageTopbar";
+import BackLink from "@/components/shared/BackLink";
 import { useSessionStore } from "@/core/session/session.store";
 import {
   type EmailProvider,
@@ -103,6 +104,9 @@ export default function MessagingSettingsPage() {
   return (
     <div className="space-y-8">
       <PageTopbar>
+        <div className="mb-4">
+          <BackLink href="/settings" label="Volver a Configuración" />
+        </div>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">

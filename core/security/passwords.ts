@@ -66,10 +66,14 @@ const deriveKey = async (
     false,
     ["deriveBits"]
   );
+  const saltBuffer =
+    salt.byteOffset === 0 && salt.byteLength === salt.buffer.byteLength
+      ? salt.buffer
+      : salt.buffer.slice(salt.byteOffset, salt.byteOffset + salt.byteLength);
   const bits = await cryptoRef.subtle.deriveBits(
     {
       name: "PBKDF2",
-      salt,
+      salt: saltBuffer,
       iterations,
       hash,
     },

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
+import BackLink from "@/components/shared/BackLink";
 import { useMessagingStore } from "@/modules/messaging/messaging.store";
 import { MessagingChannel } from "@/modules/messaging/messaging.types";
 
@@ -103,6 +103,9 @@ export default function NewTemplatePage() {
   return (
     <div className="space-y-6">
       <PageTopbar>
+        <div className="mb-4">
+          <BackLink href="/messaging" label="Volver a Mensajería" />
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
@@ -116,12 +119,6 @@ export default function NewTemplatePage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href="/messaging"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-            >
-              Cancelar
-            </Link>
             <button
               type="button"
               onClick={handleSave}

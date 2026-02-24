@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import {
     Contact,
@@ -138,6 +138,8 @@ export default function ContactsPage() {
     const [currentPage, setCurrentPage] = useState(1);
 
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const typeParam = searchParams.get("type");
 
     const [confirmDelete, setConfirmDelete] =
         useState<Contact | null>(null);
@@ -147,6 +149,23 @@ export default function ContactsPage() {
     useEffect(() => {
         loadContacts();
     }, [loadContacts]);
+
+    useEffect(() => {
+        if (!typeParam) return;
+        if (typeParam === "all") {
+            setTypeFilter("all");
+            return;
+        }
+        if (
+            typeParam === "member" ||
+            typeParam === "collaborator" ||
+            typeParam === "provider" ||
+            typeParam === "sponsor" ||
+            typeParam === "other"
+        ) {
+            setTypeFilter(typeParam);
+        }
+    }, [typeParam]);
 
     const filteredContacts = useMemo(() => {
         const query = search.trim().toLowerCase();

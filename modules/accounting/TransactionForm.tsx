@@ -795,6 +795,8 @@ export default function TransactionForm({
                 <option value="member">Socios</option>
                 <option value="provider">Proveedores</option>
                 <option value="collaborator">Colaboradores</option>
+                <option value="sponsor">Patrocinadores</option>
+                <option value="other">Otros</option>
               </select>
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                 <span className="material-symbols-outlined text-[16px]">

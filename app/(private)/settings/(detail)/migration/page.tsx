@@ -40,7 +40,13 @@ type KoraExportPayloadV1 = {
   transactions: Transaction[];
 };
 
-const CONTACT_TYPES: ContactType[] = ["member", "provider", "collaborator"];
+const CONTACT_TYPES: ContactType[] = [
+  "member",
+  "provider",
+  "collaborator",
+  "sponsor",
+  "other",
+];
 const EVENT_STATUSES: EventStatus[] = ["draft", "published"];
 const TRANSACTION_TYPES: TransactionType[] = ["income", "expense"];
 const TRANSACTION_CATEGORIES: TransactionCategory[] = [
@@ -82,7 +88,6 @@ const DATA_SCOPE_OPTIONS: Array<{
     label: "Contabilidad",
     description: "Ingresos, gastos y transacciones.",
   },
-  {
 ];
 
 function safeString(value: unknown): string {

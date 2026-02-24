@@ -150,8 +150,9 @@ export default function AssociationProfilePage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setForm((prev) => ({ ...prev, logoUrl: reader.result }));
+      const result = reader.result;
+      if (typeof result === "string") {
+        setForm((prev) => ({ ...prev, logoUrl: result }));
       }
     };
     reader.readAsDataURL(file);

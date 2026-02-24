@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
+import BackLink from "@/components/shared/BackLink";
 import { useSessionStore } from "@/core/session/session.store";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { ContactType } from "@/modules/contacts/contact.types";
@@ -27,6 +28,8 @@ const FILTERS: Array<{ id: "all" | ContactType; label: string }> = [
   { id: "member", label: "Socios" },
   { id: "provider", label: "Proveedores" },
   { id: "collaborator", label: "Colaboradores" },
+  { id: "sponsor", label: "Patrocinadores" },
+  { id: "other", label: "Otros" },
 ];
 
 const PROVIDER_LABELS: Record<EmailProvider, string> = {
@@ -318,6 +321,9 @@ export default function MessagingBulkPage() {
   return (
     <div className="space-y-6">
       <PageTopbar>
+        <div className="mb-4">
+          <BackLink href="/messaging" label="Volver a Mensajería" />
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
@@ -330,12 +336,6 @@ export default function MessagingBulkPage() {
               Configura y distribuye comunicaciones a tu base de socios.
             </p>
           </div>
-          <Link
-            href="/messaging"
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-          >
-            Volver a mensajeria
-          </Link>
         </div>
       </PageTopbar>
 

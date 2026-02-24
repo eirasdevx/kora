@@ -42,7 +42,6 @@ const FEATURE_ITEMS = [
     icon: "description",
   },
   {
-  {
     title: "Panel de control",
     description: "Indicadores clave en tiempo real.",
     icon: "dashboard",

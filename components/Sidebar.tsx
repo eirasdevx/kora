@@ -40,26 +40,26 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
   const mainItems: NavItem[] = [
     { label: "Panel de control", href: "/dashboard", icon: "space_dashboard" },
-    { label: "Mensajeria", href: "/messaging", icon: "mail" },
     {
-      label: "Contabilidad",
-      href: "/accounting",
-      icon: "receipt_long",
-      moduleKey: "accounting",
-    },
-    { label: "Eventos", href: "/events", icon: "event", moduleKey: "events" },
-    {
-      label: "Contactos",
-      href: "/contacts",
+      label: "Personas",
+      href: "/people",
       icon: "groups",
       moduleKey: "contacts",
     },
     {
-      label: "Documentos",
-      href: "/documents",
-      icon: "description",
+      label: "Finanzas",
+      href: "/finance",
+      icon: "receipt_long",
+      moduleKey: "accounting",
+    },
+    {
+      label: "Recursos",
+      href: "/resources",
+      icon: "inventory_2",
       moduleKey: "documents",
     },
+    { label: "Eventos", href: "/events", icon: "event", moduleKey: "events" },
+    { label: "Mensajeria", href: "/messaging", icon: "mail" },
   ];
 
   const isActive = (href: string) =>
