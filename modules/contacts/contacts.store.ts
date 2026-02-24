@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Contact } from "./contact.types";
+import { Contact, ContactKind, ContactType } from "./contact.types";
 import { db } from "@/core/storage/kora.db";
 import { useSessionStore } from "@/core/session/session.store";
 
@@ -15,6 +15,19 @@ interface ContactsState {
 const isAuthenticated = () =>
   useSessionStore.getState().mode === "authenticated";
 
+const parseContactTypes = (value: unknown): ContactType[] => {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is ContactType => typeof item === "string");
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean) as ContactType[];
+  }
+  return [];
+};
+
 export const useContactsStore = create<ContactsState>((set) => ({
   contacts: [],
 
@@ -25,18 +38,16 @@ export const useContactsStore = create<ContactsState>((set) => ({
     const normalized = all.map((c) => {
       const fullName = c.fullName ?? `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim();
       const nameParts = fullName.split(" ").filter(Boolean);
-      const kind = c.kind === "entity" ? "entity" : "person";
+      const kind: ContactKind = c.kind === "entity" ? "entity" : "person";
       const allowedTypes =
         kind === "entity"
           ? ["provider", "collaborator", "sponsor", "other"]
           : ["member", "provider", "collaborator", "sponsor", "other"];
-      const rawTypes = Array.isArray(c.types)
-        ? c.types
-        : typeof c.types === "string"
-          ? c.types.split(",").map((value) => value.trim())
-          : [];
+      const rawTypes = parseContactTypes(
+        (c as { types?: unknown }).types
+      );
       const types = rawTypes.filter((t) =>
-        allowedTypes.includes(t as "member" | "provider" | "collaborator")
+        allowedTypes.includes(t as ContactType)
       );
       const createdAt = c.createdAt ?? new Date().toISOString();
       return {
@@ -52,7 +63,7 @@ export const useContactsStore = create<ContactsState>((set) => ({
         deactivatedAt: c.deactivatedAt ?? undefined,
       };
     });
-    set({ contacts: normalized });
+    set({ contacts: normalized as Contact[] });
   },
 
   // Crear o actualizar contacto (UPSERT)
@@ -60,23 +71,21 @@ export const useContactsStore = create<ContactsState>((set) => ({
     const fullName =
       contact.fullName ??
       `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
-    const kind = contact.kind === "entity" ? "entity" : "person";
+    const kind: ContactKind = contact.kind === "entity" ? "entity" : "person";
     const allowedTypes =
       kind === "entity"
         ? ["provider", "collaborator", "sponsor", "other"]
         : ["member", "provider", "collaborator", "sponsor", "other"];
-    const rawTypes = Array.isArray(contact.types)
-      ? contact.types
-      : typeof contact.types === "string"
-        ? contact.types.split(",").map((value) => value.trim())
-        : [];
+    const rawTypes = parseContactTypes(
+      (contact as { types?: unknown }).types
+    );
     const normalized = {
       ...contact,
       kind,
       fullName,
       birthDate: kind === "person" ? contact.birthDate ?? undefined : undefined,
       types: rawTypes.filter((t) =>
-        allowedTypes.includes(t as "member" | "provider" | "collaborator")
+        allowedTypes.includes(t as ContactType)
       ),
       createdAt: contact.createdAt ?? new Date().toISOString(),
       deactivatedAt: contact.deactivatedAt ?? undefined,

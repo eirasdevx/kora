@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
 import AppearanceSync from "@/components/AppearanceSync";
 import PwaRegister from "@/components/PwaRegister";
@@ -25,7 +25,6 @@ export const metadata: Metadata = {
   description: "Plataforma de gestión para asociaciones",
   applicationName: "Kora",
   manifest: "/manifest.webmanifest",
-  themeColor: "#1152d4",
   appleWebApp: {
     capable: true,
     title: "Kora",
@@ -35,6 +34,10 @@ export const metadata: Metadata = {
     icon: "/icon.svg",
     apple: "/icon.svg",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1152d4",
 };
 
 export default function RootLayout({
