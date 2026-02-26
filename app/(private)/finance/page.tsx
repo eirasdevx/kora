@@ -5,6 +5,7 @@ import Link from "next/link";
 import PageHeader from "@/components/shared/PageHeader";
 import SectionBlock from "@/components/shared/SectionBlock";
 import DataTable from "@/components/shared/DataTable";
+import { useLocale } from "@/core/i18n/use-locale";
 import { downloadXlsx } from "@/lib/exporters";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import {
@@ -19,34 +20,39 @@ const STATUS_STYLES: Record<keyof typeof TransactionStatusLabels, string> =
     pending: "bg-amber-50 text-amber-700",
   };
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("es-ES", {
+function formatCurrency(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: 2,
   }).format(value);
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("es-ES", {
+function formatNumber(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
   }).format(value);
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("es-ES", {
+function formatDate(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
   }).format(new Date(value));
 }
 
-function formatSignedAmount(amount: number, type: Transaction["type"]) {
+function formatSignedAmount(
+  amount: number,
+  type: Transaction["type"],
+  locale: string
+) {
   const value = type === "expense" ? -amount : amount;
-  return formatCurrency(value);
+  return formatCurrency(value, locale);
 }
 
 export default function FinancePage() {
+  const { formatLocale } = useLocale();
   const { transactions, loadTransactions } = useTransactionsStore();
 
   useEffect(() => {
@@ -58,7 +64,7 @@ export default function FinancePage() {
       transactions.filter(
         (tx) => tx.category === "membership" && tx.type === "income"
       ),
-    [transactions]
+    [transactions, formatLocale]
   );
 
   const feePaidCount = feeTransactions.filter(
@@ -100,10 +106,10 @@ export default function FinancePage() {
   const exportRows = useMemo(
     () =>
       transactions.map((tx) => [
-        formatDate(tx.date),
+        formatDate(tx.date, formatLocale),
         tx.concept,
         TransactionCategoryLabels[tx.category],
-        formatSignedAmount(tx.amount, tx.type),
+        formatSignedAmount(tx.amount, tx.type, formatLocale),
         TransactionStatusLabels[tx.status],
       ]),
     [transactions]
@@ -138,10 +144,10 @@ export default function FinancePage() {
           tx.type === "income" ? "text-emerald-600" : "text-rose-600"
         }`}
       >
-        {formatSignedAmount(tx.amount, tx.type)}
+        {formatSignedAmount(tx.amount, tx.type, formatLocale)}
       </span>,
       <span key={`${tx.id}-date`} className="text-sm text-gray-600">
-        {formatDate(tx.date)}
+        {formatDate(tx.date, formatLocale)}
       </span>,
       <span
         key={`${tx.id}-status`}
@@ -169,7 +175,7 @@ export default function FinancePage() {
               <span className="material-symbols-outlined text-[18px]">
                 download
               </span>
-              Export
+              Exportar
             </button>
             <Link
               href="/accounting/new"
@@ -178,7 +184,7 @@ export default function FinancePage() {
               <span className="material-symbols-outlined text-[18px]">
                 add
               </span>
-              + New Record
+              Nuevo registro
             </Link>
           </>
         }
@@ -186,42 +192,42 @@ export default function FinancePage() {
 
       <section className="grid gap-4 lg:grid-cols-2">
         <SectionBlock
-          title="Fee Management"
+          title="Gestión de cuotas"
           subtitle="Estado de cuotas y pagos"
           actions={
             <Link
               href="/finance/fees"
               className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white shadow"
             >
-              Go to Fees
+              Ver cuotas
             </Link>
           }
         >
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Paid
+                Pagadas
               </p>
               <p className="mt-2 text-xl font-semibold text-gray-900">
-                {formatNumber(feePaidCount)}
+                {formatNumber(feePaidCount, formatLocale)}
               </p>
               <p className="text-xs text-gray-500">Cuotas completadas</p>
             </div>
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Pending
+                Pendientes
               </p>
               <p className="mt-2 text-xl font-semibold text-gray-900">
-                {formatNumber(feePendingCount)}
+                {formatNumber(feePendingCount, formatLocale)}
               </p>
               <p className="text-xs text-gray-500">Cuotas en curso</p>
             </div>
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Total Collected
+                Total recaudado
               </p>
               <p className="mt-2 text-xl font-semibold text-emerald-600">
-                {formatCurrency(feeCollectedAmount)}
+                {formatCurrency(feeCollectedAmount, formatLocale)}
               </p>
               <p className="text-xs text-gray-500">Ingresos confirmados</p>
             </div>
@@ -229,33 +235,33 @@ export default function FinancePage() {
         </SectionBlock>
 
         <SectionBlock
-          title="General Accounting"
+          title="Contabilidad general"
           subtitle="Ingresos y gastos operativos"
           actions={
             <Link
               href="/finance/accounting"
               className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
             >
-              Go to Accounting
+              Ver contabilidad
             </Link>
           }
         >
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Income
+                Ingresos
               </p>
               <p className="mt-2 text-xl font-semibold text-emerald-600">
-                {formatCurrency(accountingTotals.income)}
+                {formatCurrency(accountingTotals.income, formatLocale)}
               </p>
               <p className="text-xs text-gray-500">Ingresos realizados</p>
             </div>
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Expenses
+                Gastos
               </p>
               <p className="mt-2 text-xl font-semibold text-rose-600">
-                {formatCurrency(accountingTotals.expense)}
+                {formatCurrency(accountingTotals.expense, formatLocale)}
               </p>
               <p className="text-xs text-gray-500">Gastos confirmados</p>
             </div>
@@ -264,7 +270,7 @@ export default function FinancePage() {
                 Balance
               </p>
               <p className="mt-2 text-xl font-semibold text-gray-900">
-                {formatCurrency(accountingTotals.balance)}
+                {formatCurrency(accountingTotals.balance, formatLocale)}
               </p>
               <p className="text-xs text-gray-500">Saldo neto</p>
             </div>
@@ -273,7 +279,7 @@ export default function FinancePage() {
       </section>
 
       <SectionBlock
-        title="Recent Transactions"
+        title="Transacciones recientes"
         subtitle="Movimientos financieros recientes"
         actions={
           <Link
@@ -286,11 +292,11 @@ export default function FinancePage() {
       >
         <DataTable
           columns={[
-            { key: "concept", label: "Concept" },
-            { key: "category", label: "Category" },
-            { key: "amount", label: "Amount", align: "right" },
-            { key: "date", label: "Date" },
-            { key: "status", label: "Status", align: "right" },
+            { key: "concept", label: "Concepto" },
+            { key: "category", label: "Categoría" },
+            { key: "amount", label: "Importe", align: "right" },
+            { key: "date", label: "Fecha" },
+            { key: "status", label: "Estado", align: "right" },
           ]}
           rows={rows}
           emptyLabel="No hay transacciones recientes."

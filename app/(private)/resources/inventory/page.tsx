@@ -7,41 +7,44 @@ import SectionBlock from "@/components/shared/SectionBlock";
 import StatCard from "@/components/shared/StatCard";
 import DataTable from "@/components/shared/DataTable";
 import Modal from "@/components/Modal";
-import {
-  RECENT_LOANS,
-  type LoanRecord,
-} from "@/modules/resources/resources.mock";
+import { useLocale } from "@/core/i18n/use-locale";
 import { useInventoryStore } from "@/modules/resources/inventory.store";
-import { InventoryItem } from "@/modules/resources/inventory.types";
+import { InventoryItem, InventoryStatus } from "@/modules/resources/inventory.types";
 
-const LOAN_STATUS_LABELS: Record<LoanRecord["status"], string> = {
-  active: "En curso",
-  overdue: "Vencido",
-  returned: "Devuelto",
+const ITEM_STATUS_LABELS: Record<InventoryStatus, string> = {
+  available: "Disponible",
+  in_use: "En uso",
+  maintenance: "Mantenimiento",
+  retired: "Retirado",
 };
 
-const LOAN_STATUS_STYLES: Record<LoanRecord["status"], string> = {
-  active: "bg-blue-50 text-blue-600",
-  overdue: "bg-rose-50 text-rose-600",
-  returned: "bg-emerald-50 text-emerald-600",
+const ITEM_STATUS_STYLES: Record<InventoryStatus, string> = {
+  available: "bg-emerald-50 text-emerald-600",
+  in_use: "bg-blue-50 text-blue-600",
+  maintenance: "bg-amber-50 text-amber-700",
+  retired: "bg-slate-100 text-slate-500",
 };
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("es-ES", {
+function formatNumber(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
   }).format(value);
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("es-ES", {
+function formatDate(value: string | undefined, locale: string) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date(value));
+  }).format(date);
 }
 
 export default function ResourcesInventoryPage() {
-  const { items, loadItems, removeItem, clearItems } = useInventoryStore();
+  const { formatLocale } = useLocale();
+  const { items, loadItems, removeItem } = useInventoryStore();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeleteFinal, setConfirmDeleteFinal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(
@@ -63,14 +66,6 @@ export default function ResourcesInventoryPage() {
     setConfirmDelete(true);
   };
 
-  const handleClear = async () => {
-    const confirmed = window.confirm(
-      "¿Vaciar todo el inventario? Se eliminarán todos los activos."
-    );
-    if (!confirmed) return;
-    await clearItems();
-  };
-
   const rows = items.map((item) => {
     const available = Math.max(0, item.quantity - item.borrowed);
     return {
@@ -83,16 +78,16 @@ export default function ResourcesInventoryPage() {
           {item.category}
         </span>,
         <span key={`${item.id}-qty`} className="text-sm text-gray-700">
-          {formatNumber(item.quantity)}
+          {formatNumber(item.quantity, formatLocale)}
         </span>,
         <span key={`${item.id}-borrowed`} className="text-sm text-gray-700">
-          {formatNumber(item.borrowed)}
+          {formatNumber(item.borrowed, formatLocale)}
         </span>,
         <span
           key={`${item.id}-available`}
           className="text-sm font-semibold text-emerald-600"
         >
-          {formatNumber(available)}
+          {formatNumber(available, formatLocale)}
         </span>,
         <div
           key={`${item.id}-actions`}
@@ -123,6 +118,68 @@ export default function ResourcesInventoryPage() {
     };
   });
 
+  const recentLoans = useMemo(() => {
+    return [...items]
+      .filter((item) => item.borrowed > 0)
+      .map((item) => ({
+        item,
+        lastMove: item.updatedAt ?? item.createdAt,
+        borrower:
+          item.assignee?.trim() || item.location?.trim() || "Sin asignar",
+      }))
+      .sort((a, b) => {
+        const aTime = a.lastMove ? new Date(a.lastMove).getTime() : 0;
+        const bTime = b.lastMove ? new Date(b.lastMove).getTime() : 0;
+        return bTime - aTime;
+      })
+      .slice(0, 6);
+  }, [items]);
+
+  const loanRows = recentLoans.map(({ item, lastMove, borrower }) => {
+    const status =
+      item.status ?? (item.borrowed > 0 ? "in_use" : "available");
+
+    return {
+      key: `loan-${item.id}`,
+      cells: [
+        <div key={`${item.id}-loan-item`}>
+          <p className="font-semibold text-gray-900">{item.name}</p>
+          <p className="text-xs text-gray-500">{item.category}</p>
+        </div>,
+        <span
+          key={`${item.id}-loan-borrower`}
+          className="text-sm text-gray-600"
+        >
+          {borrower}
+        </span>,
+        <span
+          key={`${item.id}-loan-qty`}
+          className="text-sm font-semibold text-gray-700"
+        >
+          {formatNumber(item.borrowed, formatLocale)}
+        </span>,
+        <span key={`${item.id}-loan-date`} className="text-sm text-gray-600">
+          {formatDate(lastMove, formatLocale)}
+        </span>,
+        <span
+          key={`${item.id}-loan-status`}
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${ITEM_STATUS_STYLES[status]}`}
+        >
+          {ITEM_STATUS_LABELS[status]}
+        </span>,
+        <div key={`${item.id}-loan-actions`} className="flex justify-end">
+          <Link
+            href={`/resources/inventory/${item.id}/edit`}
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+          >
+            Ver activo
+          </Link>
+        </div>,
+      ],
+      className: "hover:bg-gray-50",
+    };
+  });
+
   return (
     <div className="space-y-6 lg:space-y-8">
       <PageHeader
@@ -132,15 +189,6 @@ export default function ResourcesInventoryPage() {
         backLabel="Volver a Recursos"
         actions={
           <>
-            {items.length > 0 ? (
-              <button
-                type="button"
-                onClick={handleClear}
-                className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
-              >
-                Vaciar inventario
-              </button>
-            ) : null}
             <Link
               href="/resources/inventory/new"
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
@@ -157,21 +205,21 @@ export default function ResourcesInventoryPage() {
       <section className="grid gap-4 md:grid-cols-3">
         <StatCard
           title="Artículos totales"
-          value={`${formatNumber(summary.total)} artículos`}
-          meta={`${formatNumber(summary.borrowed)} prestados`}
+          value={`${formatNumber(summary.total, formatLocale)} artículos`}
+          meta={`${formatNumber(summary.borrowed, formatLocale)} prestados`}
           icon="inventory_2"
           accentClassName="bg-amber-50 text-amber-600"
         />
         <StatCard
           title="Disponibles"
-          value={`${formatNumber(summary.available)} artículos`}
+          value={`${formatNumber(summary.available, formatLocale)} artículos`}
           meta="Listos para uso"
           icon="task_alt"
           accentClassName="bg-emerald-50 text-emerald-600"
         />
         <StatCard
           title="En uso"
-          value={`${formatNumber(summary.borrowed)} artículos`}
+          value={`${formatNumber(summary.borrowed, formatLocale)} artículos`}
           meta="Préstamos activos"
           icon="handshake"
           accentClassName="bg-blue-50 text-blue-600"
@@ -216,28 +264,18 @@ export default function ResourcesInventoryPage() {
           </Link>
         }
       >
-        <div className="space-y-3">
-          {RECENT_LOANS.map((loan) => (
-            <div
-              key={loan.id}
-              className="flex items-center justify-between rounded-2xl border border-gray-200 p-3"
-            >
-              <div>
-                <p className="text-sm font-semibold text-gray-900">
-                  {loan.item}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {loan.borrower} · {formatDate(loan.dueDate)}
-                </p>
-              </div>
-              <span
-                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${LOAN_STATUS_STYLES[loan.status]}`}
-              >
-                {LOAN_STATUS_LABELS[loan.status]}
-              </span>
-            </div>
-          ))}
-        </div>
+        <DataTable
+          columns={[
+            { key: "item", label: "Activo" },
+            { key: "borrower", label: "Responsable" },
+            { key: "qty", label: "Prestados", align: "right" },
+            { key: "date", label: "Último movimiento" },
+            { key: "status", label: "Estado", align: "right" },
+            { key: "actions", label: "Acciones", align: "right" },
+          ]}
+          rows={loanRows}
+          emptyLabel="No hay préstamos recientes."
+        />
       </SectionBlock>
 
       <Modal

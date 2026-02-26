@@ -549,7 +549,7 @@ export default function AssociationProfilePage() {
                 onClick={handleAddRepresentative}
                 className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-50"
               >
-                + Añadir representante
+                Añadir representante
               </button>
               <datalist id="association-representative-roles">
                 <option value="Presidente" />

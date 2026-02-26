@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import BackLink from "@/components/shared/BackLink";
 import SectionBlock from "@/components/shared/SectionBlock";
+import { useLocale } from "@/core/i18n/use-locale";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import { useSessionStore } from "@/core/session/session.store";
@@ -23,24 +24,24 @@ const PAYMENT_STYLES: Record<PaymentStatus, string> = {
   Pendiente: "bg-amber-50 text-amber-700",
 };
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("es-ES", {
+function formatCurrency(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: 2,
   }).format(value);
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("es-ES", {
+function formatDate(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
   }).format(new Date(value));
 }
 
-function formatMonthDay(value: Date) {
-  return value.toLocaleDateString("es-ES", {
+function formatMonthDay(value: Date, locale: string) {
+  return value.toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
   });
@@ -68,6 +69,7 @@ function addMonths(date: Date, months: number) {
 }
 
 export default function MemberDetailPage() {
+  const { formatLocale } = useLocale();
   const params = useParams();
   const memberId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { contacts, loadContacts } = useContactsStore();
@@ -152,7 +154,7 @@ export default function MemberDetailPage() {
   );
   const initials = getInitials(displayName);
   const memberSince = member.createdAt
-    ? formatDate(member.createdAt)
+    ? formatDate(member.createdAt, formatLocale)
     : "-";
   const memberSinceYear = member.createdAt
     ? new Date(member.createdAt).getFullYear()
@@ -330,7 +332,7 @@ export default function MemberDetailPage() {
                 Saldo actual
               </p>
               <p className="mt-3 text-3xl font-semibold text-gray-900">
-                {formatCurrency(pendingAmount)}
+                {formatCurrency(pendingAmount, formatLocale)}
               </p>
               <p
                 className={`mt-1 text-xs ${
@@ -347,7 +349,7 @@ export default function MemberDetailPage() {
                 Próximo cobro
               </p>
               <p className="mt-3 text-3xl font-semibold text-gray-900">
-                {formatMonthDay(nextChargeDate)}
+                {formatMonthDay(nextChargeDate, formatLocale)}
               </p>
               <p className="mt-1 text-xs text-gray-500">
                 Cuota {feeCycle}
@@ -405,7 +407,7 @@ export default function MemberDetailPage() {
                       className="border-b border-gray-100 last:border-0"
                     >
                       <td className="px-4 py-4 text-sm text-gray-600">
-                        {formatDate(tx.date)}
+                        {formatDate(tx.date, formatLocale)}
                       </td>
                       <td className="px-4 py-4">
                         <div className="text-sm font-semibold text-gray-900">
@@ -416,7 +418,7 @@ export default function MemberDetailPage() {
                         </div>
                       </td>
                       <td className="px-4 py-4 font-semibold text-gray-900">
-                        {formatCurrency(tx.amount)}
+                        {formatCurrency(tx.amount, formatLocale)}
                       </td>
                       <td className="px-4 py-4">
                         <span

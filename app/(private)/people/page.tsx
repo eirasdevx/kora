@@ -5,6 +5,7 @@ import Link from "next/link";
 import PageHeader from "@/components/shared/PageHeader";
 import SectionBlock from "@/components/shared/SectionBlock";
 import StatCard from "@/components/shared/StatCard";
+import { useLocale } from "@/core/i18n/use-locale";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { Contact, ContactTypeLabels } from "@/modules/contacts/contact.types";
 import { useVolunteerActivitiesStore } from "@/modules/volunteers/volunteer-activities.store";
@@ -28,19 +29,19 @@ function getInitials(contact: Contact) {
     .join("");
 }
 
-function formatDate(value?: string) {
+function formatDate(value: string | undefined, locale: string) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
   }).format(date);
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("es-ES", {
+function formatNumber(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
   }).format(value);
 }
@@ -60,6 +61,7 @@ function isOnOrAfter(dateValue: string | undefined, start: Date) {
 }
 
 export default function PeoplePage() {
+  const { formatLocale } = useLocale();
   const { contacts, loadContacts } = useContactsStore();
   const { activities, loadActivities } = useVolunteerActivitiesStore();
   const [currentPage, setCurrentPage] = useState(1);
@@ -178,32 +180,32 @@ export default function PeoplePage() {
                 add
               </span>
             </span>
-            + Añadir Nueva
+            Añadir nueva
           </Link>
         }
       />
 
       <section className="grid gap-4 md:grid-cols-3">
         <StatCard
-          title="Members"
-          value={formatNumber(members.length)}
-          meta={`+${formatNumber(newMembersThisMonth)} este mes`}
+          title="Socios"
+          value={formatNumber(members.length, formatLocale)}
+          meta={`+${formatNumber(newMembersThisMonth, formatLocale)} este mes`}
           href="/people/members"
           icon="group"
           accentClassName="bg-blue-50 text-blue-600"
         />
         <StatCard
-          title="Volunteers"
-          value={formatNumber(volunteers.length)}
-          meta={`${formatNumber(volunteerHoursThisMonth)} horas este mes`}
+          title="Voluntarios"
+          value={formatNumber(volunteers.length, formatLocale)}
+          meta={`${formatNumber(volunteerHoursThisMonth, formatLocale)} horas este mes`}
           href="/people/volunteers"
           icon="volunteer_activism"
           accentClassName="bg-emerald-50 text-emerald-600"
         />
         <StatCard
-          title="Contacts"
-          value={formatNumber(generalContacts.length)}
-          meta={`+${formatNumber(newContactsThisWeek)} esta semana`}
+          title="Contactos"
+          value={formatNumber(generalContacts.length, formatLocale)}
+          meta={`+${formatNumber(newContactsThisWeek, formatLocale)} esta semana`}
           href="/people/contacts"
           icon="contact_page"
           accentClassName="bg-slate-100 text-slate-600"
@@ -281,7 +283,7 @@ export default function PeoplePage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
-                          {formatDate(person.createdAt)}
+                          {formatDate(person.createdAt, formatLocale)}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <Link
@@ -374,7 +376,7 @@ export default function PeoplePage() {
                 Miembros
               </span>
               <span className="text-xs font-semibold text-gray-400">
-                {formatNumber(members.length)}
+                {formatNumber(members.length, formatLocale)}
               </span>
             </Link>
             <Link
@@ -390,7 +392,7 @@ export default function PeoplePage() {
                 Voluntarios
               </span>
               <span className="text-xs font-semibold text-gray-400">
-                {formatNumber(volunteers.length)}
+                {formatNumber(volunteers.length, formatLocale)}
               </span>
             </Link>
             <Link
@@ -406,7 +408,7 @@ export default function PeoplePage() {
                 Contactos
               </span>
               <span className="text-xs font-semibold text-gray-400">
-                {formatNumber(generalContacts.length)}
+                {formatNumber(generalContacts.length, formatLocale)}
               </span>
             </Link>
           </div>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/shared/PageHeader";
+import { useLocale } from "@/core/i18n/use-locale";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import { Contact } from "@/modules/contacts/contact.types";
@@ -60,27 +61,27 @@ function getInitials(contact: Contact) {
     .join("");
 }
 
-function formatDate(value?: string) {
+function formatDate(value: string | undefined, locale: string) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
   }).format(date);
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("es-ES", {
+function formatCurrency(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: 2,
   }).format(value);
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("es-ES", {
+function formatNumber(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
   }).format(value);
 }
@@ -93,6 +94,7 @@ function isOnOrAfter(dateValue: string | undefined, start: Date) {
 }
 
 export default function MembersPage() {
+  const { formatLocale } = useLocale();
   const { contacts, loadContacts } = useContactsStore();
   const { transactions, loadTransactions } = useTransactionsStore();
   const [query, setQuery] = useState("");
@@ -271,11 +273,11 @@ export default function MembersPage() {
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">Total Socios</p>
             <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
-              +{formatNumber(members.length || 0)}
+              +{formatNumber(members.length || 0, formatLocale)}
             </span>
           </div>
           <p className="mt-4 text-3xl font-semibold text-gray-900">
-            {formatNumber(members.length)}
+            {formatNumber(members.length, formatLocale)}
           </p>
         </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -284,24 +286,25 @@ export default function MembersPage() {
             <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
               {members.length
                 ? `+${formatNumber(
-                    Math.round((activeMembers / members.length) * 10)
+                    Math.round((activeMembers / members.length) * 10),
+                    formatLocale
                   )}%`
                 : "+0%"}
             </span>
           </div>
           <p className="mt-4 text-3xl font-semibold text-gray-900">
-            {formatNumber(activeMembers)}
+            {formatNumber(activeMembers, formatLocale)}
           </p>
         </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">Pendientes de Pago</p>
             <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600">
-              {formatNumber(pendingMembers)} socios
+              {formatNumber(pendingMembers, formatLocale)} socios
             </span>
           </div>
           <p className="mt-4 text-3xl font-semibold text-gray-900">
-            {formatCurrency(pendingAmount)}
+            {formatCurrency(pendingAmount, formatLocale)}
           </p>
         </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -319,7 +322,7 @@ export default function MembersPage() {
             </span>
           </div>
           <p className="mt-4 text-3xl font-semibold text-gray-900">
-            {formatCurrency(monthlyRevenue)}
+            {formatCurrency(monthlyRevenue, formatLocale)}
           </p>
         </div>
       </section>
@@ -447,7 +450,7 @@ export default function MembersPage() {
                       {item.feeCycle}
                     </td>
                     <td className="px-6 py-4 text-gray-600">
-                      {formatDate(item.lastPaymentDate)}
+                      {formatDate(item.lastPaymentDate, formatLocale)}
                     </td>
                     <td className="px-6 py-4">
                       <span

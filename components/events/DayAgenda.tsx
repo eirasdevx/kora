@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/core/i18n/use-locale";
 import { Event } from "@/modules/events/event.types";
 
 interface Props {
@@ -13,7 +14,8 @@ export default function DayAgenda({
   events,
   onSelectEvent,
 }: Props) {
-  const dayLabel = date.toLocaleDateString("es-ES", {
+  const { formatLocale } = useLocale();
+  const dayLabel = date.toLocaleDateString(formatLocale, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -58,7 +60,7 @@ export default function DayAgenda({
                 </p>
                 <p className="text-xs text-gray-500">
                   {new Date(event.startDate).toLocaleTimeString(
-                    "es-ES",
+                    formatLocale,
                     { hour: "2-digit", minute: "2-digit" }
                   )}
                 </p>

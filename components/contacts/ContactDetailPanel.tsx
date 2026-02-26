@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/core/i18n/use-locale";
 import {
   Contact,
   ContactKindLabels,
@@ -28,11 +29,11 @@ function getInitials(contact: Contact) {
     .join("");
 }
 
-function formatDate(value?: string) {
+function formatDate(value: string | undefined, locale: string) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString();
+  return date.toLocaleDateString(locale);
 }
 
 export default function ContactDetailPanel({
@@ -41,6 +42,7 @@ export default function ContactDetailPanel({
   onDelete,
   onClose,
 }: Props) {
+  const { formatLocale } = useLocale();
   if (!contact) {
     return (
       <div className="flex h-full items-center justify-center rounded-2xl border border-gray-200 bg-white p-6 text-center text-gray-500">
@@ -135,7 +137,9 @@ export default function ContactDetailPanel({
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
               Fecha de nacimiento
             </p>
-            <p className="mt-1">{formatDate(contact.birthDate)}</p>
+            <p className="mt-1">
+              {formatDate(contact.birthDate, formatLocale)}
+            </p>
           </div>
         )}
         <div>
@@ -166,13 +170,17 @@ export default function ContactDetailPanel({
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
             Fecha de registro
           </p>
-          <p className="mt-1">{formatDate(contact.createdAt)}</p>
+          <p className="mt-1">
+            {formatDate(contact.createdAt, formatLocale)}
+          </p>
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
             Fecha de baja
           </p>
-          <p className="mt-1">{formatDate(contact.deactivatedAt)}</p>
+          <p className="mt-1">
+            {formatDate(contact.deactivatedAt, formatLocale)}
+          </p>
         </div>
       </div>
 

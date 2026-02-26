@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocale } from "@/core/i18n/use-locale";
 import {
   Transaction,
   TransactionCategory,
@@ -39,6 +40,7 @@ export default function TransactionForm({
   onSubmit,
   onCancel,
 }: Props) {
+  const { formatLocale } = useLocale();
   const isEditing = Boolean(initialData);
   const contacts = useContactsStore((s) => s.contacts);
   const loadContacts = useContactsStore((s) => s.loadContacts);
@@ -104,25 +106,25 @@ export default function TransactionForm({
 
   const amountDisplay = useMemo(() => {
     try {
-      return new Intl.NumberFormat("es-ES", {
+      return new Intl.NumberFormat(formatLocale, {
         style: "currency",
         currency: "EUR",
       }).format(numericAmount || 0);
     } catch {
       return `€ ${numericAmount.toFixed(2)}`;
     }
-  }, [numericAmount]);
+  }, [numericAmount, formatLocale]);
 
   const dateLabel = useMemo(() => {
     if (!date) return "Sin fecha";
     const parsed = new Date(date);
     if (Number.isNaN(parsed.getTime())) return date;
-    return new Intl.DateTimeFormat("es-ES", {
+    return new Intl.DateTimeFormat(formatLocale, {
       day: "2-digit",
       month: "short",
       year: "numeric",
     }).format(parsed);
-  }, [date]);
+  }, [date, formatLocale]);
 
   const filteredContacts = useMemo(() => {
     if (contactFilter === "all") return contacts;

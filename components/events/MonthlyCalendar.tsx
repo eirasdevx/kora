@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useLocale } from "@/core/i18n/use-locale";
 import { Event } from "@/modules/events/event.types";
 
 interface Props {
@@ -24,6 +25,7 @@ export default function MonthlyCalendar({
   onPrevMonth,
   onNextMonth,
 }: Props) {
+  const { formatLocale } = useLocale();
   const today = new Date();
 
   const { days, monthLabel, eventsByDay } = useMemo(() => {
@@ -47,13 +49,13 @@ export default function MonthlyCalendar({
 
     return {
       days: cells,
-      monthLabel: firstDay.toLocaleDateString("es-ES", {
+      monthLabel: firstDay.toLocaleDateString(formatLocale, {
         month: "long",
         year: "numeric",
       }),
       eventsByDay: byDay,
     };
-  }, [year, month, events]);
+  }, [year, month, events, formatLocale]);
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">

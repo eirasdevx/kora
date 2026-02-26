@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/core/i18n/use-locale";
 import { Event } from "@/modules/events/event.types";
 import { addDays, isSameDay } from "@/utils/date";
 
@@ -22,6 +23,7 @@ export default function WeeklyCalendar({
   onPrevWeek,
   onNextWeek,
 }: Props) {
+  const { formatLocale } = useLocale();
   const today = new Date();
 
   const days = Array.from({ length: 7 }, (_, i) =>
@@ -41,8 +43,8 @@ export default function WeeklyCalendar({
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">
-          {weekStart.toLocaleDateString("es-ES")} –{" "}
-          {weekEnd.toLocaleDateString("es-ES")}
+          {weekStart.toLocaleDateString(formatLocale)} –{" "}
+          {weekEnd.toLocaleDateString(formatLocale)}
         </h2>
 
         <div className="flex gap-2">

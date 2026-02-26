@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import Modal from "@/components/Modal";
 import PageTopbar from "@/components/PageTopbar";
+import { useLocale } from "@/core/i18n/use-locale";
 import { useMessagingStore } from "@/modules/messaging/messaging.store";
 import { MessageTemplate } from "@/modules/messaging/messaging.types";
 
@@ -15,13 +16,14 @@ const CHANNEL_LABEL: Record<string, string> = {
   email: "Email",
 };
 
-const formatDateTime = (value: string) =>
-  new Date(value).toLocaleString("es-ES", {
+const formatDateTime = (value: string, locale: string) =>
+  new Date(value).toLocaleString(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   });
 
 export default function MessagingPage() {
+  const { formatLocale } = useLocale();
   const { templates, removeTemplate } = useMessagingStore();
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<MessageTemplate | null>(
@@ -111,7 +113,9 @@ export default function MessagingPage() {
           </p>
           <p className="mt-2 text-xs text-slate-500">
             Ultima actualizacion:{" "}
-            {lastTemplateUpdate ? formatDateTime(lastTemplateUpdate) : "-"}
+            {lastTemplateUpdate
+              ? formatDateTime(lastTemplateUpdate, formatLocale)
+              : "-"}
           </p>
         </div>
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -216,7 +220,7 @@ export default function MessagingPage() {
                     {CHANNEL_LABEL[template.channel] ?? template.channel}
                   </span>
                   <span className="text-xs text-slate-400">
-                    {formatDateTime(template.updatedAt)}
+                    {formatDateTime(template.updatedAt, formatLocale)}
                   </span>
                 </div>
                 <h3 className="mt-3 text-base font-semibold text-slate-900">

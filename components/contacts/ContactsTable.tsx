@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/core/i18n/use-locale";
 import { Contact } from "@/modules/contacts/contact.types";
 
 interface Props {
@@ -23,12 +24,12 @@ function getInitials(contact: Contact) {
     .join("");
 }
 
-function formatBirthDate(contact: Contact) {
+function formatBirthDate(contact: Contact, locale: string) {
   if (contact.kind !== "person") return "-";
   if (!contact.birthDate) return "-";
   const date = new Date(contact.birthDate);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -40,6 +41,7 @@ export default function ContactsTable({
   selectedId,
   onSelect,
 }: Props) {
+  const { formatLocale } = useLocale();
   if (contacts.length === 0) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-6 text-gray-500">
@@ -102,7 +104,7 @@ export default function ContactsTable({
               </td>
               <td className="px-6 py-4 text-gray-700">{lastName}</td>
               <td className="px-6 py-4 text-gray-600">
-                {formatBirthDate(c)}
+                {formatBirthDate(c, formatLocale)}
               </td>
               <td className="px-6 py-4 text-gray-600">{c.dni || "-"}</td>
               <td className="px-6 py-4 text-gray-600">{phone}</td>

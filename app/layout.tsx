@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
 import AppearanceSync from "@/components/AppearanceSync";
+import LocaleSync from "@/components/LocaleSync";
 import PwaRegister from "@/components/PwaRegister";
 
 const bodyFont = Inter({
@@ -46,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${bodyFont.variable} ${headingFont.variable}`}>
+    <html lang="es-ES" className={`${bodyFont.variable} ${headingFont.variable}`}>
       <head>
         <link
           rel="stylesheet"
@@ -59,6 +60,7 @@ export default function RootLayout({
       </head>
       <body>
         <AppearanceSync />
+        <LocaleSync />
         <PwaRegister />
         {children}
       </body>

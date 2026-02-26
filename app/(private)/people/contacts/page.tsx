@@ -6,6 +6,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import SectionBlock from "@/components/shared/SectionBlock";
 import StatCard from "@/components/shared/StatCard";
 import DataTable from "@/components/shared/DataTable";
+import { useLocale } from "@/core/i18n/use-locale";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { Contact, ContactTypeLabels } from "@/modules/contacts/contact.types";
 
@@ -24,8 +25,8 @@ function getInitials(contact: Contact) {
     .join("");
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("es-ES", {
+function formatNumber(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
   }).format(value);
 }
@@ -35,6 +36,7 @@ function isContact(contact: Contact) {
 }
 
 export default function PeopleContactsPage() {
+  const { formatLocale } = useLocale();
   const { contacts, loadContacts } = useContactsStore();
   const [query, setQuery] = useState("");
 
@@ -142,21 +144,21 @@ export default function PeopleContactsPage() {
       <section className="grid gap-4 md:grid-cols-3">
         <StatCard
           title="Contactos totales"
-          value={formatNumber(contactPool.length)}
+          value={formatNumber(contactPool.length, formatLocale)}
           meta="Base de datos general"
           icon="contacts"
           accentClassName="bg-blue-50 text-blue-600"
         />
         <StatCard
           title="Proveedores"
-          value={formatNumber(providers.length)}
+          value={formatNumber(providers.length, formatLocale)}
           meta="Servicios y recursos"
           icon="inventory"
           accentClassName="bg-amber-50 text-amber-600"
         />
         <StatCard
           title="Colaboradores"
-          value={formatNumber(collaborators.length)}
+          value={formatNumber(collaborators.length, formatLocale)}
           meta="Equipo externo"
           icon="handshake"
           accentClassName="bg-emerald-50 text-emerald-600"

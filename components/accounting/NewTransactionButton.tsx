@@ -8,7 +8,7 @@ export default function NewTransactionButton() {
       href="/accounting/new"
       className="bg-primary text-white px-6 py-3 rounded-lg font-bold shadow inline-flex items-center"
     >
-      + Nueva Transacción
+      Nueva transacción
     </Link>
   );
 }

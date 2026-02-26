@@ -10,6 +10,7 @@ import DayAgenda from "@/components/events/DayAgenda";
 import EventDetailsPanel from "@/components/events/EventDetailsPanel";
 import PageTopbar from "@/components/PageTopbar";
 
+import { useLocale } from "@/core/i18n/use-locale";
 import { Event } from "@/modules/events/event.types";
 import { useEventsStore } from "@/modules/events/events.store";
 import { downloadPdf, downloadXlsx } from "@/lib/exporters";
@@ -65,31 +66,31 @@ function matchesDateRange(
   return true;
 }
 
-function formatDate(value?: string) {
+function formatDate(value: string | undefined, locale: string) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
   }).format(date);
 }
 
-function formatTime(value?: string) {
+function formatTime(value: string | undefined, locale: string) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
 }
 
-function formatPrice(value?: number) {
+function formatPrice(value: number | undefined, locale: string) {
   if (value === null || value === undefined) return "-";
   if (value === 0) return "Gratis";
-  return new Intl.NumberFormat("es-ES", {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
   }).format(value);
@@ -99,7 +100,7 @@ function formatYesNo(value?: boolean) {
   return value ? "Si" : "No";
 }
 
-function buildEventExportData(event: Event) {
+function buildEventExportData(event: Event, locale: string) {
   const meetingType =
     event.locationType === "online" ? "En linea" : "Presencial";
   const location =
@@ -112,15 +113,15 @@ function buildEventExportData(event: Event) {
     category: event.category ?? "-",
     description: event.description ?? "-",
     status: event.status ?? "-",
-    startDate: formatDate(event.startDate),
-    startTime: formatTime(event.startDate),
-    endDate: formatDate(event.endDate),
-    endTime: formatTime(event.endDate),
+    startDate: formatDate(event.startDate, locale),
+    startTime: formatTime(event.startDate, locale),
+    endDate: formatDate(event.endDate, locale),
+    endTime: formatTime(event.endDate, locale),
     meetingType,
     location,
-    price: formatPrice(event.ticketPrice),
+    price: formatPrice(event.ticketPrice, locale),
     capacity: event.capacity?.toString() ?? "-",
-    registrationDeadline: formatDate(event.registrationDeadline),
+    registrationDeadline: formatDate(event.registrationDeadline, locale),
     waitlist: formatYesNo(event.waitlistEnabled),
     participants:
       event.participantIds && event.participantIds.length > 0
@@ -130,7 +131,7 @@ function buildEventExportData(event: Event) {
       event.organizerIds && event.organizerIds.length > 0
         ? event.organizerIds.join(", ")
         : "-",
-    createdAt: formatDate(event.createdAt),
+    createdAt: formatDate(event.createdAt, locale),
   };
 }
 
@@ -139,6 +140,7 @@ function buildEventExportData(event: Event) {
 ======================= */
 
 export default function EventsPage() {
+  const { formatLocale } = useLocale();
   /* -------- stores -------- */
   const { events, loadEvents } = useEventsStore();
 
@@ -212,7 +214,7 @@ export default function EventsPage() {
   const exportRowsXlsx = useMemo(
     () =>
       filteredEvents.map((event) => {
-        const data = buildEventExportData(event);
+        const data = buildEventExportData(event, formatLocale);
         return [
           data.title,
           data.category,
@@ -239,7 +241,7 @@ export default function EventsPage() {
   const exportRowsPdf = useMemo(
     () =>
       filteredEvents.flatMap((event) => {
-        const data = buildEventExportData(event);
+        const data = buildEventExportData(event, formatLocale);
           return [
             ["Evento", data.title],
             ["Categoría", data.category],

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useLocale } from "@/core/i18n/use-locale";
 import { Event } from "@/modules/events/event.types";
 import { useEventsStore } from "@/modules/events/events.store";
 import Modal from "@/components/Modal";
@@ -23,20 +24,21 @@ export default function EventDetailsPanel({
   const deleteEvent = useEventsStore((s) => s.deleteEvent);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeleteFinal, setConfirmDeleteFinal] = useState(false);
+  const { formatLocale } = useLocale();
 
   const eventLabel = event.title?.trim() || "este evento";
 
   const formatted = useMemo(() => {
-    const dateFormatter = new Intl.DateTimeFormat("es-ES", {
+    const dateFormatter = new Intl.DateTimeFormat(formatLocale, {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
-    const timeFormatter = new Intl.DateTimeFormat("es-ES", {
+    const timeFormatter = new Intl.DateTimeFormat(formatLocale, {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const currencyFormatter = new Intl.NumberFormat("es-ES", {
+    const currencyFormatter = new Intl.NumberFormat(formatLocale, {
       style: "currency",
       currency: "EUR",
     });
@@ -78,7 +80,7 @@ export default function EventDetailsPanel({
       capacityLabel,
       deadlineLabel,
     };
-  }, [event]);
+  }, [event, formatLocale]);
 
   const categoryLabel = event.category?.trim() || "Sin categoría";
   const locationLabel = event.location?.trim() || "Sin ubicación";

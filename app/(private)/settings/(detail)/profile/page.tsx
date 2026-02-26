@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import { useSessionStore } from "@/core/session/session.store";
 import {
+  LOCALE_DATE_FORMATS,
+  type LocaleCode,
+  resolveLocale,
+} from "@/core/i18n/locale";
+import {
   type UserAccount,
   type UserPreferences,
   createDefaultPreferences,
@@ -13,11 +18,6 @@ import {
 } from "@/core/users/users.store";
 import { createPasswordDigest } from "@/core/security/passwords";
 
-const SUPPORTED_LOCALES = ["es", "es-419", "gl", "eu", "ca", "va", "en"] as const;
-type LocaleCode = (typeof SUPPORTED_LOCALES)[number];
-
-const DEFAULT_LOCALE: LocaleCode = "es";
-const LOCALE_LOOKUP = new Set<string>(SUPPORTED_LOCALES);
 
 type Copy = {
   breadcrumb: string;
@@ -81,16 +81,6 @@ type Copy = {
   errorRequired: string;
   errorEmailTaken: string;
   errorPasswordsMismatch: string;
-};
-
-const LOCALE_DATE_FORMATS: Record<LocaleCode, string> = {
-  es: "es-ES",
-  "es-419": "es-419",
-  gl: "gl-ES",
-  eu: "eu-ES",
-  ca: "ca-ES",
-  va: "ca-ES-valencia",
-  en: "en-US",
 };
 
 const LANGUAGE_OPTIONS: Array<{ value: LocaleCode; label: string }> = [
@@ -493,14 +483,6 @@ const COPY: Record<LocaleCode, Copy> = {
     errorEmailTaken: "A user with that email already exists.",
     errorPasswordsMismatch: "Passwords do not match.",
   },
-};
-
-const resolveLocale = (value?: string): LocaleCode => {
-  const normalized = normalizeLanguage(value);
-  if (LOCALE_LOOKUP.has(normalized)) {
-    return normalized as LocaleCode;
-  }
-  return DEFAULT_LOCALE;
 };
 
 type UserProfileFormState = {

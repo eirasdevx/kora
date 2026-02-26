@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import Modal from "@/components/Modal";
 import PageTopbar from "@/components/PageTopbar";
+import { useLocale } from "@/core/i18n/use-locale";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
 import {
   DocumentCategory,
@@ -50,10 +51,10 @@ function formatBytes(bytes: number) {
   return `${value.toFixed(value >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string, locale: string) {
   if (!iso) return "-";
   const date = new Date(iso);
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -105,7 +106,8 @@ function getCategoryFromType(type: DocumentType): DocumentCategory {
 
 function buildDocumentFromFile(
   file: File,
-  security: DocumentSecurity
+  security: DocumentSecurity,
+  locale: string
 ): DocumentItem {
   const now = new Date();
   const nowIso = now.toISOString();
@@ -132,7 +134,7 @@ function buildDocumentFromFile(
         id: crypto.randomUUID(),
         label: "v1.0 - Subido",
         author: owner,
-        time: new Intl.DateTimeFormat("es-ES", {
+        time: new Intl.DateTimeFormat(locale, {
           hour: "2-digit",
           minute: "2-digit",
         }).format(now),
@@ -171,6 +173,7 @@ function FileIcon({
 }
 
 export default function DocumentsPage() {
+  const { formatLocale } = useLocale();
   const {
     documents,
     loadDocuments,
@@ -262,7 +265,9 @@ export default function DocumentsPage() {
     const files = Array.from(fileList);
     const security: DocumentSecurity =
       privacy === "private" ? "Privado" : "Compartido";
-    const docs = files.map((file) => buildDocumentFromFile(file, security));
+    const docs = files.map((file) =>
+      buildDocumentFromFile(file, security, formatLocale)
+    );
     await upsertDocuments(docs);
     setPendingFiles(files);
     setSelectedId(docs[0]?.id ?? "");
@@ -616,7 +621,7 @@ export default function DocumentsPage() {
                               </span>
                             </td>
                             <td className="px-6 py-4 text-gray-600">
-                              {formatDate(doc.updatedAt)}
+                              {formatDate(doc.updatedAt, formatLocale)}
                             </td>
                             <td className="px-6 py-4 text-gray-600">
                               {formatSizeLabel(doc)}
@@ -692,7 +697,7 @@ export default function DocumentsPage() {
                           </p>
                         </div>
                         <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-                          <span>{formatDate(doc.updatedAt)}</span>
+                          <span>{formatDate(doc.updatedAt, formatLocale)}</span>
                           <span>{formatSizeLabel(doc)}</span>
                         </div>
                       </button>
@@ -884,7 +889,7 @@ export default function DocumentsPage() {
                         <div>
                           <dt className="text-xs text-gray-400">Creado</dt>
                           <dd className="font-semibold text-gray-700">
-                            {formatDate(selectedDoc.createdAt)}
+                            {formatDate(selectedDoc.createdAt, formatLocale)}
                           </dd>
                         </div>
                         <div>
@@ -960,7 +965,7 @@ export default function DocumentsPage() {
                       <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
                         <p className="font-semibold text-gray-700">Última actividad</p>
                       <p className="mt-1 text-xs text-gray-500">
-                        {formatDate(selectedDoc.updatedAt)} - {selectedDoc.owner}
+                        {formatDate(selectedDoc.updatedAt, formatLocale)} - {selectedDoc.owner}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-gray-100 bg-white p-4">

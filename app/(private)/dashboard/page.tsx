@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageTopbar from "@/components/PageTopbar";
+import { useLocale } from "@/core/i18n/use-locale";
 import { useSessionStore } from "@/core/session/session.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
@@ -22,32 +23,33 @@ const CATEGORY_LABELS: Record<string, string> = {
 const MONTH_OPTIONS = [3, 4, 5, 6];
 
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("es-ES", {
+const formatCurrency = (value: number, locale: string) =>
+  new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: 2,
   }).format(value);
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("es-ES", {
+const formatNumber = (value: number, locale: string) =>
+  new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
   }).format(value);
 
 const formatPercent = (value: number) =>
   `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
 
-const toMonthLabel = (date: Date) =>
-  date.toLocaleDateString("es-ES", { month: "short" }).toUpperCase();
+const toMonthLabel = (date: Date, locale: string) =>
+  date.toLocaleDateString(locale, { month: "short" }).toUpperCase();
 
-const formatShortDate = (value: string) =>
-  new Intl.DateTimeFormat("es-ES", {
+const formatShortDate = (value: string, locale: string) =>
+  new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
   }).format(new Date(value));
 
 
 export default function DashboardPage() {
+  const { formatLocale } = useLocale();
   const association = useSessionStore((s) => s.association);
   const { transactions, loadTransactions } = useTransactionsStore();
   const { contacts, loadContacts } = useContactsStore();
@@ -153,7 +155,7 @@ export default function DashboardPage() {
           0
         );
       return {
-        label: toMonthLabel(month),
+        label: toMonthLabel(month, formatLocale),
         income: monthIncome,
         expense: monthExpense,
       };
@@ -200,6 +202,7 @@ export default function DashboardPage() {
     startOfPrevMonth,
     endOfPrevMonth,
     monthsRange,
+    formatLocale,
   ]);
 
   const totalMembers = useMemo(() => {
@@ -294,7 +297,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm">
-              Balance mensual: {formatCurrency(monthBalance)}
+              Balance mensual: {formatCurrency(monthBalance, formatLocale)}
             </span>
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
@@ -373,10 +376,10 @@ export default function DashboardPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
               <span className="rounded-full border border-white/80 bg-white/80 px-3 py-1">
-                Ingresos: {formatCurrency(totalIncome)}
+                Ingresos: {formatCurrency(totalIncome, formatLocale)}
               </span>
               <span className="rounded-full border border-white/80 bg-white/80 px-3 py-1">
-                Gastos: {formatCurrency(totalExpense)}
+                Gastos: {formatCurrency(totalExpense, formatLocale)}
               </span>
               <span className="rounded-full border border-white/80 bg-white/80 px-3 py-1">
                 Rango: ultimos {safeRange} meses
@@ -398,7 +401,7 @@ export default function DashboardPage() {
               </span>
             </div>
             <p className="mt-3 text-2xl font-semibold text-gray-900">
-              {formatCurrency(balance)}
+              {formatCurrency(balance, formatLocale)}
             </p>
             <div className="mt-2 flex items-center gap-2 text-xs font-semibold">
               <span
@@ -428,7 +431,7 @@ export default function DashboardPage() {
               </span>
             </div>
             <p className="mt-3 text-2xl font-semibold text-gray-900">
-              {formatCurrency(totalIncome)}
+              {formatCurrency(totalIncome, formatLocale)}
             </p>
             <p className="mt-2 text-xs text-gray-500">
               Ultimos {safeRange} meses
@@ -447,7 +450,7 @@ export default function DashboardPage() {
               </span>
             </div>
             <p className="mt-3 text-2xl font-semibold text-gray-900">
-              {formatCurrency(totalExpense)}
+              {formatCurrency(totalExpense, formatLocale)}
             </p>
             <p className="mt-2 text-xs text-gray-500">
               Ultimos {safeRange} meses
@@ -466,10 +469,10 @@ export default function DashboardPage() {
               </span>
             </div>
             <p className="mt-3 text-2xl font-semibold text-gray-900">
-              {formatNumber(totalMembers)}
+              {formatNumber(totalMembers, formatLocale)}
             </p>
             <p className="mt-2 text-xs text-gray-500">
-              {formatNumber(contacts.length)} contactos en total
+              {formatNumber(contacts.length, formatLocale)} contactos en total
             </p>
           </div>
         </div>
@@ -547,8 +550,8 @@ export default function DashboardPage() {
               Gastos
             </span>
             <span className="text-sm text-gray-400">
-              Total ingresos: {formatCurrency(totalIncome)} / Total gastos:{" "}
-              {formatCurrency(totalExpense)}
+              Total ingresos: {formatCurrency(totalIncome, formatLocale)} / Total gastos:{" "}
+              {formatCurrency(totalExpense, formatLocale)}
             </span>
           </div>
         </div>
@@ -678,7 +681,7 @@ export default function DashboardPage() {
                     <div className="flex items-start gap-4">
                       <div className="flex h-10 w-10 flex-col items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
                         <span className="text-xs font-semibold">
-                          {date.toLocaleDateString("es-ES", {
+                          {date.toLocaleDateString(formatLocale, {
                             month: "short",
                           })}
                         </span>
@@ -692,7 +695,7 @@ export default function DashboardPage() {
                         </p>
                         <p className="text-xs text-gray-500">
                           {event.location || "Ubicacion por confirmar"} /{" "}
-                          {date.toLocaleTimeString("es-ES", {
+                          {date.toLocaleTimeString(formatLocale, {
                             hour: "2-digit",
                             minute: "2-digit",
                           })}
@@ -758,7 +761,7 @@ export default function DashboardPage() {
                     {doc.name}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {formatShortDate(doc.updatedAt)} - {doc.category}
+                    {formatShortDate(doc.updatedAt, formatLocale)} - {doc.category}
                   </p>
                 </div>
                 <span className="rounded-xl bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
@@ -844,7 +847,7 @@ export default function DashboardPage() {
               <p className="text-xs text-gray-500">
                 Ultima actualizacion:{" "}
                 {lastTemplateUpdate
-                  ? formatShortDate(lastTemplateUpdate)
+                  ? formatShortDate(lastTemplateUpdate, formatLocale)
                   : "-"}
               </p>
             </div>
@@ -870,7 +873,7 @@ export default function DashboardPage() {
                     </p>
                     <p className="text-xs text-gray-500">
                       {template.subject || "Sin asunto"} /{" "}
-                      {formatShortDate(template.updatedAt)}
+                      {formatShortDate(template.updatedAt, formatLocale)}
                     </p>
                   </div>
                   <Link

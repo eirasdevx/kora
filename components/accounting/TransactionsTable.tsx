@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Modal from "@/components/Modal";
+import { useLocale } from "@/core/i18n/use-locale";
 import {
   Transaction,
   TransactionCategoryLabels,
@@ -21,9 +22,13 @@ const STATUS_STYLES: Record<keyof typeof TransactionStatusLabels, string> = {
 
 const PAGE_SIZE = 8;
 
-function formatAmount(amount: number, type: "income" | "expense") {
+function formatAmount(
+  amount: number,
+  type: "income" | "expense",
+  locale: string
+) {
   const value = type === "expense" ? -amount : amount;
-  return value.toLocaleString("es-ES", {
+  return value.toLocaleString(locale, {
     style: "currency",
     currency: "EUR",
   });
@@ -57,8 +62,8 @@ function matchesDateRange(iso: string | undefined, from: string, to: string) {
   return true;
 }
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString("es-ES");
+function formatDate(value: string, locale: string) {
+  return new Date(value).toLocaleDateString(locale);
 }
 
 function escapeCsv(value: string) {
@@ -298,6 +303,7 @@ function buildPdf(lines: string[]) {
 }
 
 export default function TransactionsTable({ transactions }: Props) {
+  const { formatLocale } = useLocale();
   const deleteTransaction = useTransactionsStore(
     (s) => s.deleteTransaction
   );
@@ -384,13 +390,13 @@ export default function TransactionsTable({ transactions }: Props) {
 
   const exportRows = useMemo(() => {
     return filteredTransactions.map((tx) => ({
-      fecha: formatDate(tx.date),
+      fecha: formatDate(tx.date, formatLocale),
       concepto: tx.concept,
       estado: TransactionStatusLabels[tx.status],
-      importe: formatAmount(tx.amount, tx.type),
+      importe: formatAmount(tx.amount, tx.type, formatLocale),
       notas: tx.description ?? "",
     }));
-  }, [filteredTransactions]);
+  }, [filteredTransactions, formatLocale]);
 
   const handleExportCsv = () => {
     const header = [
@@ -722,7 +728,7 @@ export default function TransactionsTable({ transactions }: Props) {
                 className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
               >
                 <td className="px-6 py-4 text-sm text-gray-600">
-                  {formatDate(tx.date)}
+                  {formatDate(tx.date, formatLocale)}
                 </td>
 
                 <td className="px-6 py-4">
@@ -759,7 +765,7 @@ export default function TransactionsTable({ transactions }: Props) {
                       : "text-red-600"
                   }`}
                 >
-                  {formatAmount(tx.amount, tx.type)}
+                  {formatAmount(tx.amount, tx.type, formatLocale)}
                 </td>
 
                 <td className="px-6 py-4 text-right">

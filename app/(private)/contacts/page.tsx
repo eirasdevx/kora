@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLocale } from "@/core/i18n/use-locale";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import {
     Contact,
@@ -67,18 +68,18 @@ function getContactTypesLabel(contact: Contact) {
         .join(", ");
 }
 
-function formatDate(value?: string) {
+function formatDate(value: string | undefined, locale: string) {
     if (!value) return "-";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "-";
-    return new Intl.DateTimeFormat("es-ES", {
+    return new Intl.DateTimeFormat(locale, {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
     }).format(date);
 }
 
-function buildContactExportData(contact: Contact) {
+function buildContactExportData(contact: Contact, locale: string) {
     const displayName = getContactDisplayName(contact);
     const fallbackParts = displayName.split(" ").filter(Boolean);
     const firstName =
@@ -95,7 +96,7 @@ function buildContactExportData(contact: Contact) {
             : "";
     const birthDate =
         contact.kind === "person"
-            ? formatDate(contact.birthDate)
+            ? formatDate(contact.birthDate, locale)
             : "-";
 
     return {
@@ -118,12 +119,13 @@ function buildContactExportData(contact: Contact) {
         representative,
         tags: tagsLabel,
         notes: contact.notes ?? "",
-        createdAt: formatDate(contact.createdAt),
-        deactivatedAt: formatDate(contact.deactivatedAt),
+        createdAt: formatDate(contact.createdAt, locale),
+        deactivatedAt: formatDate(contact.deactivatedAt, locale),
     };
 }
 
 export default function ContactsPage() {
+    const { formatLocale } = useLocale();
     const { contacts, loadContacts, removeContact } =
         useContactsStore();
 
@@ -213,7 +215,7 @@ export default function ContactsPage() {
 
     const exportRowsXlsx = useMemo(() => {
         return filteredContacts.map((contact) => {
-            const data = buildContactExportData(contact);
+            const data = buildContactExportData(contact, formatLocale);
             return [
                 data.firstName || "-",
                 data.lastName || "-",
@@ -241,7 +243,7 @@ export default function ContactsPage() {
 
     const exportRowsPdf = useMemo(() => {
         return filteredContacts.flatMap((contact) => {
-            const data = buildContactExportData(contact);
+            const data = buildContactExportData(contact, formatLocale);
             return [
                 ["Contacto", data.displayName || "-"],
                 ["Nombre", data.firstName || "-"],

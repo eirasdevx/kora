@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageTopbar from "@/components/PageTopbar";
 import BackLink from "@/components/shared/BackLink";
+import { useLocale } from "@/core/i18n/use-locale";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useVolunteerActivitiesStore } from "@/modules/volunteers/volunteer-activities.store";
 import { useEventsStore } from "@/modules/events/events.store";
@@ -35,8 +36,8 @@ function getInitials(contact: Contact) {
     .join("");
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("es-ES", {
+function formatNumber(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
   }).format(value);
 }
@@ -49,6 +50,7 @@ function isOnOrAfter(dateValue: string | undefined, start: Date) {
 }
 
 export default function VolunteersPage() {
+  const { formatLocale } = useLocale();
   const { contacts, loadContacts } = useContactsStore();
   const { activities, loadActivities } = useVolunteerActivitiesStore();
   const { events, loadEvents } = useEventsStore();
@@ -254,10 +256,10 @@ export default function VolunteersPage() {
             </span>
           </div>
           <p className="mt-4 text-3xl font-semibold text-gray-900">
-            {formatNumber(activeVolunteers.length)}
+            {formatNumber(activeVolunteers.length, formatLocale)}
           </p>
           <p className="mt-2 text-xs text-emerald-600">
-            +{formatNumber(activeVolunteers.length)} vs mes anterior
+            +{formatNumber(activeVolunteers.length, formatLocale)} vs mes anterior
           </p>
         </div>
 
@@ -271,7 +273,7 @@ export default function VolunteersPage() {
             </span>
           </div>
           <p className="mt-4 text-3xl font-semibold text-gray-900">
-            {formatNumber(monthlyHours)}h
+            {formatNumber(monthlyHours, formatLocale)}h
           </p>
           <p
             className={`mt-2 text-xs ${
@@ -293,10 +295,10 @@ export default function VolunteersPage() {
             </span>
           </div>
           <p className="mt-4 text-3xl font-semibold text-gray-900">
-            {formatNumber(pendingTasks)}
+            {formatNumber(pendingTasks, formatLocale)}
           </p>
           <p className="mt-2 text-xs text-rose-600">
-            -{formatNumber(Math.round(pendingTasks * 0.2))} vs semana anterior
+            -{formatNumber(Math.round(pendingTasks * 0.2), formatLocale)} vs semana anterior
           </p>
         </div>
       </section>
@@ -392,7 +394,7 @@ export default function VolunteersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-900">
-                      {formatNumber(item.totalHours)}h
+                      {formatNumber(item.totalHours, formatLocale)}h
                     </td>
                     <td className="px-6 py-4 text-gray-600">
                       {item.taskLabel}
