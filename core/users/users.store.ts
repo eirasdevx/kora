@@ -7,6 +7,7 @@ import {
   type PasswordDigest,
   createPasswordDigest,
 } from "@/core/security/passwords";
+import { useNotificationsStore } from "@/core/notifications/notifications.store";
 
 export type UserRole = "Admin" | "Gestor" | "Lector";
 export type UserStatus = "Activo" | "Pendiente";
@@ -236,7 +237,7 @@ const toAdminUser = (admin: AdminAccount): UserAccount =>
 
 export const useUsersStore = create<UsersState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       companyCode: null,
       users: [],
       ensureSeed: (companyCode, admin) =>
@@ -278,7 +279,9 @@ export const useUsersStore = create<UsersState>()(
         status,
         permissions,
         photoUrl,
-      }) =>
+      }) => {
+        const displayName =
+          `${firstName} ${lastName}`.trim() || email || "Usuario";
         set((state) => ({
           users: [
             normalizeUser({
@@ -297,23 +300,67 @@ export const useUsersStore = create<UsersState>()(
             }),
             ...state.users.map(normalizeUser),
           ],
-        })),
-      updateUser: (id, updates) =>
+        }));
+        useNotificationsStore.getState().addNotification({
+          category: "members",
+          title: "Usuario creado",
+          description: `Se creo el usuario ${displayName}.`,
+          href: "/settings/users",
+          actionLabel: "Ver usuarios",
+          icon: "person_add",
+          tone: "bg-amber-50 text-amber-600",
+        });
+      },
+      updateUser: (id, updates) => {
+        const target = get().users.find((user) => user.id === id);
+        const displayName =
+          target?.name?.trim() ||
+          `${target?.firstName ?? ""} ${target?.lastName ?? ""}`.trim() ||
+          target?.email ||
+          "Usuario";
         set((state) => ({
           users: state.users.map((user) =>
             user.id === id
               ? normalizeUser({
                   ...user,
                   ...updates,
-                  password: updates.passwordDigest ? undefined : updates.password ?? user.password,
+                  password: updates.passwordDigest
+                    ? undefined
+                    : updates.password ?? user.password,
                 })
               : user
           ),
-        })),
-      removeUser: (id) =>
+        }));
+        useNotificationsStore.getState().addNotification({
+          category: "members",
+          title: "Usuario actualizado",
+          description: `Se actualizo el usuario ${displayName}.`,
+          href: "/settings/users",
+          actionLabel: "Ver usuarios",
+          icon: "manage_accounts",
+          tone: "bg-blue-50 text-blue-600",
+        });
+      },
+      removeUser: (id) => {
+        const target = get().users.find((user) => user.id === id);
+        const displayName =
+          target?.name?.trim() ||
+          `${target?.firstName ?? ""} ${target?.lastName ?? ""}`.trim() ||
+          target?.email ||
+          "Usuario";
         set((state) => ({
           users: state.users.filter((user) => user.id !== id),
-        })),
+        }));
+        useNotificationsStore.getState().addNotification({
+          category: "members",
+          title: "Usuario eliminado",
+          description: `Se elimino el usuario ${displayName}.`,
+          href: "/settings/users",
+          actionLabel: "Ver usuarios",
+          icon: "person_remove",
+          tone: "bg-rose-50 text-rose-600",
+        });
+      },
       resetUsers: () => set({ users: [] }),
     }),
     {

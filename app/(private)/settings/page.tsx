@@ -36,8 +36,8 @@ const cards = [
   {
     title: "Notificaciones",
     description:
-      "Personaliza las alertas por email, notificaciones push y avisos del sistema.",
-    href: "/settings/notifications",
+      "Revisa el centro de notificaciones con cambios, pagos y eventos clave.",
+    href: "/notifications",
     tone: "bg-amber-50 text-amber-600",
     icon: (
       <span className="material-symbols-outlined text-[20px]">

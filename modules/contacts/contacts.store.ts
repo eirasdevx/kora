@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { Contact, ContactKind, ContactType } from "./contact.types";
 import { db } from "@/core/storage/kora.db";
 import { useSessionStore } from "@/core/session/session.store";
+import { useNotificationsStore } from "@/core/notifications/notifications.store";
 
 interface ContactsState {
   contacts: Contact[];
@@ -28,7 +29,7 @@ const parseContactTypes = (value: unknown): ContactType[] => {
   return [];
 };
 
-export const useContactsStore = create<ContactsState>((set) => ({
+export const useContactsStore = create<ContactsState>((set, get) => ({
   contacts: [],
 
   // Cargar todos los contactos desde IndexedDB
@@ -68,9 +69,11 @@ export const useContactsStore = create<ContactsState>((set) => ({
 
   // Crear o actualizar contacto (UPSERT)
   addContact: async (contact) => {
+    const exists = get().contacts.some((c) => c.id === contact.id);
     const fullName =
       contact.fullName ??
       `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
+    const displayName = fullName || contact.email || "contacto";
     const kind: ContactKind = contact.kind === "entity" ? "entity" : "person";
     const allowedTypes =
       kind === "entity"
@@ -104,6 +107,17 @@ export const useContactsStore = create<ContactsState>((set) => ({
             : [...state.contacts, normalized],
         };
       });
+      useNotificationsStore.getState().addNotification({
+        category: "members",
+        title: exists ? "Contacto actualizado" : "Nuevo contacto creado",
+        description: exists
+          ? `Se actualizo el contacto ${displayName}.`
+          : `Se creo el contacto ${displayName}.`,
+        href: "/people",
+        actionLabel: "Ver perfil",
+        icon: exists ? "edit" : "person_add",
+        tone: exists ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600",
+      });
       return;
     }
 
@@ -122,14 +136,38 @@ export const useContactsStore = create<ContactsState>((set) => ({
           : [...state.contacts, normalized],
       };
     });
+
+    useNotificationsStore.getState().addNotification({
+      category: "members",
+      title: exists ? "Contacto actualizado" : "Nuevo contacto creado",
+      description: exists
+        ? `Se actualizo el contacto ${displayName}.`
+        : `Se creo el contacto ${displayName}.`,
+      href: "/people",
+      actionLabel: "Ver perfil",
+      icon: exists ? "edit" : "person_add",
+      tone: exists ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600",
+    });
   },
 
   // Eliminar contacto
   removeContact: async (id) => {
+    const target = get().contacts.find((c) => c.id === id);
     if (!isAuthenticated()) {
       set((state) => ({
         contacts: state.contacts.filter((c) => c.id !== id),
       }));
+      useNotificationsStore.getState().addNotification({
+        category: "members",
+        title: "Contacto eliminado",
+        description: target?.fullName
+          ? `Se elimino el contacto ${target.fullName}.`
+          : "Se elimino un contacto.",
+        href: "/people",
+        actionLabel: "Ver contactos",
+        icon: "person_remove",
+        tone: "bg-rose-50 text-rose-600",
+      });
       return;
     }
     await db.contacts.delete(id);
@@ -137,6 +175,18 @@ export const useContactsStore = create<ContactsState>((set) => ({
     set((state) => ({
       contacts: state.contacts.filter((c) => c.id !== id),
     }));
+
+    useNotificationsStore.getState().addNotification({
+      category: "members",
+      title: "Contacto eliminado",
+      description: target?.fullName
+        ? `Se elimino el contacto ${target.fullName}.`
+        : "Se elimino un contacto.",
+      href: "/people",
+      actionLabel: "Ver contactos",
+      icon: "person_remove",
+      tone: "bg-rose-50 text-rose-600",
+    });
   },
 
   resetContacts: () => set({ contacts: [] }),

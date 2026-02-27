@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { db } from "@/core/storage/kora.db";
 import { useSessionStore } from "@/core/session/session.store";
 import { VolunteerActivity } from "./volunteer-activity.types";
+import { useNotificationsStore } from "@/core/notifications/notifications.store";
 
 interface VolunteerActivitiesState {
   activities: VolunteerActivity[];
@@ -18,7 +19,7 @@ const isAuthenticated = () =>
   useSessionStore.getState().mode === "authenticated";
 
 export const useVolunteerActivitiesStore =
-  create<VolunteerActivitiesState>((set) => ({
+  create<VolunteerActivitiesState>((set, get) => ({
     activities: [],
 
     loadActivities: async () => {
@@ -32,12 +33,34 @@ export const useVolunteerActivitiesStore =
         set((state) => ({
           activities: [activity, ...state.activities],
         }));
+        useNotificationsStore.getState().addNotification({
+          category: "system",
+          title: "Actividad creada",
+          description: activity.notes
+            ? `Se creo una actividad: ${activity.notes}.`
+            : "Se creo una actividad.",
+          href: "/people/volunteers",
+          actionLabel: "Ver actividades",
+          icon: "volunteer_activism",
+          tone: "bg-indigo-50 text-indigo-600",
+        });
         return;
       }
       await db.volunteerActivities.put(activity);
       set((state) => ({
         activities: [activity, ...state.activities],
       }));
+      useNotificationsStore.getState().addNotification({
+        category: "system",
+        title: "Actividad creada",
+        description: activity.notes
+          ? `Se creo una actividad: ${activity.notes}.`
+          : "Se creo una actividad.",
+        href: "/people/volunteers",
+        actionLabel: "Ver actividades",
+        icon: "volunteer_activism",
+        tone: "bg-indigo-50 text-indigo-600",
+      });
     },
 
     updateActivity: async (activity) => {
@@ -47,6 +70,17 @@ export const useVolunteerActivitiesStore =
             item.id === activity.id ? activity : item
           ),
         }));
+        useNotificationsStore.getState().addNotification({
+          category: "system",
+          title: "Actividad actualizada",
+          description: activity.notes
+            ? `Se actualizo una actividad: ${activity.notes}.`
+            : "Se actualizo una actividad.",
+          href: "/people/volunteers",
+          actionLabel: "Ver actividades",
+          icon: "edit",
+          tone: "bg-blue-50 text-blue-600",
+        });
         return;
       }
       await db.volunteerActivities.put(activity);
@@ -55,19 +89,53 @@ export const useVolunteerActivitiesStore =
           item.id === activity.id ? activity : item
         ),
       }));
+      useNotificationsStore.getState().addNotification({
+        category: "system",
+        title: "Actividad actualizada",
+        description: activity.notes
+          ? `Se actualizo una actividad: ${activity.notes}.`
+          : "Se actualizo una actividad.",
+        href: "/people/volunteers",
+        actionLabel: "Ver actividades",
+        icon: "edit",
+        tone: "bg-blue-50 text-blue-600",
+      });
     },
 
     deleteActivity: async (id) => {
+      const target = get().activities.find((item) => item.id === id);
       if (!isAuthenticated()) {
         set((state) => ({
           activities: state.activities.filter((item) => item.id !== id),
         }));
+        useNotificationsStore.getState().addNotification({
+          category: "system",
+          title: "Actividad eliminada",
+          description: target?.notes
+            ? `Se elimino la actividad: ${target.notes}.`
+            : "Se elimino una actividad.",
+          href: "/people/volunteers",
+          actionLabel: "Ver actividades",
+          icon: "delete",
+          tone: "bg-rose-50 text-rose-600",
+        });
         return;
       }
       await db.volunteerActivities.delete(id);
       set((state) => ({
         activities: state.activities.filter((item) => item.id !== id),
       }));
+      useNotificationsStore.getState().addNotification({
+        category: "system",
+        title: "Actividad eliminada",
+        description: target?.notes
+          ? `Se elimino la actividad: ${target.notes}.`
+          : "Se elimino una actividad.",
+        href: "/people/volunteers",
+        actionLabel: "Ver actividades",
+        icon: "delete",
+        tone: "bg-rose-50 text-rose-600",
+      });
     },
 
     resetActivities: () => set({ activities: [] }),

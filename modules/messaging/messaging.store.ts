@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { MessageTemplate } from "./messaging.types";
+import { useNotificationsStore } from "@/core/notifications/notifications.store";
 
 const createTemplateId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -74,6 +75,15 @@ export const useMessagingStore = create<MessagingState>()(
           updatedAt: stamp,
         };
         set((state) => ({ templates: [template, ...state.templates] }));
+        useNotificationsStore.getState().addNotification({
+          category: "system",
+          title: "Plantilla creada",
+          description: `Se creo la plantilla ${template.title}.`,
+          href: "/messaging",
+          actionLabel: "Ver plantillas",
+          icon: "mail",
+          tone: "bg-sky-50 text-sky-600",
+        });
         return template;
       },
       updateTemplate: (id, updates) => {
@@ -88,12 +98,34 @@ export const useMessagingStore = create<MessagingState>()(
         set({
           templates: templates.map((item) => (item.id === id ? updated : item)),
         });
+        useNotificationsStore.getState().addNotification({
+          category: "system",
+          title: "Plantilla actualizada",
+          description: `Se actualizo la plantilla ${updated.title}.`,
+          href: "/messaging",
+          actionLabel: "Ver plantillas",
+          icon: "mark_email_read",
+          tone: "bg-blue-50 text-blue-600",
+        });
         return updated;
       },
-      removeTemplate: (id) =>
+      removeTemplate: (id) => {
+        const target = get().templates.find((item) => item.id === id);
         set((state) => ({
           templates: state.templates.filter((item) => item.id !== id),
-        })),
+        }));
+        useNotificationsStore.getState().addNotification({
+          category: "system",
+          title: "Plantilla eliminada",
+          description: target?.title
+            ? `Se elimino la plantilla ${target.title}.`
+            : "Se elimino una plantilla.",
+          href: "/messaging",
+          actionLabel: "Ver plantillas",
+          icon: "delete",
+          tone: "bg-rose-50 text-rose-600",
+        });
+      },
     }),
     {
       name: "kora-messaging",

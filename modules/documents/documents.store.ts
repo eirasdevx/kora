@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { db } from "@/core/storage/kora.db";
 import { DocumentItem } from "./document.types";
 import { useSessionStore } from "@/core/session/session.store";
+import { useNotificationsStore } from "@/core/notifications/notifications.store";
 
 interface DocumentsState {
   documents: DocumentItem[];
@@ -15,7 +16,7 @@ interface DocumentsState {
 const isAuthenticated = () =>
   useSessionStore.getState().mode === "authenticated";
 
-export const useDocumentsStore = create<DocumentsState>((set) => ({
+export const useDocumentsStore = create<DocumentsState>((set, get) => ({
   documents: [],
 
   loadDocuments: async () => {
@@ -25,6 +26,7 @@ export const useDocumentsStore = create<DocumentsState>((set) => ({
   },
 
   upsertDocument: async (doc) => {
+    const exists = get().documents.some((item) => item.id === doc.id);
     if (!isAuthenticated()) {
       set((state) => {
         const exists = state.documents.some((item) => item.id === doc.id);
@@ -35,6 +37,17 @@ export const useDocumentsStore = create<DocumentsState>((set) => ({
               )
             : [doc, ...state.documents],
         };
+      });
+      useNotificationsStore.getState().addNotification({
+        category: "documents",
+        title: exists ? "Documento actualizado" : "Documento agregado",
+        description: doc.name
+          ? `Se ${exists ? "actualizo" : "agrego"} ${doc.name}.`
+          : "Se guardo un documento.",
+        href: "/documents",
+        actionLabel: "Ver documento",
+        icon: "description",
+        tone: "bg-blue-50 text-blue-600",
       });
       return;
     }
@@ -48,6 +61,17 @@ export const useDocumentsStore = create<DocumentsState>((set) => ({
             )
           : [doc, ...state.documents],
       };
+    });
+    useNotificationsStore.getState().addNotification({
+      category: "documents",
+      title: exists ? "Documento actualizado" : "Documento agregado",
+      description: doc.name
+        ? `Se ${exists ? "actualizo" : "agrego"} ${doc.name}.`
+        : "Se guardo un documento.",
+      href: "/documents",
+      actionLabel: "Ver documento",
+      icon: "description",
+      tone: "bg-blue-50 text-blue-600",
     });
   },
 
@@ -76,16 +100,39 @@ export const useDocumentsStore = create<DocumentsState>((set) => ({
   },
 
   deleteDocument: async (id) => {
+    const target = get().documents.find((item) => item.id === id);
     if (!isAuthenticated()) {
       set((state) => ({
         documents: state.documents.filter((item) => item.id !== id),
       }));
+      useNotificationsStore.getState().addNotification({
+        category: "documents",
+        title: "Documento eliminado",
+        description: target?.name
+          ? `Se elimino ${target.name}.`
+          : "Se elimino un documento.",
+        href: "/documents",
+        actionLabel: "Ver documentos",
+        icon: "delete",
+        tone: "bg-rose-50 text-rose-600",
+      });
       return;
     }
     await db.documents.delete(id);
     set((state) => ({
       documents: state.documents.filter((item) => item.id !== id),
     }));
+    useNotificationsStore.getState().addNotification({
+      category: "documents",
+      title: "Documento eliminado",
+      description: target?.name
+        ? `Se elimino ${target.name}.`
+        : "Se elimino un documento.",
+      href: "/documents",
+      actionLabel: "Ver documentos",
+      icon: "delete",
+      tone: "bg-rose-50 text-rose-600",
+    });
   },
 
   resetDocuments: () => set({ documents: [] }),

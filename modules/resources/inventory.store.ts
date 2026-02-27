@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { db } from "@/core/storage/kora.db";
 import { useSessionStore } from "@/core/session/session.store";
 import { InventoryItem, InventoryStatus } from "./inventory.types";
+import { useNotificationsStore } from "@/core/notifications/notifications.store";
 
 interface InventoryState {
   items: InventoryItem[];
@@ -45,7 +46,7 @@ const normalizeItem = (item: InventoryItem): InventoryItem => {
   };
 };
 
-export const useInventoryStore = create<InventoryState>((set) => ({
+export const useInventoryStore = create<InventoryState>((set, get) => ({
   items: [],
 
   loadItems: async () => {
@@ -56,6 +57,7 @@ export const useInventoryStore = create<InventoryState>((set) => ({
   },
 
   upsertItem: async (item) => {
+    const exists = get().items.some((entry) => entry.id === item.id);
     const normalized = normalizeItem(item);
     if (!isAuthenticated()) {
       set((state) => {
@@ -67,6 +69,19 @@ export const useInventoryStore = create<InventoryState>((set) => ({
               )
             : [normalized, ...state.items],
         };
+      });
+      useNotificationsStore.getState().addNotification({
+        category: "system",
+        title: exists ? "Recurso actualizado" : "Nuevo recurso registrado",
+        description: normalized.name
+          ? `Se ${exists ? "actualizo" : "registro"} ${normalized.name}.`
+          : exists
+            ? "Se actualizo un recurso."
+            : "Se registro un recurso.",
+        href: "/resources",
+        actionLabel: "Ver recursos",
+        icon: "inventory_2",
+        tone: "bg-slate-100 text-slate-600",
       });
       return;
     }
@@ -82,13 +97,38 @@ export const useInventoryStore = create<InventoryState>((set) => ({
           : [normalized, ...state.items],
       };
     });
+    useNotificationsStore.getState().addNotification({
+      category: "system",
+      title: exists ? "Recurso actualizado" : "Nuevo recurso registrado",
+      description: normalized.name
+        ? `Se ${exists ? "actualizo" : "registro"} ${normalized.name}.`
+        : exists
+          ? "Se actualizo un recurso."
+          : "Se registro un recurso.",
+      href: "/resources",
+      actionLabel: "Ver recursos",
+      icon: "inventory_2",
+      tone: "bg-slate-100 text-slate-600",
+    });
   },
 
   removeItem: async (id) => {
+    const target = get().items.find((entry) => entry.id === id);
     if (!isAuthenticated()) {
       set((state) => ({
         items: state.items.filter((entry) => entry.id !== id),
       }));
+      useNotificationsStore.getState().addNotification({
+        category: "system",
+        title: "Recurso eliminado",
+        description: target?.name
+          ? `Se elimino ${target.name}.`
+          : "Se elimino un recurso.",
+        href: "/resources",
+        actionLabel: "Ver recursos",
+        icon: "delete",
+        tone: "bg-rose-50 text-rose-600",
+      });
       return;
     }
 
@@ -96,16 +136,45 @@ export const useInventoryStore = create<InventoryState>((set) => ({
     set((state) => ({
       items: state.items.filter((entry) => entry.id !== id),
     }));
+    useNotificationsStore.getState().addNotification({
+      category: "system",
+      title: "Recurso eliminado",
+      description: target?.name
+        ? `Se elimino ${target.name}.`
+        : "Se elimino un recurso.",
+      href: "/resources",
+      actionLabel: "Ver recursos",
+      icon: "delete",
+      tone: "bg-rose-50 text-rose-600",
+    });
   },
 
   clearItems: async () => {
     if (!isAuthenticated()) {
       set({ items: [] });
+      useNotificationsStore.getState().addNotification({
+        category: "system",
+        title: "Inventario limpiado",
+        description: "Se eliminaron todos los recursos del inventario.",
+        href: "/resources",
+        actionLabel: "Ver recursos",
+        icon: "delete_sweep",
+        tone: "bg-rose-50 text-rose-600",
+      });
       return;
     }
 
     await db.inventory.clear();
     set({ items: [] });
+    useNotificationsStore.getState().addNotification({
+      category: "system",
+      title: "Inventario limpiado",
+      description: "Se eliminaron todos los recursos del inventario.",
+      href: "/resources",
+      actionLabel: "Ver recursos",
+      icon: "delete_sweep",
+      tone: "bg-rose-50 text-rose-600",
+    });
   },
 
   resetItems: () => set({ items: [] }),
