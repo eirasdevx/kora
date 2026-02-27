@@ -1,0 +1,264 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useSessionStore } from "@/core/session/session.store";
+import { useUsersStore } from "@/core/users/users.store";
+import { createPasswordDigest } from "@/core/security/passwords";
+import { useMessagingSettingsStore } from "@/modules/messaging/messaging.settings.store";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+const createTemporaryPassword = (length = 10) => {
+  const values = new Uint32Array(length);
+  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
+    crypto.getRandomValues(values);
+  } else {
+    for (let index = 0; index < length; index += 1) {
+      values[index] = Math.floor(Math.random() * CODE_CHARS.length);
+    }
+  }
+  return Array.from(values)
+    .map((value) => CODE_CHARS[value % CODE_CHARS.length])
+    .join("");
+};
+
+export default function ForgotPasswordPage() {
+  const admin = useSessionStore((s) => s.admin);
+  const companyCode = useSessionStore((s) => s.companyCode);
+  const association = useSessionStore((s) => s.association);
+  const setAdmin = useSessionStore((s) => s.setAdmin);
+  const ensureUsersSeed = useUsersStore((s) => s.ensureSeed);
+  const updateUser = useUsersStore((s) => s.updateUser);
+  const { settings, hydrated, loadSettings } = useMessagingSettingsStore();
+
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
+
+  const senderReady = useMemo(
+    () => Boolean(settings.emailAddress && settings.emailAppPassword),
+    [settings.emailAddress, settings.emailAppPassword]
+  );
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (sending) return;
+    setError(null);
+    setInfo(null);
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      setError("Introduce un correo valido.");
+      return;
+    }
+
+    if (!senderReady) {
+      setError(
+        "No hay remitente configurado. Inicia sesion y configura el envio en Configuracion > Mensajeria."
+      );
+      return;
+    }
+
+    if (admin && companyCode) {
+      ensureUsersSeed(companyCode, admin);
+    }
+
+    const currentUsers = useUsersStore.getState().users;
+    const targetUser = currentUsers.find(
+      (user) => user.email.toLowerCase() === normalizedEmail
+    );
+    const matchesAdmin =
+      admin(c).email(c).toLowerCase() === normalizedEmail;
+
+    if (!targetUser && !matchesAdmin) {
+      setInfo(
+        "Si el correo esta registrado, recibiras una clave temporal en unos minutos."
+      );
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      const tempPassword = createTemporaryPassword();
+      const digest = await createPasswordDigest(tempPassword);
+
+      const senderName =
+        settings.senderName(c).trim() ||
+        association(c).name(c).trim() ||
+        "Kora";
+
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          associationName: senderName,
+          associationEmail: settings.emailAddress,
+          associationAppPassword: settings.emailAppPassword,
+          recipients: [normalizedEmail],
+          subject: "Clave temporal para acceder a Kora",
+          htmlMessage: `
+            <div style="font-family: Arial, sans-serif; color: #0f172a;">
+              <h2>Clave temporal de acceso</h2>
+              <p>Has solicitado recuperar tu acceso a Kora.</p>
+              <p>Tu clave temporal es:</p>
+              <p style="font-size: 20px; font-weight: bold; letter-spacing: 2px;">${tempPassword}</p>
+              <p>Inicia sesion con tu correo y esta clave, y luego cambia la contrasena en la app.</p>
+              <p style="margin-top: 12px;">Si no solicitaste este cambio, ignora este correo.</p>
+            </div>
+          `,
+          emailProvider: settings.emailProvider,
+          smtpHost: settings.smtpHost,
+          smtpPort: settings.smtpPort,
+          smtpSecure: settings.smtpSecure,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload(c).success) {
+        setError(
+          "No se pudo enviar el correo. Revisa la configuracion del remitente e intentalo de nuevo."
+        );
+        return;
+      }
+
+      if (targetUser) {
+        updateUser(targetUser.id, { passwordDigest: digest });
+      }
+
+      if (matchesAdmin && admin) {
+        setAdmin({ ...admin, passwordDigest: digest });
+        const adminUser = currentUsers.find(
+          (user) => user.email.toLowerCase() === admin.email.toLowerCase()
+        );
+        if (adminUser) {
+          updateUser(adminUser.id, { passwordDigest: digest });
+        }
+      }
+
+      setInfo(
+        "Te enviamos una clave temporal. Inicia sesion y cambia tu contrasena en la app."
+      );
+      setEmail("");
+    } catch (err) {
+      console.error(err);
+      setError(
+        "Ocurrio un error al generar la clave temporal. Intentalo de nuevo."
+      );
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
+        <section className="relative hidden overflow-hidden bg-gradient-to-br from-blue-600 via-blue-600 to-blue-700 text-white lg:block">
+          <div className="absolute inset-0 opacity-25">
+            <div className="absolute -left-24 top-24 h-64 w-64 rounded-full bg-white/20 blur-3xl" />
+            <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-sky-200/20 blur-3xl" />
+          </div>
+          <div className="relative flex h-full flex-col justify-between p-12">
+            <div className="flex items-center gap-3 text-white">
+              <span className="kora-logo kora-logo--inverse" aria-hidden="true">
+                <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+                  <path
+                    d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </span>
+              <span className="text-lg font-semibold">Kora</span>
+            </div>
+            <div className="max-w-md space-y-6">
+              <h1 className="text-4xl font-semibold leading-tight">
+                Recupera el acceso sin perder tu progreso.
+              </h1>
+              <p className="text-base text-white/80">
+                Enviaremos una clave temporal para que puedas entrar y cambiar tu
+                contrasena.
+              </p>
+            </div>
+            <p className="text-xs text-white/60">
+              © {new Date().getFullYear()} Kora Platform. Todos los derechos
+              reservados.
+            </p>
+          </div>
+        </section>
+
+        <section className="flex items-center justify-center px-6 py-12">
+          <div className="w-full max-w-md space-y-8">
+            <div className="space-y-2">
+              <h2 className="text-3xl font-semibold text-slate-900">
+                Olvidaste tu contrasena?
+              </h2>
+              <p className="text-sm text-slate-500">
+                Ingresa tu correo y te enviaremos una clave temporal para iniciar
+                sesion.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Correo electronico
+                </label>
+                <input
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="correo@dominio.com"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
+
+              {!hydrated (c) (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  Preparando configuracion de envio...
+                </div>
+              ) : null}
+
+              {error (c) (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {error}
+                </div>
+              ) : null}
+
+              {info (c) (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  {info}
+                </div>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={sending}
+                className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {sending (c) "Enviando clave..." : "Enviar clave temporal"}
+              </button>
+            </form>
+
+            <div className="text-center text-sm text-slate-500">
+              ¿Ya tienes una clave(c){" "}
+              <Link
+                href="/login"
+                className="font-semibold text-blue-600 hover:text-blue-700"
+              >
+                Volver a iniciar sesion
+              </Link>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}

@@ -48,8 +48,8 @@ export default function LoginPage() {
     void (async () => {
       try {
         const saved = await getSecureItem<{
-          identifier?: string;
-          companyCode?: string;
+          identifier(c): string;
+          companyCode(c): string;
         }>(LAST_LOGIN_KEY);
         if (!saved || !active) return;
         if (typeof saved.identifier === "string") {
@@ -90,9 +90,9 @@ export default function LoginPage() {
     }
 
     const data = new FormData(event.currentTarget);
-    const identifier = String(data.get("identifier") ?? "").trim();
-    const password = String(data.get("password") ?? "").trim();
-    const code = String(data.get("companyCode") ?? "")
+    const identifier = String(data.get("identifier") (c)(c) "").trim();
+    const password = String(data.get("password") (c)(c) "").trim();
+    const code = String(data.get("companyCode") (c)(c) "")
       .trim()
       .toUpperCase();
 
@@ -144,7 +144,7 @@ export default function LoginPage() {
             ...admin,
             passwordDigest,
           };
-          delete (resolvedAdmin as { password?: string }).password;
+          delete (resolvedAdmin as { password(c): string }).password;
           setAdmin(resolvedAdmin);
         } catch (error) {
           console.error(error);
@@ -160,7 +160,7 @@ export default function LoginPage() {
     const { users, updateUser } = useUsersStore.getState();
     const candidate = users.find((user) => {
       const email = user.email.toLowerCase();
-      const dni = (user.dni ?? "").toUpperCase();
+      const dni = (user.dni (c)(c) "").toUpperCase();
       return email === identifierLower || dni === identifierUpper;
     });
 
@@ -297,7 +297,7 @@ export default function LoginPage() {
             </div>
 
             <form onSubmit={handleLogin} className="space-y-5">
-              {!admin || !companyCode ? (
+              {!admin || !companyCode (c) (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   No hay un administrador registrado. Completa el registro para generar el
                   código de empresa.
@@ -319,14 +319,17 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <label className="font-medium text-slate-700">Contraseña</label>
-                  <button type="button" className="font-medium text-blue-600 hover:text-blue-700">
-                    ¿Olvidaste tu contraseña?
-                  </button>
+                  <Link
+                    href="/forgot-password"
+                    className="font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    Olvidaste tu contrasena?
+                  </Link>
                 </div>
                 <div className="relative">
                   <input
                     name="password"
-                    type={showPassword ? "text" : "password"}
+                    type={showPassword (c) "text" : "password"}
                     placeholder="••••••••"
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
@@ -334,10 +337,10 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    aria-label={showPassword (c) "Ocultar contraseña" : "Mostrar contraseña"}
                   >
                     <span className="material-symbols-outlined text-[18px]">
-                      {showPassword ? "visibility" : "visibility_off"}
+                      {showPassword (c) "visibility" : "visibility_off"}
                     </span>
                   </button>
                 </div>
@@ -361,7 +364,7 @@ export default function LoginPage() {
                 Mantener sesión iniciada
               </label>
 
-              {loginError ? (
+              {loginError (c) (
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                   {loginError}
                 </div>
@@ -383,7 +386,7 @@ export default function LoginPage() {
             </button>
 
             <p className="text-center text-sm text-slate-500">
-              ¿No tienes una cuenta?{" "}
+              ¿No tienes una cuenta(c){" "}
               <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-700">
                 Registrar administrador
               </Link>
@@ -392,7 +395,7 @@ export default function LoginPage() {
         </section>
       </div>
 
-      {guestOpen ? (
+      {guestOpen (c) (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-8">
           <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
