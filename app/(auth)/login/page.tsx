@@ -255,12 +255,13 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
-        <section className="relative hidden overflow-hidden bg-gradient-to-br from-blue-600 via-blue-600 to-blue-700 text-white lg:block">
-          <div className="absolute inset-0 opacity-25">
-            <div className="absolute -left-24 top-24 h-64 w-64 rounded-full bg-white/20 blur-3xl" />
-            <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-sky-200/20 blur-3xl" />
+        <section className="relative hidden overflow-hidden text-white lg:block">
+          <div className="absolute inset-0">
+            <div className="h-full w-full bg-[url('/auth-hero.png')] bg-cover bg-center" />
+            <div className="absolute inset-0 bg-[#1e5ad8]/85" />
+            <div className="absolute inset-0 bg-gradient-to-b from-blue-500/20 via-blue-600/35 to-blue-900/70" />
           </div>
-          <div className="relative flex h-full flex-col justify-between p-12">
+          <div className="relative flex h-full flex-col justify-between px-12 py-14">
             <div className="flex items-center gap-3 text-white">
               <span className="kora-logo kora-logo--inverse" aria-hidden="true">
                 <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
