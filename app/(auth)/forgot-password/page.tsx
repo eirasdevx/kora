@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
       (user) => user.email.toLowerCase() === normalizedEmail
     );
     const matchesAdmin =
-      admin(c).email(c).toLowerCase() === normalizedEmail;
+      admin?.email?.toLowerCase() === normalizedEmail;
 
     if (!targetUser && !matchesAdmin) {
       setInfo(
@@ -91,8 +91,8 @@ export default function ForgotPasswordPage() {
       const digest = await createPasswordDigest(tempPassword);
 
       const senderName =
-        settings.senderName(c).trim() ||
-        association(c).name(c).trim() ||
+        (settings.senderName ?? "").trim() ||
+        (association?.name ?? "").trim() ||
         "Kora";
 
       const response = await fetch("/api/send-email", {
@@ -122,7 +122,7 @@ export default function ForgotPasswordPage() {
       });
 
       const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload(c).success) {
+      if (!response.ok || !payload?.success) {
         setError(
           "No se pudo enviar el correo. Revisa la configuracion del remitente e intentalo de nuevo."
         );
@@ -220,19 +220,19 @@ export default function ForgotPasswordPage() {
                 />
               </div>
 
-              {!hydrated (c) (
+              {!hydrated ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                   Preparando configuracion de envio...
                 </div>
               ) : null}
 
-              {error (c) (
+              {error ? (
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                   {error}
                 </div>
               ) : null}
 
-              {info (c) (
+              {info ? (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                   {info}
                 </div>
@@ -243,12 +243,12 @@ export default function ForgotPasswordPage() {
                 disabled={sending}
                 className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {sending (c) "Enviando clave..." : "Enviar clave temporal"}
+                {sending ? "Enviando clave..." : "Enviar clave temporal"}
               </button>
             </form>
 
             <div className="text-center text-sm text-slate-500">
-              ¿Ya tienes una clave(c){" "}
+              ¿Ya tienes una clave?{" "}
               <Link
                 href="/login"
                 className="font-semibold text-blue-600 hover:text-blue-700"
