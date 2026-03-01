@@ -61,6 +61,13 @@ const toCounterBuffer = (counter: number) => {
   return buffer;
 };
 
+const toArrayBuffer = (bytes: Uint8Array): ArrayBuffer => {
+  if (bytes.buffer instanceof ArrayBuffer) {
+    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  }
+  return new Uint8Array(bytes).buffer as ArrayBuffer;
+};
+
 const signHmac = async (secret: Uint8Array, counter: number) => {
   const cryptoRef = globalThis.crypto;
   if (!cryptoRef?.subtle) {
@@ -68,7 +75,7 @@ const signHmac = async (secret: Uint8Array, counter: number) => {
   }
   const key = await cryptoRef.subtle.importKey(
     "raw",
-    secret,
+    toArrayBuffer(secret),
     { name: "HMAC", hash: "SHA-1" },
     false,
     ["sign"]
