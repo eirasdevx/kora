@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import { useSessionStore } from "@/core/session/session.store";
@@ -539,14 +546,6 @@ function resolvePreferences(preferences?: UserPreferences): UserPreferences {
   };
 }
 
-function EyeIcon({ open }: { open: boolean }) {
-  return (
-    <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
-      {open ? "visibility" : "visibility_off"}
-    </span>
-  );
-}
-
 function ToggleSwitch({
   checked,
   onChange,
@@ -590,16 +589,13 @@ function UserProfileCard({
   preferences: UserPreferences;
   copy: Copy;
   dateLocale: string;
-  onPreferencesChange: (next: UserPreferences) => void;
+  onPreferencesChange: Dispatch<SetStateAction<UserPreferences>>;
   onResetPreferences: () => void;
   onSave: (updates: Partial<UserAccount>) => void;
 }) {
   const [form, setForm] = useState<UserProfileFormState>(
     getUserFormState(user)
   );
-  const [showPassword, setShowPassword] = useState(false);
-  const [showRepeat, setShowRepeat] = useState(false);
-  const [passwordOpen, setPasswordOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -607,11 +603,21 @@ function UserProfileCard({
   useEffect(() => {
     setForm(getUserFormState(user));
     setFormError(null);
-    setPasswordOpen(false);
-    setShowPassword(false);
-    setShowRepeat(false);
     setLastSavedAt(null);
   }, [user?.id]);
+
+  const updatePreferences = (
+    updater: (prev: UserPreferences) => UserPreferences,
+    persist = false
+  ) => {
+    onPreferencesChange((prev) => {
+      const next = updater(prev);
+      if (persist && user) {
+        onSave({ preferences: resolvePreferences(next) });
+      }
+      return next;
+    });
+  };
 
   const fullName = `${form.firstName} ${form.lastName}`.trim();
   const displayName = fullName || user?.name || copy.userFallback;
@@ -724,7 +730,6 @@ function UserProfileCard({
 
     onSave(updates);
     setLastSavedAt(Date.now());
-    setPasswordOpen(false);
     setForm((prev) => ({
       ...prev,
       firstName,
@@ -741,7 +746,6 @@ function UserProfileCard({
   const handleReset = () => {
     setForm(getUserFormState(user));
     setFormError(null);
-    setPasswordOpen(false);
     onResetPreferences();
   };
 
@@ -839,7 +843,7 @@ function UserProfileCard({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6">
         <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
@@ -903,143 +907,143 @@ function UserProfileCard({
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-              <span className="material-symbols-outlined text-[16px]">lock</span>
-            </span>
-            {copy.securityAccount}
+      <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+            <span className="material-symbols-outlined text-[16px]">settings</span>
+          </span>
+          {copy.preferencesTitle}
+        </div>
+        <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-gray-500">
+                {copy.languageLabel}
+              </label>
+              <select
+                value={preferences.language}
+                onChange={(event) =>
+                  updatePreferences(
+                    (prev) => ({
+                      ...prev,
+                      language: event.target.value,
+                    }),
+                    true
+                  )
+                }
+                className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
+              >
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500">
+                {copy.timezoneLabel}
+              </label>
+              <select
+                value={preferences.timezone}
+                onChange={(event) =>
+                  updatePreferences(
+                    (prev) => ({
+                      ...prev,
+                      timezone: event.target.value,
+                    }),
+                    true
+                  )
+                }
+                className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
+              >
+                <option>(GMT+01:00) Madrid</option>
+                <option>(GMT+00:00) Lisboa</option>
+                <option>(GMT-03:00) Buenos Aires</option>
+              </select>
+            </div>
           </div>
-          <div className="mt-5 space-y-4">
+          <div className="space-y-4">
             <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-gray-800">{copy.password}</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  {copy.systemNotifications}
+                </p>
                 <p className="text-xs text-gray-400">
-                  {lastSavedAt
-                    ? copy.lastUpdate(
-                        new Date(lastSavedAt).toLocaleDateString(dateLocale)
-                      )
-                    : copy.noChanges}
+                  {copy.systemNotificationsDescription}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setPasswordOpen((prev) => {
-                    if (prev) {
-                      setForm((current) => ({
-                        ...current,
-                        password: "",
-                        passwordRepeat: "",
-                      }));
-                      setShowPassword(false);
-                      setShowRepeat(false);
-                    }
-                    return !prev;
-                  });
-                }}
-                className="text-sm font-semibold text-primary"
-              >
-                {passwordOpen ? copy.cancel : copy.change}
-              </button>
-            </div>
-
-            {passwordOpen ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500">
-                    {copy.newPassword}
-                  </label>
-                  <div className="relative mt-2">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={form.password}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          password: event.target.value,
-                        }))
-                      }
-                      placeholder="********"
-                      className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-11 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      aria-label={
-                        showPassword ? copy.hidePassword : copy.showPassword
-                      }
-                    >
-                      <EyeIcon open={showPassword} />
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-500">
-                    {copy.repeatPassword}
-                  </label>
-                  <div className="relative mt-2">
-                    <input
-                      type={showRepeat ? "text" : "password"}
-                      value={form.passwordRepeat}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          passwordRepeat: event.target.value,
-                        }))
-                      }
-                      placeholder="********"
-                      className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 pr-11 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowRepeat((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      aria-label={
-                        showRepeat ? copy.hidePassword : copy.showPassword
-                      }
-                    >
-                      <EyeIcon open={showRepeat} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-800">{copy.auth2fa}</p>
-                <p className="text-xs text-gray-400">{copy.auth2faDescription}</p>
-              </div>
               <ToggleSwitch
-                checked={preferences.twoFactorEnabled}
+                checked={preferences.notifications.updates}
                 onChange={() =>
-                  onPreferencesChange({
-                    ...preferences,
-                    twoFactorEnabled: !preferences.twoFactorEnabled,
-                  })
+                  updatePreferences(
+                    (prev) => ({
+                      ...prev,
+                      notifications: {
+                        ...prev.notifications,
+                        updates: !prev.notifications.updates,
+                      },
+                    }),
+                    true
+                  )
                 }
               />
             </div>
-
             <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-gray-800">
-                  {copy.activeSessions}
+                  {copy.emailAlerts}
                 </p>
                 <p className="text-xs text-gray-400">
-                  {copy.activeSessionsDescription}
+                  {copy.emailAlertsDescription}
                 </p>
               </div>
-              <button type="button" className="text-sm font-semibold text-primary">
-                {copy.viewDetails}
-              </button>
+              <ToggleSwitch
+                checked={preferences.notifications.email}
+                onChange={() =>
+                  updatePreferences(
+                    (prev) => ({
+                      ...prev,
+                      notifications: {
+                        ...prev.notifications,
+                        email: !prev.notifications.email,
+                      },
+                    }),
+                    true
+                  )
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">
+                  {copy.browserNotifications}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {copy.browserNotificationsDescription}
+                </p>
+              </div>
+              <ToggleSwitch
+                checked={preferences.notifications.browser}
+                onChange={() =>
+                  updatePreferences(
+                    (prev) => ({
+                      ...prev,
+                      notifications: {
+                        ...prev.notifications,
+                        browser: !prev.notifications.browser,
+                      },
+                    }),
+                    true
+                  )
+                }
+              />
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-gray-400">{statusLabel}</p>
@@ -1098,6 +1102,7 @@ export default function ProfileSettingsPage() {
   useEffect(() => {
     setPreferences(resolvePreferences(activeUser?.preferences));
   }, [activeUser?.id]);
+
 
   useEffect(() => {
     if (!hydrated || mode !== "authenticated") return;
@@ -1185,127 +1190,6 @@ export default function ProfileSettingsPage() {
           updateUser(activeUser.id, updates);
         }}
       />
-
-      <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-            <span className="material-symbols-outlined text-[16px]">settings</span>
-          </span>
-          {copy.preferencesTitle}
-        </div>
-        <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-gray-500">
-                {copy.languageLabel}
-              </label>
-              <select
-                value={preferences.language}
-                onChange={(event) =>
-                  setPreferences((prev) => ({
-                    ...prev,
-                    language: event.target.value,
-                  }))
-                }
-                className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
-              >
-                {LANGUAGE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-500">
-                {copy.timezoneLabel}
-              </label>
-              <select
-                value={preferences.timezone}
-                onChange={(event) =>
-                  setPreferences((prev) => ({
-                    ...prev,
-                    timezone: event.target.value,
-                  }))
-                }
-                className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
-              >
-                <option>(GMT+01:00) Madrid</option>
-                <option>(GMT+00:00) Lisboa</option>
-                <option>(GMT-03:00) Buenos Aires</option>
-              </select>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-800">
-                  {copy.systemNotifications}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {copy.systemNotificationsDescription}
-                </p>
-              </div>
-              <ToggleSwitch
-                checked={preferences.notifications.updates}
-                onChange={() =>
-                  setPreferences((prev) => ({
-                    ...prev,
-                    notifications: {
-                      ...prev.notifications,
-                      updates: !prev.notifications.updates,
-                    },
-                  }))
-                }
-              />
-            </div>
-            <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-800">
-                  {copy.emailAlerts}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {copy.emailAlertsDescription}
-                </p>
-              </div>
-              <ToggleSwitch
-                checked={preferences.notifications.email}
-                onChange={() =>
-                  setPreferences((prev) => ({
-                    ...prev,
-                    notifications: {
-                      ...prev.notifications,
-                      email: !prev.notifications.email,
-                    },
-                  }))
-                }
-              />
-            </div>
-            <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-800">
-                  {copy.browserNotifications}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {copy.browserNotificationsDescription}
-                </p>
-              </div>
-              <ToggleSwitch
-                checked={preferences.notifications.browser}
-                onChange={() =>
-                  setPreferences((prev) => ({
-                    ...prev,
-                    notifications: {
-                      ...prev.notifications,
-                      browser: !prev.notifications.browser,
-                    },
-                  }))
-                }
-              />
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

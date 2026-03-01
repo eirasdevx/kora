@@ -14,6 +14,7 @@ import {
   verifyPassword,
 } from "@/core/security/passwords";
 import { getSecureItem, setSecureItem } from "@/core/security/secure-storage";
+import { verifyTotp } from "@/core/security/totp";
 
 const LAST_LOGIN_KEY = "kora-last-login";
 
@@ -36,6 +37,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [identifierValue, setIdentifierValue] = useState("");
   const [companyCodeValue, setCompanyCodeValue] = useState("");
+  const [twoFactorPending, setTwoFactorPending] = useState<{
+    userId: string;
+    identifier: string;
+    companyCode: string;
+    secret: string;
+  } | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
+  const [twoFactorVerifying, setTwoFactorVerifying] = useState(false);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -78,9 +88,122 @@ export default function LoginPage() {
     }
   };
 
+  const createActivityId = () => {
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+      return crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  };
+
+  const resolveDeviceLabel = () => {
+    if (typeof navigator === "undefined") return "Navegador";
+    const ua = navigator.userAgent;
+    const browser = /Edg\//.test(ua)
+      ? "Edge"
+      : /Chrome\//.test(ua)
+        ? "Chrome"
+        : /Safari\//.test(ua)
+          ? "Safari"
+          : /Firefox\//.test(ua)
+            ? "Firefox"
+            : "Navegador";
+    const os = /Macintosh|Mac OS X/.test(ua)
+      ? "macOS"
+      : /Windows/.test(ua)
+        ? "Windows"
+        : /Android/.test(ua)
+          ? "Android"
+          : /iPhone|iPad|iPod/.test(ua)
+            ? "iOS"
+            : "Linux";
+    return `${browser} en ${os}`;
+  };
+
+  const logSecurityActivity = (userId: string, action: string) => {
+    const { users, updateUser } = useUsersStore.getState();
+    const target = users.find((user) => user.id === userId);
+    if (!target) return;
+    const entry = {
+      id: createActivityId(),
+      action,
+      device: resolveDeviceLabel(),
+      location: "Local",
+      timestamp: new Date().toISOString(),
+    };
+    updateUser(userId, {
+      lastAccessAt: new Date().toISOString(),
+      securityActivity: [
+        entry,
+        ...(target.securityActivity ?? []),
+      ].slice(0, 12),
+    });
+  };
+
+  const completeLogin = async (
+    userId: string,
+    identifier: string,
+    code: string
+  ) => {
+    await persistLastLogin(identifier, code);
+    setAuthenticated(userId);
+    logSecurityActivity(userId, "Inicio de sesión");
+    router.push("/dashboard");
+  };
+
+  const startTwoFactor = (payload: {
+    userId: string;
+    identifier: string;
+    companyCode: string;
+    secret: string;
+  }) => {
+    setTwoFactorPending(payload);
+    setTwoFactorCode("");
+    setTwoFactorError(null);
+  };
+
+  const handleTwoFactorSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+    if (!twoFactorPending) return;
+    if (twoFactorVerifying) return;
+    const token = twoFactorCode.trim();
+    if (!token) {
+      setTwoFactorError("Introduce el código de verificación.");
+      return;
+    }
+    setTwoFactorVerifying(true);
+    setTwoFactorError(null);
+    try {
+      const valid = await verifyTotp({
+        token,
+        secret: twoFactorPending.secret,
+      });
+      if (!valid) {
+        setTwoFactorError("El código es incorrecto. Inténtalo de nuevo.");
+        return;
+      }
+      await completeLogin(
+        twoFactorPending.userId,
+        twoFactorPending.identifier,
+        twoFactorPending.companyCode
+      );
+      setTwoFactorPending(null);
+      setTwoFactorCode("");
+    } catch (error) {
+      console.error(error);
+      setTwoFactorError("No se pudo validar el código.");
+    } finally {
+      setTwoFactorVerifying(false);
+    }
+  };
+
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoginError(null);
+    setTwoFactorPending(null);
+    setTwoFactorCode("");
+    setTwoFactorError(null);
 
     if (!admin || !companyCode) {
       setLoginError(
@@ -175,9 +298,17 @@ export default function LoginPage() {
               passwordDigest: resolvedAdmin.passwordDigest,
             });
           }
-          await persistLastLogin(identifier, code);
-          setAuthenticated(adminUser.id);
-          router.push("/dashboard");
+          const adminSecret = adminUser.preferences?.twoFactorSecret;
+          if (adminUser.preferences?.twoFactorEnabled && adminSecret) {
+            startTwoFactor({
+              userId: adminUser.id,
+              identifier,
+              companyCode: code,
+              secret: adminSecret,
+            });
+            return;
+          }
+          await completeLogin(adminUser.id, identifier, code);
           return;
         }
       }
@@ -236,9 +367,17 @@ export default function LoginPage() {
       }
     }
 
-    setAuthenticated(candidate.id);
-    await persistLastLogin(identifier, code);
-    router.push("/dashboard");
+    const candidateSecret = candidate.preferences?.twoFactorSecret;
+    if (candidate.preferences?.twoFactorEnabled && candidateSecret) {
+      startTwoFactor({
+        userId: candidate.id,
+        identifier,
+        companyCode: code,
+        secret: candidateSecret,
+      });
+      return;
+    }
+    await completeLogin(candidate.id, identifier, code);
   };
 
   const handleGuestSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -480,6 +619,70 @@ export default function LoginPage() {
                   className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-200 hover:bg-blue-700"
                 >
                   Continuar como invitado
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {twoFactorPending ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-8">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-slate-900">
+                Verificación en dos pasos
+              </h3>
+              <p className="text-sm text-slate-500">
+                Introduce el código de tu app para continuar.
+              </p>
+            </div>
+            <form onSubmit={handleTwoFactorSubmit} className="mt-5 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Código de verificación
+                </label>
+                <input
+                  value={twoFactorCode}
+                  onChange={(event) => {
+                    const nextValue = event.target.value.replace(/\D/g, "");
+                    setTwoFactorCode(nextValue);
+                    setTwoFactorError(null);
+                  }}
+                  placeholder="123456"
+                  inputMode="numeric"
+                  maxLength={6}
+                  autoComplete="one-time-code"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
+              {twoFactorError ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {twoFactorError}
+                </div>
+              ) : null}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTwoFactorPending(null);
+                    setTwoFactorCode("");
+                    setTwoFactorError(null);
+                  }}
+                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={twoFactorVerifying}
+                  className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold text-white ${
+                    twoFactorVerifying
+                      ? "bg-blue-400"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {twoFactorVerifying ? "Verificando..." : "Verificar"}
                 </button>
               </div>
             </form>

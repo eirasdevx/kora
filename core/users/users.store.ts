@@ -21,6 +21,8 @@ export type UserPreferences = {
     browser: boolean;
   };
   twoFactorEnabled: boolean;
+  twoFactorSecret?: string;
+  twoFactorVerifiedAt?: string;
 };
 
 export type UserPermissions = {
@@ -35,6 +37,14 @@ export type UserPermissions = {
     edit: boolean;
     delete: boolean;
   };
+};
+
+export type SecurityActivityEntry = {
+  id: string;
+  action: string;
+  device: string;
+  location: string;
+  timestamp: string;
 };
 
 export type UserAccount = {
@@ -53,6 +63,7 @@ export type UserAccount = {
   lastAccessAt: string | null;
   permissions?: UserPermissions;
   preferences?: UserPreferences;
+  securityActivity?: SecurityActivityEntry[];
 };
 
 interface UsersState {
@@ -104,7 +115,9 @@ export const createDefaultPreferences = (): UserPreferences => ({
     email: true,
     browser: false,
   },
-  twoFactorEnabled: true,
+  twoFactorEnabled: false,
+  twoFactorSecret: undefined,
+  twoFactorVerifiedAt: undefined,
 });
 
 const LANGUAGE_ALIASES: Record<string, string> = {
