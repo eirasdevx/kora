@@ -5,7 +5,7 @@ import { useEffect, useMemo } from "react";
 import AccountingKPIs from "@/components/accounting/AccountingKPIs";
 import TransactionsTable from "@/components/accounting/TransactionsTable";
 import NewTransactionButton from "@/components/accounting/NewTransactionButton";
-import PageTopbar from "@/components/PageTopbar";
+import PageHeader from "@/components/shared/PageHeader";
 
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 
@@ -39,17 +39,13 @@ export default function AccountingPage() {
 
   return (
     <div className="space-y-6">
-      <PageTopbar>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">Gestión de Contabilidad</h1>
-            <p className="text-sm text-gray-500">
-              Supervisa el flujo de caja y mantén al día la salud financiera de tu asociación.
-            </p>
-          </div>
-          <NewTransactionButton />
-        </div>
-      </PageTopbar>
+      <PageHeader
+        title="Gestión de Contabilidad"
+        subtitle="Supervisa el flujo de caja y mantén al día la salud financiera de tu asociación."
+        backHref="/finance"
+        backLabel="Volver a Finanzas"
+        actions={<NewTransactionButton />}
+      />
 
       <AccountingKPIs income={income} expense={expense} balance={balance} />
 

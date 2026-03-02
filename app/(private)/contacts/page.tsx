@@ -15,6 +15,7 @@ import ContactsHeader from "@/components/contacts/ContactsHeader";
 import ContactsTable from "@/components/contacts/ContactsTable";
 import ContactDetailPanel from "@/components/contacts/ContactDetailPanel";
 import PageTopbar from "@/components/PageTopbar";
+import BackLink from "@/components/shared/BackLink";
 
 import Modal from "@/components/Modal";
 import { downloadPdf, downloadXlsx } from "@/lib/exporters";
@@ -373,11 +374,14 @@ export default function ContactsPage() {
     return (
         <div className="flex flex-col gap-6">
             <PageTopbar>
-                <ContactsHeader
-                    onAdd={() => {
-                        router.push("/contacts/new");
-                    }}
-                />
+                <div className="space-y-4">
+                    <BackLink href="/people" label="Volver a Personas" />
+                    <ContactsHeader
+                        onAdd={() => {
+                            router.push("/contacts/new");
+                        }}
+                    />
+                </div>
             </PageTopbar>
 
             {/* Contenido principal */}

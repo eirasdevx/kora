@@ -36,9 +36,9 @@ export default function EditContactPage() {
       initialData={contact}
       onSubmit={async (updated) => {
         await addContact(updated);
-        router.push("/contacts");
+        router.push("/people/all");
       }}
-      onCancel={() => router.push("/contacts")}
+      onCancel={() => router.push("/people/all")}
     />
   );
 }

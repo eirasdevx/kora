@@ -12,9 +12,9 @@ export default function NewContactPage() {
     <ContactForm
       onSubmit={async (contact) => {
         await addContact(contact);
-        router.push("/contacts");
+        router.push("/people/all");
       }}
-      onCancel={() => router.push("/contacts")}
+      onCancel={() => router.push("/people/all")}
     />
   );
 }
