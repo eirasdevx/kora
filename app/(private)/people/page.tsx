@@ -65,6 +65,7 @@ export default function PeoplePage() {
   const { contacts, loadContacts } = useContactsStore();
   const { activities, loadActivities } = useVolunteerActivitiesStore();
   const [currentPage, setCurrentPage] = useState(1);
+  const [tableFilter, setTableFilter] = useState<PeopleSegment>("contact");
 
   useEffect(() => {
     loadContacts();
@@ -73,7 +74,7 @@ export default function PeoplePage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [contacts.length]);
+  }, [contacts.length, tableFilter]);
 
   const now = useMemo(() => new Date(), []);
   const startOfMonth = useMemo(
@@ -101,34 +102,32 @@ export default function PeoplePage() {
     return ids;
   }, [contacts, activities]);
 
-  const segmentedContacts = useMemo(
-    () =>
-      contacts.map((contact) => {
-        if (contact.types.includes("member")) {
-          return { contact, segment: "member" as const };
-        }
-        if (volunteerIds.has(contact.id)) {
-          return { contact, segment: "volunteer" as const };
-        }
-        return { contact, segment: "contact" as const };
-      }),
+  const members = useMemo(
+    () => contacts.filter((contact) => contact.types.includes("member")),
+    [contacts]
+  );
+  const volunteers = useMemo(
+    () => contacts.filter((contact) => volunteerIds.has(contact.id)),
     [contacts, volunteerIds]
   );
+  const contactPool = useMemo(
+    () =>
+      contacts.filter((contact) =>
+        contact.types.some((type) => type !== "member")
+      ),
+    [contacts]
+  );
 
-  const members = segmentedContacts
-    .filter((item) => item.segment === "member")
-    .map((item) => item.contact);
-  const volunteers = segmentedContacts
-    .filter((item) => item.segment === "volunteer")
-    .map((item) => item.contact);
-  const generalContacts = segmentedContacts
-    .filter((item) => item.segment === "contact")
-    .map((item) => item.contact);
+  const tableContacts = useMemo(() => {
+    if (tableFilter === "member") return members;
+    if (tableFilter === "volunteer") return volunteers;
+    return contactPool;
+  }, [tableFilter, members, volunteers, contactPool]);
 
   const newMembersThisMonth = members.filter((member) =>
     isOnOrAfter(member.createdAt, startOfMonth)
   ).length;
-  const newContactsThisWeek = generalContacts.filter((contact) =>
+  const newContactsThisWeek = contactPool.filter((contact) =>
     isOnOrAfter(contact.createdAt, startOfWeek)
   ).length;
 
@@ -139,12 +138,12 @@ export default function PeoplePage() {
   }, [activities, startOfMonth]);
 
   const sortedContacts = useMemo(() => {
-    return [...contacts].sort(
+    return [...tableContacts].sort(
       (a, b) =>
         new Date(b.createdAt).getTime() -
         new Date(a.createdAt).getTime()
     );
-  }, [contacts]);
+  }, [tableContacts]);
 
   const totalPages = Math.max(1, Math.ceil(sortedContacts.length / PAGE_SIZE));
   const currentPageSafe = Math.min(currentPage, totalPages);
@@ -204,7 +203,7 @@ export default function PeoplePage() {
         />
         <StatCard
           title="Contactos"
-          value={formatNumber(generalContacts.length, formatLocale)}
+          value={formatNumber(contactPool.length, formatLocale)}
           meta={`+${formatNumber(newContactsThisWeek, formatLocale)} esta semana`}
           href="/people/contacts"
           icon="contact_page"
@@ -215,7 +214,7 @@ export default function PeoplePage() {
       <section className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <SectionBlock
           title="Contactos"
-          subtitle="Listado general de personas"
+          subtitle="Listado general de contactos"
         >
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -359,13 +358,18 @@ export default function PeoplePage() {
         </SectionBlock>
 
         <SectionBlock
-          title="Navegación"
-          subtitle="Accesos rápidos"
+          title="Filtrado tabla"
+          subtitle="Selecciona el grupo a mostrar"
         >
           <div className="grid gap-3">
-            <Link
-              href="/people/members"
-              className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-primary/40 hover:bg-white"
+            <button
+              type="button"
+              onClick={() => setTableFilter("member")}
+              className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                tableFilter === "member"
+                  ? "border-primary/40 bg-white text-gray-800 shadow-sm"
+                  : "border-gray-200 bg-gray-50 text-gray-700 hover:border-primary/40 hover:bg-white"
+              }`}
             >
               <span className="flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -378,10 +382,15 @@ export default function PeoplePage() {
               <span className="text-xs font-semibold text-gray-400">
                 {formatNumber(members.length, formatLocale)}
               </span>
-            </Link>
-            <Link
-              href="/people/volunteers"
-              className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-primary/40 hover:bg-white"
+            </button>
+            <button
+              type="button"
+              onClick={() => setTableFilter("volunteer")}
+              className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                tableFilter === "volunteer"
+                  ? "border-primary/40 bg-white text-gray-800 shadow-sm"
+                  : "border-gray-200 bg-gray-50 text-gray-700 hover:border-primary/40 hover:bg-white"
+              }`}
             >
               <span className="flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
@@ -394,10 +403,15 @@ export default function PeoplePage() {
               <span className="text-xs font-semibold text-gray-400">
                 {formatNumber(volunteers.length, formatLocale)}
               </span>
-            </Link>
-            <Link
-              href="/people/contacts"
-              className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-primary/40 hover:bg-white"
+            </button>
+            <button
+              type="button"
+              onClick={() => setTableFilter("contact")}
+              className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                tableFilter === "contact"
+                  ? "border-primary/40 bg-white text-gray-800 shadow-sm"
+                  : "border-gray-200 bg-gray-50 text-gray-700 hover:border-primary/40 hover:bg-white"
+              }`}
             >
               <span className="flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
@@ -408,9 +422,9 @@ export default function PeoplePage() {
                 Contactos
               </span>
               <span className="text-xs font-semibold text-gray-400">
-                {formatNumber(generalContacts.length, formatLocale)}
+                {formatNumber(contactPool.length, formatLocale)}
               </span>
-            </Link>
+            </button>
           </div>
         </SectionBlock>
       </section>

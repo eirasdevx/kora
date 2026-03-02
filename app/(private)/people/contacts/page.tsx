@@ -32,7 +32,7 @@ function formatNumber(value: number, locale: string) {
 }
 
 function isContact(contact: Contact) {
-  return !contact.types.includes("member");
+  return contact.types.some((type) => type !== "member");
 }
 
 export default function PeopleContactsPage() {

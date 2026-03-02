@@ -479,7 +479,7 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex h-full flex-col rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
@@ -510,7 +510,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div
-            className="mt-4 grid items-end gap-3"
+            className="mt-4 grid min-h-[240px] flex-1 gap-3"
             style={{
               gridTemplateColumns: `repeat(${Math.max(
                 1,
@@ -519,18 +519,21 @@ export default function DashboardPage() {
             }}
           >
             {monthlySeries.map((month) => (
-              <div key={month.label} className="text-center">
-                <div className="flex h-24 items-end justify-center gap-2">
+              <div
+                key={month.label}
+                className="flex h-full flex-col items-center text-center"
+              >
+                <div className="flex w-full flex-1 items-end justify-center gap-2">
                   <div
                     className="w-3 rounded-full bg-primary/60"
                     style={{
-                      height: `${(month.income / maxBar) * 90}px`,
+                      height: `${(month.income / maxBar) * 100}%`,
                     }}
                   />
                   <div
                     className="w-3 rounded-full bg-orange-400/60"
                     style={{
-                      height: `${(month.expense / maxBar) * 90}px`,
+                      height: `${(month.expense / maxBar) * 100}%`,
                     }}
                   />
                 </div>

@@ -174,11 +174,6 @@ export default function RegisterPage() {
             </span>
             <span className="text-lg font-semibold text-slate-900">Kora</span>
           </div>
-          <nav className="hidden items-center gap-6 text-sm text-slate-500 md:flex">
-            <button type="button" className="hover:text-slate-900">Módulos</button>
-            <button type="button" className="hover:text-slate-900">Precios</button>
-            <button type="button" className="hover:text-slate-900">Contacto</button>
-          </nav>
           <Link
             href="/login"
             className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-200 hover:bg-blue-700"
