@@ -240,9 +240,15 @@ export default function SettingsPage() {
           los derechos reservados.
         </span>
         <div className="flex gap-6">
-          <span>Términos</span>
-          <span>Privacidad</span>
-          <span>Estado del Sistema</span>
+          <Link href="/settings/terms" className="transition hover:text-gray-700">
+            Términos
+          </Link>
+          <Link href="/settings/privacy" className="transition hover:text-gray-700">
+            Privacidad
+          </Link>
+          <Link href="/settings/status" className="transition hover:text-gray-700">
+            Estado del Sistema
+          </Link>
         </div>
       </footer>
     </div>

@@ -8,6 +8,7 @@ import StatCard from "@/components/shared/StatCard";
 import DataTable from "@/components/shared/DataTable";
 import Modal from "@/components/Modal";
 import { useLocale } from "@/core/i18n/use-locale";
+import { downloadPdf, downloadXlsx } from "@/lib/exporters";
 import { useInventoryStore } from "@/modules/resources/inventory.store";
 import { InventoryItem, InventoryStatus } from "@/modules/resources/inventory.types";
 
@@ -25,9 +26,23 @@ const ITEM_STATUS_STYLES: Record<InventoryStatus, string> = {
   retired: "bg-slate-100 text-slate-500",
 };
 
+const INVENTORY_PDF_COLUMNS = [
+  { label: "Item", width: 18 },
+  { label: "Detalles", width: 70 },
+];
+
 function formatNumber(value: number, locale: string) {
   return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatCurrency(value: number | undefined, locale: string) {
+  if (value === undefined || value === null) return "-";
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
   }).format(value);
 }
 
@@ -60,6 +75,87 @@ export default function ResourcesInventoryPage() {
     const borrowed = items.reduce((sum, item) => sum + item.borrowed, 0);
     return { total, borrowed, available: total - borrowed };
   }, [items]);
+
+  const exportRowsXlsx = useMemo(() => {
+    return items.map((item) => {
+      const status =
+        item.status ?? (item.borrowed > 0 ? "in_use" : "available");
+      const available = Math.max(0, item.quantity - item.borrowed);
+      return [
+        item.name,
+        item.category,
+        formatNumber(item.quantity, formatLocale),
+        formatNumber(item.borrowed, formatLocale),
+        formatNumber(available, formatLocale),
+        ITEM_STATUS_LABELS[status],
+        item.serial ?? "-",
+        item.location ?? "-",
+        item.assignee ?? "-",
+        formatDate(item.acquisitionDate, formatLocale),
+        formatCurrency(item.value, formatLocale),
+        item.notes ?? "-",
+      ];
+    });
+  }, [items, formatLocale]);
+
+  const exportRowsPdf = useMemo(() => {
+    return items.map((item) => {
+      const status =
+        item.status ?? (item.borrowed > 0 ? "in_use" : "available");
+      const available = Math.max(0, item.quantity - item.borrowed);
+      const details = [
+        `Categoría: ${item.category}`,
+        `Cantidad: ${formatNumber(item.quantity, formatLocale)}`,
+        `Prestados: ${formatNumber(item.borrowed, formatLocale)}`,
+        `Disponibles: ${formatNumber(available, formatLocale)}`,
+        `Estado: ${ITEM_STATUS_LABELS[status]}`,
+        item.serial ? `Serie: ${item.serial}` : null,
+        item.location ? `Ubicación: ${item.location}` : null,
+        item.assignee ? `Asignado a: ${item.assignee}` : null,
+        item.acquisitionDate
+          ? `Adquisición: ${formatDate(item.acquisitionDate, formatLocale)}`
+          : null,
+        item.value !== undefined
+          ? `Valor: ${formatCurrency(item.value, formatLocale)}`
+          : null,
+        item.notes ? `Notas: ${item.notes}` : null,
+      ]
+        .filter(Boolean)
+        .join(" | ");
+      return [item.name, details];
+    });
+  }, [items, formatLocale]);
+
+  const handleExportXlsx = () => {
+    if (items.length === 0) return;
+    downloadXlsx("inventario.xlsx", "Inventario", [
+      [
+        "Nombre",
+        "Categoría",
+        "Cantidad",
+        "Prestados",
+        "Disponibles",
+        "Estado",
+        "Serie",
+        "Ubicación",
+        "Asignado a",
+        "Fecha adquisición",
+        "Valor",
+        "Notas",
+      ],
+      ...exportRowsXlsx,
+    ]);
+  };
+
+  const handleExportPdf = () => {
+    if (items.length === 0) return;
+    downloadPdf(
+      "inventario.pdf",
+      "Inventario - listado de activos",
+      INVENTORY_PDF_COLUMNS,
+      exportRowsPdf
+    );
+  };
 
   const handleDelete = (item: InventoryItem) => {
     setSelectedItem(item);
@@ -189,6 +285,32 @@ export default function ResourcesInventoryPage() {
         backLabel="Volver a Recursos"
         actions={
           <>
+            <button
+              type="button"
+              onClick={handleExportXlsx}
+              disabled={items.length === 0}
+              aria-label="Exportar Excel"
+              title="Exportar Excel"
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                grid_on
+              </span>
+              Excel
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              disabled={items.length === 0}
+              aria-label="Exportar PDF"
+              title="Exportar PDF"
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                picture_as_pdf
+              </span>
+              PDF
+            </button>
             <Link
               href="/resources/inventory/new"
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
