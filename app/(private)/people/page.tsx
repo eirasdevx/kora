@@ -189,7 +189,7 @@ export default function PeoplePage() {
                   add
                 </span>
               </span>
-              A?adir nueva
+              Añadir nueva
             </Link>
           </>
         }
