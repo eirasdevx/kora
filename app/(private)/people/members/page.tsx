@@ -3,6 +3,19 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/shared/PageHeader";
+import {
+  tableBodyStyles,
+  tableFooterStyles,
+  tableHeadCellStyles,
+  tableHeadStyles,
+  tableIconActionStyles,
+  tablePagerButtonDisabledStyles,
+  tablePagerButtonEnabledStyles,
+  tablePagerButtonStyles,
+  tablePagerCurrentStyles,
+  tableRowStyles,
+  tableWrapperStyles,
+} from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
@@ -384,20 +397,21 @@ export default function MembersPage() {
       </section>
 
       <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
+        <div className={tableWrapperStyles}>
+          <table className="w-full text-left text-sm">
+          <thead className={tableHeadStyles}>
             <tr>
-              <th className="px-6 py-4">Socio</th>
-              <th className="px-6 py-4">ID Socio</th>
-              <th className="px-6 py-4">Estado</th>
-              <th className="px-6 py-4">Cuota</th>
-              <th className="px-6 py-4">Último Pago</th>
-              <th className="px-6 py-4">Saldo</th>
-              <th className="px-6 py-4">Permisos</th>
-              <th className="px-6 py-4 text-right">Acción</th>
+              <th className={tableHeadCellStyles}>Socio</th>
+              <th className={tableHeadCellStyles}>ID Socio</th>
+              <th className={tableHeadCellStyles}>Estado</th>
+              <th className={tableHeadCellStyles}>Cuota</th>
+              <th className={tableHeadCellStyles}>Último Pago</th>
+              <th className={tableHeadCellStyles}>Saldo</th>
+              <th className={tableHeadCellStyles}>Permisos</th>
+              <th className={`${tableHeadCellStyles} text-right`}>Acción</th>
             </tr>
           </thead>
-          <tbody className="text-gray-700">
+          <tbody className={tableBodyStyles}>
             {pageMembers.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-500">
@@ -413,7 +427,7 @@ export default function MembersPage() {
                 return (
                   <tr
                     key={member.id}
-                    className="border-b border-gray-100 hover:bg-gray-50"
+                    className={tableRowStyles}
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -481,7 +495,7 @@ export default function MembersPage() {
                     <td className="px-6 py-4 text-right">
                       <Link
                         href={`/people/members/${member.id}`}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50"
+                        className={tableIconActionStyles}
                         aria-label={`Ver socio ${displayName}`}
                       >
                         <span className="material-symbols-outlined text-[18px]">
@@ -494,9 +508,10 @@ export default function MembersPage() {
               })
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
 
-        <div className="flex flex-col gap-3 border-t border-gray-100 px-6 py-4 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className={tableFooterStyles}>
           <span>
             Mostrando{" "}
             {pageMembers.length === 0
@@ -513,15 +528,15 @@ export default function MembersPage() {
                 setCurrentPage((prev) => Math.max(1, prev - 1))
               }
               disabled={currentPageSafe === 1}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+              className={`${tablePagerButtonStyles} ${
                 currentPageSafe === 1
-                  ? "border-gray-100 text-gray-300"
-                  : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  ? tablePagerButtonDisabledStyles
+                  : tablePagerButtonEnabledStyles
               }`}
             >
               Anterior
             </button>
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary">
+            <span className={tablePagerCurrentStyles}>
               {currentPageSafe}
             </span>
             <button
@@ -530,10 +545,10 @@ export default function MembersPage() {
                 setCurrentPage((prev) => Math.min(totalPages, prev + 1))
               }
               disabled={currentPageSafe === totalPages}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+              className={`${tablePagerButtonStyles} ${
                 currentPageSafe === totalPages
-                  ? "border-gray-100 text-gray-300"
-                  : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  ? tablePagerButtonDisabledStyles
+                  : tablePagerButtonEnabledStyles
               }`}
             >
               Siguiente

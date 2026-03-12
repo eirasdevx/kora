@@ -6,6 +6,15 @@ import { useParams } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import BackLink from "@/components/shared/BackLink";
 import SectionBlock from "@/components/shared/SectionBlock";
+import {
+  tableBodyStyles,
+  tableEmptyCellStyles,
+  tableHeadCellStyles,
+  tableHeadStyles,
+  tableIconActionStyles,
+  tableRowStyles,
+  tableWrapperStyles,
+} from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
@@ -380,22 +389,23 @@ export default function MemberDetailPage() {
               </Link>
             }
           >
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
+            <div className={tableWrapperStyles}>
+              <table className="w-full text-left text-sm">
+              <thead className={tableHeadStyles}>
                 <tr>
-                  <th className="px-4 py-3">Fecha</th>
-                  <th className="px-4 py-3">Categoría</th>
-                  <th className="px-4 py-3">Importe</th>
-                  <th className="px-4 py-3">Estado</th>
-                  <th className="px-4 py-3 text-right">Acción</th>
+                  <th className={tableHeadCellStyles}>Fecha</th>
+                  <th className={tableHeadCellStyles}>Categoría</th>
+                  <th className={tableHeadCellStyles}>Importe</th>
+                  <th className={tableHeadCellStyles}>Estado</th>
+                  <th className={`${tableHeadCellStyles} text-right`}>Acción</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className={tableBodyStyles}>
                 {paymentHistory.length === 0 ? (
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-4 py-6 text-center text-sm text-gray-500"
+                      className={tableEmptyCellStyles}
                     >
                       No hay pagos registrados todavía.
                     </td>
@@ -404,12 +414,12 @@ export default function MemberDetailPage() {
                   paymentHistory.map((tx) => (
                     <tr
                       key={tx.id}
-                      className="border-b border-gray-100 last:border-0"
+                      className={tableRowStyles}
                     >
-                      <td className="px-4 py-4 text-sm text-gray-600">
+                      <td className="px-6 py-4 text-sm text-gray-600">
                         {formatDate(tx.date, formatLocale)}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-6 py-4">
                         <div className="text-sm font-semibold text-gray-900">
                           Cuota {feeCycle}
                         </div>
@@ -417,10 +427,10 @@ export default function MemberDetailPage() {
                           {tier}
                         </div>
                       </td>
-                      <td className="px-4 py-4 font-semibold text-gray-900">
+                      <td className="px-6 py-4 font-semibold text-gray-900">
                         {formatCurrency(tx.amount, formatLocale)}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-6 py-4">
                         <span
                           className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                             PAYMENT_STYLES[
@@ -435,10 +445,10 @@ export default function MemberDetailPage() {
                             : "Pendiente"}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-right">
+                      <td className="px-6 py-4 text-right">
                         <button
                           type="button"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50"
+                          className={tableIconActionStyles}
                         >
                           <span className="material-symbols-outlined text-[18px]">
                             receipt_long
@@ -449,7 +459,8 @@ export default function MemberDetailPage() {
                   ))
                 )}
               </tbody>
-            </table>
+              </table>
+            </div>
           </SectionBlock>
         </div>
 

@@ -1,5 +1,15 @@
 "use client";
 
+import {
+  tableBodyStyles,
+  tableEmptyCellStyles,
+  tableHeadCellStyles,
+  tableHeadStyles,
+  tableMinWidthStyles,
+  tableRowStyles,
+  tableWrapperStyles,
+} from "@/components/shared/tableStyles";
+
 type DataTableColumn = {
   key: string;
   label: string;
@@ -41,29 +51,21 @@ export default function DataTable({
   tableClassName,
   containerClassName,
 }: DataTableProps) {
-  if (rows.length === 0) {
-    return (
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-500">
-        {emptyLabel}
-      </div>
-    );
-  }
-
   return (
-    <div className={cx("overflow-x-auto", containerClassName)}>
+    <div className={cx(tableWrapperStyles, containerClassName)}>
       <table
         className={cx(
-          "min-w-[700px] w-full text-sm",
+          tableMinWidthStyles,
           tableClassName
         )}
       >
-        <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
+        <thead className={tableHeadStyles}>
           <tr>
             {columns.map((column) => (
               <th
                 key={column.key}
                 className={cx(
-                  "px-6 py-4 font-semibold",
+                  tableHeadCellStyles,
                   ALIGN_CLASS[column.align ?? "left"],
                   column.className
                 )}
@@ -73,33 +75,38 @@ export default function DataTable({
             ))}
           </tr>
         </thead>
-        <tbody className="text-gray-700">
-          {rows.map((row) => (
-            <tr
-              key={row.key}
-              className={cx(
-                "border-b border-gray-100 last:border-0",
-                row.className
-              )}
-            >
-              {row.cells.map((cell, idx) => {
-                const column = columns[idx];
-                return (
-                  <td
-                    key={`${row.key}-${idx}`}
-                    className={cx(
-                      "px-6 py-4",
-                      column?.align
-                        ? ALIGN_CLASS[column.align]
-                        : "text-left"
-                    )}
-                  >
-                    {cell}
-                  </td>
-                );
-              })}
+        <tbody className={tableBodyStyles}>
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length} className={tableEmptyCellStyles}>
+                {emptyLabel}
+              </td>
             </tr>
-          ))}
+          ) : (
+            rows.map((row) => (
+              <tr
+                key={row.key}
+                className={cx(tableRowStyles, row.className)}
+              >
+                {row.cells.map((cell, idx) => {
+                  const column = columns[idx];
+                  return (
+                    <td
+                      key={`${row.key}-${idx}`}
+                      className={cx(
+                        "px-6 py-4",
+                        column?.align
+                          ? ALIGN_CLASS[column.align]
+                          : "text-left"
+                      )}
+                    >
+                      {cell}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>

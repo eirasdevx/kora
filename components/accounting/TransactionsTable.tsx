@@ -5,6 +5,20 @@ import Link from "next/link";
 import Modal from "@/components/Modal";
 import { useLocale } from "@/core/i18n/use-locale";
 import {
+  tableBodyStyles,
+  tableFooterStyles,
+  tableHeadCellStyles,
+  tableHeadStyles,
+  tablePagerButtonDisabledStyles,
+  tablePagerButtonEnabledStyles,
+  tablePagerNumberStyles,
+  tablePagerButtonStyles,
+  tablePagerCurrentStyles,
+  tableRowStyles,
+  tableTextActionStyles,
+  tableWrapperStyles,
+} from "@/components/shared/tableStyles";
+import {
   Transaction,
   TransactionCategoryLabels,
   TransactionStatusLabels,
@@ -709,23 +723,24 @@ export default function TransactionsTable({ transactions }: Props) {
           No hay resultados para los filtros seleccionados.
         </div>
       ) : (
-        <table className="w-full text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
+        <div className={tableWrapperStyles}>
+          <table className="w-full text-left text-sm">
+          <thead className={tableHeadStyles}>
             <tr>
-              <th className="px-6 py-4 text-left">Fecha</th>
-              <th className="px-6 py-4 text-left">Concepto</th>
-              <th className="px-6 py-4 text-left">Categoría</th>
-              <th className="px-6 py-4 text-left">Estado</th>
-              <th className="px-6 py-4 text-right">Importe</th>
-              <th className="px-6 py-4 text-right">Acciones</th>
+              <th className={`${tableHeadCellStyles} text-left`}>Fecha</th>
+              <th className={`${tableHeadCellStyles} text-left`}>Concepto</th>
+              <th className={`${tableHeadCellStyles} text-left`}>Categoría</th>
+              <th className={`${tableHeadCellStyles} text-left`}>Estado</th>
+              <th className={`${tableHeadCellStyles} text-right`}>Importe</th>
+              <th className={`${tableHeadCellStyles} text-right`}>Acciones</th>
             </tr>
           </thead>
 
-          <tbody>
+          <tbody className={tableBodyStyles}>
             {pagedTransactions.map((tx) => (
               <tr
                 key={tx.id}
-                className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                className={tableRowStyles}
               >
                 <td className="px-6 py-4 text-sm text-gray-600">
                   {formatDate(tx.date, formatLocale)}
@@ -772,7 +787,7 @@ export default function TransactionsTable({ transactions }: Props) {
                   <div className="inline-flex items-center gap-2">
                     <Link
                       href={`/accounting/${tx.id}/edit`}
-                      className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+                      className={tableTextActionStyles}
                     >
                       Editar
                     </Link>
@@ -787,10 +802,11 @@ export default function TransactionsTable({ transactions }: Props) {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       )}
 
-      <div className="flex flex-col gap-3 border-t border-gray-100 px-6 py-4 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+      <div className={tableFooterStyles}>
         <span>
           Mostrando {pagedTransactions.length} de {filteredTransactions.length} transacciones
         </span>
@@ -799,10 +815,10 @@ export default function TransactionsTable({ transactions }: Props) {
             type="button"
             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
             disabled={!canPrev}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+            className={`${tablePagerButtonStyles} ${
               canPrev
-                ? "border-gray-200 text-gray-600 hover:bg-gray-50"
-                : "border-gray-100 text-gray-300"
+                ? tablePagerButtonEnabledStyles
+                : tablePagerButtonDisabledStyles
             }`}
           >
             Anterior
@@ -812,11 +828,11 @@ export default function TransactionsTable({ transactions }: Props) {
               key={page}
               type="button"
               onClick={() => setCurrentPage(page)}
-              className={`h-8 w-8 rounded-lg text-xs font-semibold ${
-                page === currentPageSafe
-                  ? "bg-primary/10 text-primary"
-                  : "border border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}
+                  className={
+                    page === currentPageSafe
+                      ? tablePagerCurrentStyles
+                      : `${tablePagerNumberStyles} ${tablePagerButtonEnabledStyles}`
+                  }
             >
               {page}
             </button>
@@ -827,10 +843,10 @@ export default function TransactionsTable({ transactions }: Props) {
               setCurrentPage((prev) => Math.min(totalPages, prev + 1))
             }
             disabled={!canNext}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+            className={`${tablePagerButtonStyles} ${
               canNext
-                ? "border-gray-200 text-gray-600 hover:bg-gray-50"
-                : "border-gray-100 text-gray-300"
+                ? tablePagerButtonEnabledStyles
+                : tablePagerButtonDisabledStyles
             }`}
           >
             Siguiente

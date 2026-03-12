@@ -8,6 +8,21 @@ import {
   moduleTopbarButtonIconStyles,
   moduleTopbarButtonStyles,
 } from "@/components/shared/ModuleTopbar";
+import {
+  tableBodyStyles,
+  tableEmptyCellStyles,
+  tableFooterStyles,
+  tableHeadCellStyles,
+  tableHeadStyles,
+  tableIconActionStyles,
+  tablePagerButtonDisabledStyles,
+  tablePagerButtonEnabledStyles,
+  tablePagerNumberStyles,
+  tablePagerButtonStyles,
+  tablePagerCurrentStyles,
+  tableRowStyles,
+  tableWrapperStyles,
+} from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
 import {
@@ -554,25 +569,25 @@ export default function DocumentsPage() {
             </div>
 
             {viewMode === "list" ? (
-              <div className="mt-4 overflow-x-auto">
+              <div className={`mt-4 ${tableWrapperStyles}`}>
                 <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
-                      <th className="px-6 py-3 font-semibold">Nombre</th>
-                      <th className="px-6 py-3 font-semibold">Seguridad</th>
-                      <th className="px-6 py-3 font-semibold">Modificado</th>
-                      <th className="px-6 py-3 font-semibold">Tamano</th>
-                      <th className="px-6 py-3 font-semibold text-right">
+                  <thead className={tableHeadStyles}>
+                    <tr>
+                      <th className={tableHeadCellStyles}>Nombre</th>
+                      <th className={tableHeadCellStyles}>Seguridad</th>
+                      <th className={tableHeadCellStyles}>Modificado</th>
+                      <th className={tableHeadCellStyles}>Tamano</th>
+                      <th className={`${tableHeadCellStyles} text-right`}>
                         Acciones
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className={tableBodyStyles}>
                     {filteredDocuments.length === 0 ? (
                       <tr>
                         <td
                           colSpan={5}
-                          className="px-6 py-10 text-center text-sm text-gray-500"
+                          className={tableEmptyCellStyles}
                         >
                           No se encontraron documentos con esos filtros.
                         </td>
@@ -587,7 +602,7 @@ export default function DocumentsPage() {
                               setSelectedId(doc.id);
                             }}
                             className={cx(
-                              "cursor-pointer transition hover:bg-gray-50",
+                              `cursor-pointer transition ${tableRowStyles}`,
                               active && "bg-primary/5"
                             )}
                           >
@@ -633,7 +648,7 @@ export default function DocumentsPage() {
                             <td className="px-6 py-4 text-right">
                               <button
                                 type="button"
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100"
+                                className={tableIconActionStyles}
                                 aria-label="Mas acciones"
                               >
                                 <span className="material-symbols-outlined text-[16px]">
@@ -711,7 +726,7 @@ export default function DocumentsPage() {
               </div>
             )}
 
-            <div className="flex flex-col gap-3 border-t border-gray-100 px-6 py-4 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+            <div className={tableFooterStyles}>
               <span>
                 Mostrando {pagedDocuments.length} de {filteredDocuments.length} archivos
               </span>
@@ -723,10 +738,10 @@ export default function DocumentsPage() {
                   }
                   disabled={!canPrev}
                   className={cx(
-                    "rounded-lg border px-3 py-1.5 text-sm",
+                    tablePagerButtonStyles,
                     canPrev
-                      ? "border-gray-200 text-gray-500 hover:bg-gray-50"
-                      : "border-gray-200 text-gray-300 cursor-not-allowed"
+                      ? tablePagerButtonEnabledStyles
+                      : tablePagerButtonDisabledStyles
                   )}
                 >
                   Anterior
@@ -737,10 +752,9 @@ export default function DocumentsPage() {
                     type="button"
                     onClick={() => setCurrentPage(page)}
                     className={cx(
-                      "rounded-lg border px-3 py-1.5 text-sm",
                       page === currentPageSafe
-                        ? "border-primary bg-primary/5 font-semibold text-primary"
-                        : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                        ? tablePagerCurrentStyles
+                        : `${tablePagerNumberStyles} ${tablePagerButtonEnabledStyles}`
                     )}
                   >
                     {page}
@@ -753,10 +767,10 @@ export default function DocumentsPage() {
                   }
                   disabled={!canNext}
                   className={cx(
-                    "rounded-lg border px-3 py-1.5 text-sm",
+                    tablePagerButtonStyles,
                     canNext
-                      ? "border-gray-200 text-gray-500 hover:bg-gray-50"
-                      : "border-gray-200 text-gray-300 cursor-not-allowed"
+                      ? tablePagerButtonEnabledStyles
+                      : tablePagerButtonDisabledStyles
                   )}
                 >
                   Siguiente

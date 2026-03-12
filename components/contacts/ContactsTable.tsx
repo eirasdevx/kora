@@ -2,6 +2,12 @@
 
 import { useLocale } from "@/core/i18n/use-locale";
 import { Contact } from "@/modules/contacts/contact.types";
+import {
+  tableBodyStyles,
+  tableHeadCellStyles,
+  tableHeadStyles,
+  tableRowStyles,
+} from "@/components/shared/tableStyles";
 
 interface Props {
   contacts: Contact[];
@@ -52,19 +58,19 @@ export default function ContactsTable({
 
   return (
     <table className="min-w-[1100px] w-full text-left text-sm">
-      <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
+      <thead className={tableHeadStyles}>
         <tr>
-          <th className="px-6 py-4">Perfil</th>
-          <th className="px-6 py-4">Nombre</th>
-          <th className="px-6 py-4">Apellidos</th>
-          <th className="px-6 py-4">Fecha nacimiento</th>
-          <th className="px-6 py-4">DNI</th>
-          <th className="px-6 py-4">Teléfono</th>
-          <th className="px-6 py-4">Correo</th>
+          <th className={tableHeadCellStyles}>Perfil</th>
+          <th className={tableHeadCellStyles}>Nombre</th>
+          <th className={tableHeadCellStyles}>Apellidos</th>
+          <th className={tableHeadCellStyles}>Fecha nacimiento</th>
+          <th className={tableHeadCellStyles}>DNI</th>
+          <th className={tableHeadCellStyles}>Teléfono</th>
+          <th className={tableHeadCellStyles}>Correo</th>
         </tr>
       </thead>
 
-      <tbody className="text-gray-700">
+      <tbody className={tableBodyStyles}>
         {contacts.map((c) => {
           const displayName = getDisplayName(c);
           const fallbackParts = displayName.split(" ").filter(Boolean);
@@ -80,10 +86,10 @@ export default function ContactsTable({
             <tr
               key={c.id}
               onClick={() => onSelect(c)}
-              className={`cursor-pointer border-b border-gray-100 transition last:border-0 ${
+              className={`cursor-pointer transition ${tableRowStyles} ${
                 c.id === selectedId
                   ? "bg-primary/5"
-                  : "hover:bg-gray-50"
+                  : ""
               }`}
             >
               <td className="px-6 py-4">

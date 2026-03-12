@@ -4,6 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageTopbar from "@/components/PageTopbar";
 import BackLink from "@/components/shared/BackLink";
+import {
+  tableBodyStyles,
+  tableFooterStyles,
+  tableHeadCellStyles,
+  tableHeadStyles,
+  tableIconActionStyles,
+  tablePagerButtonDisabledStyles,
+  tablePagerButtonEnabledStyles,
+  tablePagerButtonStyles,
+  tablePagerCurrentStyles,
+  tableRowStyles,
+} from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useVolunteerActivitiesStore } from "@/modules/volunteers/volunteer-activities.store";
@@ -336,16 +348,16 @@ export default function VolunteersPage() {
         </div>
 
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
+          <thead className={tableHeadStyles}>
             <tr>
-              <th className="px-6 py-4">Voluntario</th>
-              <th className="px-6 py-4">Estado</th>
-              <th className="px-6 py-4">Horas Totales</th>
-              <th className="px-6 py-4">Tareas Actuales</th>
-              <th className="px-6 py-4 text-right">Acciones</th>
+              <th className={tableHeadCellStyles}>Voluntario</th>
+              <th className={tableHeadCellStyles}>Estado</th>
+              <th className={tableHeadCellStyles}>Horas Totales</th>
+              <th className={tableHeadCellStyles}>Tareas Actuales</th>
+              <th className={`${tableHeadCellStyles} text-right`}>Acciones</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className={tableBodyStyles}>
             {pageVolunteers.length === 0 ? (
               <tr>
                 <td
@@ -361,7 +373,7 @@ export default function VolunteersPage() {
                 return (
                   <tr
                     key={item.volunteer.id}
-                    className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                    className={tableRowStyles}
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -402,7 +414,7 @@ export default function VolunteersPage() {
                     <td className="px-6 py-4 text-right">
                       <Link
                         href={`/people/volunteers/records/new?volunteerId=${item.volunteer.id}`}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50"
+                        className={tableIconActionStyles}
                         aria-label={`Editar ${displayName}`}
                       >
                         <span className="material-symbols-outlined text-[18px]">
@@ -417,7 +429,7 @@ export default function VolunteersPage() {
           </tbody>
         </table>
 
-        <div className="flex flex-col gap-3 border-t border-gray-100 px-6 py-4 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className={tableFooterStyles}>
           <span>
             Mostrando{" "}
             {pageVolunteers.length === 0
@@ -434,15 +446,15 @@ export default function VolunteersPage() {
                 setCurrentPage((prev) => Math.max(1, prev - 1))
               }
               disabled={currentPageSafe === 1}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+              className={`${tablePagerButtonStyles} ${
                 currentPageSafe === 1
-                  ? "border-gray-100 text-gray-300"
-                  : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  ? tablePagerButtonDisabledStyles
+                  : tablePagerButtonEnabledStyles
               }`}
             >
               Anterior
             </button>
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary">
+            <span className={tablePagerCurrentStyles}>
               {currentPageSafe}
             </span>
             <button
@@ -451,10 +463,10 @@ export default function VolunteersPage() {
                 setCurrentPage((prev) => Math.min(totalPages, prev + 1))
               }
               disabled={currentPageSafe === totalPages}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+              className={`${tablePagerButtonStyles} ${
                 currentPageSafe === totalPages
-                  ? "border-gray-100 text-gray-300"
-                  : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  ? tablePagerButtonDisabledStyles
+                  : tablePagerButtonEnabledStyles
               }`}
             >
               Siguiente
