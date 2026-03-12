@@ -1,11 +1,45 @@
-import {
-  AssociationUserStatus,
-  SystemModule,
-  UserRole,
-  type AssociationUserPermission,
-} from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { clearSessionCookie, getSessionToken, hashSessionToken } from "@/lib/auth";
+
+const UserRole = {
+  Admin: "Admin",
+  Gestor: "Gestor",
+  Lector: "Lector",
+} as const;
+
+type UserRole = (typeof UserRole)[keyof typeof UserRole];
+
+const SystemModule = {
+  ACCOUNTING: "ACCOUNTING",
+  EVENTS: "EVENTS",
+  CONTACTS: "CONTACTS",
+  DOCUMENTS: "DOCUMENTS",
+  MESSAGING: "MESSAGING",
+} as const;
+
+type SystemModule = (typeof SystemModule)[keyof typeof SystemModule];
+
+type AssociationUserStatus = string;
+
+type AssociationUserPermission = {
+  module: SystemModule;
+  canView: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+};
+
+type PrismaAuthCompatClient = {
+  session?: {
+    findUnique: (args: unknown) => Promise<any>;
+    delete: (args: unknown) => Promise<any>;
+  };
+  associationUser?: {
+    findUnique: (args: unknown) => Promise<any>;
+    findFirst: (args: unknown) => Promise<any>;
+  };
+};
+
+const prismaAuthCompat = prisma as unknown as PrismaAuthCompatClient;
 
 export type LegacyPermissions = {
   modules: {
@@ -297,8 +331,12 @@ export const getSessionContext = async () => {
   const token = await getSessionToken();
   if (!token) return null;
 
+  if (!prismaAuthCompat.session || !prismaAuthCompat.associationUser) {
+    return null;
+  }
+
   const tokenHash = hashSessionToken(token);
-  const session = await prisma.session.findUnique({
+  const session = await prismaAuthCompat.session.findUnique({
     where: { tokenHash },
     include: {
       user: true,
@@ -312,14 +350,16 @@ export const getSessionContext = async () => {
 
   if (!session || session.expiresAt < new Date() || session.revokedAt) {
     if (session) {
-      await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
+      await prismaAuthCompat.session
+        .delete({ where: { id: session.id } })
+        .catch(() => {});
     }
     await clearSessionCookie();
     return null;
   }
 
   let associationUser = session.activeAssociationId
-    ? await prisma.associationUser.findUnique({
+    ? await prismaAuthCompat.associationUser.findUnique({
         where: {
           associationId_userId: {
             associationId: session.activeAssociationId,
@@ -339,7 +379,7 @@ export const getSessionContext = async () => {
     : null;
 
   if (!associationUser) {
-    associationUser = await prisma.associationUser.findFirst({
+    associationUser = await prismaAuthCompat.associationUser.findFirst({
       where: {
         userId: session.userId,
         deactivatedAt: null,
