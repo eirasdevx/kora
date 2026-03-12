@@ -50,6 +50,7 @@ const formatShortDate = (value: string, locale: string) =>
 
 export default function DashboardPage() {
   const { formatLocale } = useLocale();
+  const mode = useSessionStore((s) => s.mode);
   const association = useSessionStore((s) => s.association);
   const { transactions, loadTransactions } = useTransactionsStore();
   const { contacts, loadContacts } = useContactsStore();
@@ -255,6 +256,7 @@ export default function DashboardPage() {
   const senderEmail = settings.emailAddress || association?.contactEmail || "";
   const senderPassword = settings.emailAppPassword || "";
   const safeRange = Math.min(6, Math.max(3, monthsRange));
+  const isGuest = mode === "guest";
   const messagingReady = Boolean(senderName && senderEmail && senderPassword);
   const recentTemplates = useMemo(() => {
     const sorted = [...templates].sort((a, b) =>
@@ -362,17 +364,19 @@ export default function DashboardPage() {
                 </span>
                 Subir documento
               </Link>
-              <Link
-                href="/messaging/templates/new"
-                className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                  <span className="material-symbols-outlined text-[18px]">
-                    mail
+              {!isGuest ? (
+                <Link
+                  href="/messaging/templates/new"
+                  className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <span className="material-symbols-outlined text-[18px]">
+                      mail
+                    </span>
                   </span>
-                </span>
-                Nueva plantilla
-              </Link>
+                  Nueva plantilla
+                </Link>
+              ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
               <span className="rounded-full border border-white/80 bg-white/80 px-3 py-1">
@@ -729,7 +733,11 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+      <section
+        className={
+          isGuest ? "grid gap-4" : "grid gap-4 lg:grid-cols-[1.6fr_1fr]"
+        }
+      >
         <Link
           href="/documents"
           aria-label="Ir a documentos"
@@ -775,121 +783,123 @@ export default function DashboardPage() {
           </div>
         </Link>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">
-                Mensajeria
-              </p>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Centro de campanas
-              </h3>
-              <p className="text-sm text-gray-500">
-                Plantillas, segmentos y envios masivos.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link
-                href="/messaging"
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-              >
-                Abrir
-              </Link>
-              <Link
-                href="/messaging/templates/new"
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow"
-              >
-                Nueva plantilla
-              </Link>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-              <p className="text-xs font-semibold uppercase text-gray-400">
-                Estado del remitente
-              </p>
-              <div className="mt-2 flex items-center justify-between">
-                <p className="text-sm font-semibold text-gray-900">
-                  {messagingReady
-                    ? "Listo para enviar"
-                    : "Pendiente de configuracion"}
+        {!isGuest ? (
+          <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">
+                  Mensajeria
                 </p>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    messagingReady
-                      ? "bg-emerald-50 text-emerald-600"
-                      : "bg-amber-50 text-amber-600"
-                  }`}
-                >
-                  {messagingReady ? "Activo" : "Pendiente"}
-                </span>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Centro de campanas
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Plantillas, segmentos y envios masivos.
+                </p>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Remitente: {senderEmail || "Sin configurar"}
-              </p>
-              {!messagingReady ? (
+              <div className="flex items-center gap-2">
                 <Link
-                  href="/settings/messaging"
-                  className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-primary"
+                  href="/messaging"
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
                 >
-                  Configurar mensajeria
-                  <span className="material-symbols-outlined text-[14px]">
-                    arrow_forward
-                  </span>
+                  Abrir
                 </Link>
-              ) : null}
-            </div>
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-              <p className="text-xs font-semibold uppercase text-gray-400">
-                Plantillas activas
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-gray-900">
-                {totalTemplates}
-              </p>
-              <p className="text-xs text-gray-500">
-                Ultima actualizacion:{" "}
-                {lastTemplateUpdate
-                  ? formatShortDate(lastTemplateUpdate, formatLocale)
-                  : "-"}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-              Recientes
-            </p>
-            {recentTemplates.length === 0 ? (
-              <div className="rounded-2xl border border-gray-200 p-3 text-sm text-gray-400">
-                No hay plantillas recientes.
-              </div>
-            ) : (
-              recentTemplates.map((template) => (
-                <div
-                  key={template.id}
-                  className="flex items-center justify-between rounded-2xl border border-gray-200 p-3"
+                <Link
+                  href="/messaging/templates/new"
+                  className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow"
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {template.title}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {template.subject || "Sin asunto"} /{" "}
-                      {formatShortDate(template.updatedAt, formatLocale)}
-                    </p>
-                  </div>
-                  <Link
-                    href={`/messaging/templates/new?id=${template.id}`}
-                    className="rounded-xl bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
+                  Nueva plantilla
+                </Link>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-semibold uppercase text-gray-400">
+                  Estado del remitente
+                </p>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-900">
+                    {messagingReady
+                      ? "Listo para enviar"
+                      : "Pendiente de configuracion"}
+                  </p>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      messagingReady
+                        ? "bg-emerald-50 text-emerald-600"
+                        : "bg-amber-50 text-amber-600"
+                    }`}
                   >
-                    Ver
-                  </Link>
+                    {messagingReady ? "Activo" : "Pendiente"}
+                  </span>
                 </div>
-              ))
-            )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Remitente: {senderEmail || "Sin configurar"}
+                </p>
+                {!messagingReady ? (
+                  <Link
+                    href="/settings/messaging"
+                    className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-primary"
+                  >
+                    Configurar mensajeria
+                    <span className="material-symbols-outlined text-[14px]">
+                      arrow_forward
+                    </span>
+                  </Link>
+                ) : null}
+              </div>
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-semibold uppercase text-gray-400">
+                  Plantillas activas
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-gray-900">
+                  {totalTemplates}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Ultima actualizacion:{" "}
+                  {lastTemplateUpdate
+                    ? formatShortDate(lastTemplateUpdate, formatLocale)
+                    : "-"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Recientes
+              </p>
+              {recentTemplates.length === 0 ? (
+                <div className="rounded-2xl border border-gray-200 p-3 text-sm text-gray-400">
+                  No hay plantillas recientes.
+                </div>
+              ) : (
+                recentTemplates.map((template) => (
+                  <div
+                    key={template.id}
+                    className="flex items-center justify-between rounded-2xl border border-gray-200 p-3"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {template.title}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {template.subject || "Sin asunto"} /{" "}
+                        {formatShortDate(template.updatedAt, formatLocale)}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/messaging/templates/new?id=${template.id}`}
+                      className="rounded-xl bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
+                    >
+                      Ver
+                    </Link>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        ) : null}
       </section>
     </div>
   );

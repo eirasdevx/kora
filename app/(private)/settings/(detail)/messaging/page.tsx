@@ -64,6 +64,7 @@ const PROVIDER_STEPS: Record<EmailProvider, string[]> = {
 };
 
 export default function MessagingSettingsPage() {
+  const mode = useSessionStore((s) => s.mode);
   const association = useSessionStore((s) => s.association);
   const {
     settings,
@@ -100,6 +101,41 @@ export default function MessagingSettingsPage() {
       setTimeout(() => setStatus("idle"), 2200);
     }
   };
+
+  if (mode === "guest") {
+    return (
+      <div className="space-y-8">
+        <PageTopbar>
+          <div className="mb-4">
+            <BackLink href="/settings" label="Volver a Configuracion" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+              Configuracion &gt; Mensajeria
+            </p>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Credenciales de mensajeria
+            </h1>
+            <p className="text-sm text-gray-500">
+              Esta seccion solo esta disponible en cuentas autenticadas.
+            </p>
+          </div>
+        </PageTopbar>
+
+        <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
+            <span className="material-symbols-outlined text-[24px]">info</span>
+          </div>
+          <h2 className="mt-4 text-lg font-semibold text-gray-900">
+            Mensajeria no disponible en modo invitado
+          </h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Inicia sesion para configurar remitentes y credenciales de envio.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

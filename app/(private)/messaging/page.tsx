@@ -5,6 +5,7 @@ import Link from "next/link";
 import Modal from "@/components/Modal";
 import PageTopbar from "@/components/PageTopbar";
 import { useLocale } from "@/core/i18n/use-locale";
+import { useSessionStore } from "@/core/session/session.store";
 import { useMessagingStore } from "@/modules/messaging/messaging.store";
 import { MessageTemplate } from "@/modules/messaging/messaging.types";
 
@@ -24,6 +25,7 @@ const formatDateTime = (value: string, locale: string) =>
 
 export default function MessagingPage() {
   const { formatLocale } = useLocale();
+  const mode = useSessionStore((s) => s.mode);
   const { templates, removeTemplate } = useMessagingStore();
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<MessageTemplate | null>(
@@ -70,6 +72,46 @@ export default function MessagingPage() {
   const handleDeleteTemplate = (template: MessageTemplate) => {
     setConfirmDelete(template);
   };
+
+  if (mode === "guest") {
+    return (
+      <div className="space-y-6">
+        <PageTopbar>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                Mensajeria
+              </p>
+              <h1 className="text-2xl font-semibold text-slate-900">
+                Centro de mensajes
+              </h1>
+              <p className="text-sm text-slate-500">
+                Esta seccion solo esta disponible en cuentas autenticadas.
+              </p>
+            </div>
+            <Link
+              href="/dashboard"
+              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              Volver al panel
+            </Link>
+          </div>
+        </PageTopbar>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+            <span className="material-symbols-outlined text-[24px]">info</span>
+          </div>
+          <h2 className="mt-4 text-lg font-semibold text-slate-900">
+            Mensajeria no disponible en modo invitado
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Inicia sesion para crear plantillas y enviar comunicaciones.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

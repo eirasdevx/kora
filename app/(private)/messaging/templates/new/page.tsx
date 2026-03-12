@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import BackLink from "@/components/shared/BackLink";
+import { useSessionStore } from "@/core/session/session.store";
 import { useMessagingStore } from "@/modules/messaging/messaging.store";
-import { MessagingChannel } from "@/modules/messaging/messaging.types";
+import {
+  type MessageTemplate,
+  type MessagingChannel,
+} from "@/modules/messaging/messaging.types";
 
 const VARIABLE_GROUPS = [
   {
@@ -39,26 +43,23 @@ const applyPreviewVariables = (value: string) => {
   );
 };
 
-export default function NewTemplatePage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const templateId = searchParams.get("id");
-  const { templates, addTemplate, updateTemplate } = useMessagingStore();
-  const activeTemplate = templates.find((item) => item.id === templateId);
-
+function TemplateEditor({
+  activeTemplate,
+  onSave,
+}: {
+  activeTemplate?: MessageTemplate;
+  onSave: (payload: {
+    title: string;
+    channel: MessagingChannel;
+    subject: string;
+    html: string;
+  }) => void;
+}) {
   const [title, setTitle] = useState(activeTemplate?.title ?? "");
   const [channel] = useState<MessagingChannel>("email");
   const [subject, setSubject] = useState(activeTemplate?.subject ?? "");
   const [html, setHtml] = useState(activeTemplate?.html ?? "");
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!activeTemplate) return;
-    setTitle(activeTemplate.title);
-    // Solo email en esta version.
-    setSubject(activeTemplate.subject);
-    setHtml(activeTemplate.html);
-  }, [activeTemplate]);
 
   const previewHtml = useMemo(() => applyPreviewVariables(html), [html]);
 
@@ -77,23 +78,12 @@ export default function NewTemplatePage() {
       return;
     }
 
-    if (activeTemplate) {
-      updateTemplate(activeTemplate.id, {
-        title: title.trim(),
-        channel,
-        subject: subject.trim(),
-        html: html.trim(),
-      });
-    } else {
-      addTemplate({
-        title: title.trim(),
-        channel,
-        subject: subject.trim(),
-        html: html.trim(),
-      });
-    }
-
-    router.push("/messaging");
+    onSave({
+      title: title.trim(),
+      channel,
+      subject: subject.trim(),
+      html: html.trim(),
+    });
   };
 
   const insertToken = (token: string) => {
@@ -104,7 +94,7 @@ export default function NewTemplatePage() {
     <div className="space-y-6">
       <PageTopbar>
         <div className="mb-4">
-          <BackLink href="/messaging" label="Volver a Mensajería" />
+          <BackLink href="/messaging" label="Volver a Mensajeria" />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -250,5 +240,77 @@ export default function NewTemplatePage() {
         </aside>
       </div>
     </div>
+  );
+}
+
+export default function NewTemplatePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const mode = useSessionStore((s) => s.mode);
+  const templateId = searchParams.get("id");
+  const { templates, addTemplate, updateTemplate } = useMessagingStore();
+  const activeTemplate = templates.find((item) => item.id === templateId);
+
+  if (mode === "guest") {
+    return (
+      <div className="space-y-6">
+        <PageTopbar>
+          <div className="mb-4">
+            <BackLink href="/dashboard" label="Volver al panel" />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                Plantillas / Nueva plantilla
+              </p>
+              <h1 className="text-2xl font-semibold text-slate-900">
+                Crear nueva plantilla
+              </h1>
+              <p className="text-sm text-slate-500">
+                Esta seccion solo esta disponible en cuentas autenticadas.
+              </p>
+            </div>
+          </div>
+        </PageTopbar>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+            <span className="material-symbols-outlined text-[24px]">info</span>
+          </div>
+          <h2 className="mt-4 text-lg font-semibold text-slate-900">
+            Plantillas no disponibles en modo invitado
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Inicia sesion para crear o editar contenido de mensajeria.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <TemplateEditor
+      key={activeTemplate?.id ?? "new-template"}
+      activeTemplate={activeTemplate}
+      onSave={({ title, channel, subject, html }) => {
+        if (activeTemplate) {
+          updateTemplate(activeTemplate.id, {
+            title,
+            channel,
+            subject,
+            html,
+          });
+        } else {
+          addTemplate({
+            title,
+            channel,
+            subject,
+            html,
+          });
+        }
+
+        router.push("/messaging");
+      }}
+    />
   );
 }

@@ -104,6 +104,7 @@ const applyPreviewVariables = (value: string) => {
 };
 
 export default function MessagingBulkPage() {
+  const mode = useSessionStore((s) => s.mode);
   const association = useSessionStore((s) => s.association);
   const { templates } = useMessagingStore();
   const {
@@ -317,6 +318,43 @@ export default function MessagingBulkPage() {
       setSending(false);
     }
   };
+
+  if (mode === "guest") {
+    return (
+      <div className="space-y-6">
+        <PageTopbar>
+          <div className="mb-4">
+            <BackLink href="/dashboard" label="Volver al panel" />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                Mensajeria / Envio masivo
+              </p>
+              <h1 className="text-2xl font-semibold text-slate-900">
+                Envio de mensajes masivos
+              </h1>
+              <p className="text-sm text-slate-500">
+                Esta seccion solo esta disponible en cuentas autenticadas.
+              </p>
+            </div>
+          </div>
+        </PageTopbar>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+            <span className="material-symbols-outlined text-[24px]">info</span>
+          </div>
+          <h2 className="mt-4 text-lg font-semibold text-slate-900">
+            Envio masivo no disponible en modo invitado
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Inicia sesion para seleccionar destinatarios y realizar campanas.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

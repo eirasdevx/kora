@@ -452,6 +452,51 @@ export default function SecuritySettingsPage() {
     cancelTwoFactorFlow();
   };
 
+  if (!hydrated) {
+    return <div className="min-h-screen bg-background-light" aria-busy="true" />;
+  }
+
+  if (mode === "guest") {
+    return (
+      <div className="space-y-8">
+        <PageTopbar>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Configuracion &gt; Seguridad
+              </p>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                Seguridad
+              </h1>
+              <p className="text-sm text-gray-500">
+                Esta seccion solo esta disponible en cuentas autenticadas.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push("/settings")}
+              className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
+            >
+              Volver a configuracion
+            </button>
+          </div>
+        </PageTopbar>
+
+        <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
+            <span className="material-symbols-outlined text-[24px]">info</span>
+          </div>
+          <h2 className="mt-4 text-lg font-semibold text-gray-900">
+            Seguridad no disponible en modo invitado
+          </h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Inicia sesion para gestionar contrasenas, 2FA y actividad de acceso.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-8">

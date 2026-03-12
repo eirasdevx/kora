@@ -91,6 +91,12 @@ const cards = [
   },
 ];
 
+const GUEST_HIDDEN_CARD_HREFS = [
+  "/settings/users",
+  "/settings/messaging",
+  "/settings/security",
+];
+
 const roleLabels: Record<UserRole, string> = {
   Admin: "Administrador",
   Gestor: "Gestor",
@@ -123,7 +129,7 @@ export default function SettingsPage() {
 
   const visibleCards =
     mode === "guest"
-      ? cards.filter((card) => card.href !== "/settings/users")
+      ? cards.filter((card) => !GUEST_HIDDEN_CARD_HREFS.includes(card.href))
       : cards;
 
   const filteredCards = useMemo(() => {
