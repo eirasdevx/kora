@@ -13,11 +13,16 @@ import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { ContactType, ContactTypeLabels } from "@/modules/contacts/contact.types";
 import { useEventsStore } from "@/modules/events/events.store";
 import Modal from "@/components/Modal";
+import BackLink from "@/components/shared/BackLink";
+import PageHeader from "@/components/shared/PageHeader";
+import { moduleTopbarButtonStyles } from "@/components/shared/ModuleTopbar";
 
 interface Props {
   initialData?: Transaction;
   onSubmit: (tx: Transaction) => void | Promise<void>;
   onCancel: () => void;
+  backHref?: string;
+  backLabel?: string;
 }
 
 const BASE_CATEGORIES: TransactionCategory[] = [
@@ -39,6 +44,8 @@ export default function TransactionForm({
   initialData,
   onSubmit,
   onCancel,
+  backHref,
+  backLabel,
 }: Props) {
   const { formatLocale } = useLocale();
   const isEditing = Boolean(initialData);
@@ -256,20 +263,37 @@ export default function TransactionForm({
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="min-h-screen bg-slate-50">
-        <div className="w-full px-6 py-6">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300"
-              aria-label="Volver"
-            >
-              <span className="material-symbols-outlined text-[20px]">
-                chevron_left
-              </span>
-            </button>
+      <form onSubmit={handleSubmit} className="min-h-screen">
+          <PageHeader
+            title={isEditing ? "Editar transacción" : "Nueva transacción"}
+            backHref={backHref}
+            backLabel={backLabel}
+            actions={
+              <>
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className={moduleTopbarButtonStyles.secondary}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!isValid}
+                  className={`${moduleTopbarButtonStyles.primary} ${
+                    !isValid ? "cursor-not-allowed opacity-60" : ""
+                  }`}
+                >
+                  {isEditing ? "Guardar cambios" : "Guardar transacción"}
+                </button>
+              </>
+            }
+          />
+        <header className="hidden flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5">
+          <div className="space-y-3">
+            {backHref && backLabel ? (
+              <BackLink href={backHref} label={backLabel} />
+            ) : null}
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
                 Kora · Gestión financiera
@@ -325,7 +349,7 @@ export default function TransactionForm({
                     }`}
                   >
                     <span className="material-symbols-outlined text-[16px]">
-                      south
+                      north
                     </span>
                   </span>
                   Ingreso
@@ -347,7 +371,7 @@ export default function TransactionForm({
                     }`}
                   >
                     <span className="material-symbols-outlined text-[16px]">
-                      north
+                      south
                     </span>
                   </span>
                   Gasto
@@ -728,7 +752,6 @@ export default function TransactionForm({
             </section>
 
           </div>
-        </div>
         </div>
       </form>
 

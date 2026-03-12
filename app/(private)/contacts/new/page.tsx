@@ -10,6 +10,8 @@ export default function NewContactPage() {
 
   return (
     <ContactForm
+      backHref="/people/all"
+      backLabel="Volver a Personas"
       onSubmit={async (contact) => {
         await addContact(contact);
         router.push("/people/all");

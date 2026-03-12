@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
+import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
 import { useAppearanceStore } from "@/core/appearance/appearance.store";
 
 const colorSwatches = [
@@ -96,6 +97,12 @@ export default function AppearanceSettingsPage() {
 
   return (
     <div className="space-y-8">
+      <SettingsPageHeader
+        section="Apariencia"
+        title="Apariencia"
+        subtitle="Personaliza el aspecto visual de tu plataforma para adaptarla a tu imagen corporativa."
+      />
+      <div className="hidden">
       <PageTopbar>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
@@ -117,6 +124,7 @@ export default function AppearanceSettingsPage() {
           </button>
         </div>
       </PageTopbar>
+      </div>
 
       <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
         <div>

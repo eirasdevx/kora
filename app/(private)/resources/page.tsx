@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
-import ModuleTopbar, {
-  moduleTopbarButtonStyles,
-} from "@/components/shared/ModuleTopbar";
+import ModuleTopbar from "@/components/shared/ModuleTopbar";
 import StatCard from "@/components/shared/StatCard";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
@@ -28,7 +26,7 @@ const ITEM_STATUS_STYLES: Record<InventoryStatus, string> = {
 const RESOURCES_MODULE_TITLE = "Recursos";
 const RESOURCES_PAGE_TITLE = "Centro de recursos";
 const RESOURCES_MODULE_DESCRIPTION =
-  "Inventario, prestamos y documentacion clave.";
+  "Inventario, pr\u00e9stamos y documentaci\u00f3n clave.";
 
 function resolveItemStatus(item: InventoryItem): InventoryStatus {
   if (item.status) return item.status;
@@ -133,28 +131,6 @@ export default function ResourcesPage() {
         module={RESOURCES_MODULE_TITLE}
         title={RESOURCES_PAGE_TITLE}
         description={RESOURCES_MODULE_DESCRIPTION}
-        actions={
-          <>
-            <Link
-              href="/resources/inventory"
-              className={`${moduleTopbarButtonStyles.secondary} inline-flex items-center gap-2`}
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                inventory_2
-              </span>
-              Ver inventario
-            </Link>
-            <Link
-              href="/documents"
-              className={`${moduleTopbarButtonStyles.primary} inline-flex items-center gap-2`}
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                upload_file
-              </span>
-              Subir documento
-            </Link>
-          </>
-        }
       />
 
       <section className="grid gap-4 md:grid-cols-2">

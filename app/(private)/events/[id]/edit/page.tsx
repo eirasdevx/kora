@@ -33,6 +33,8 @@ export default function EditEventPage() {
 
   return (
     <EventForm
+      backHref="/events"
+      backLabel="Volver a Eventos"
       initialData={event}
       onSubmit={async (updated) => {
         await addOrUpdateEvent(updated);

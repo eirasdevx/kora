@@ -10,6 +10,7 @@ import WeeklyCalendar from "@/components/events/WeeklyCalendar";
 import DayAgenda from "@/components/events/DayAgenda";
 import EventDetailsPanel from "@/components/events/EventDetailsPanel";
 import ModuleTopbar, {
+  moduleTopbarButtonIconStyles,
   moduleTopbarButtonStyles,
 } from "@/components/shared/ModuleTopbar";
 
@@ -328,10 +329,12 @@ export default function EventsPage() {
           actions={
             <Link
               href="/events/new"
-              className={`${moduleTopbarButtonStyles.primary} inline-flex items-center gap-2`}
+              className={moduleTopbarButtonStyles.primary}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                add
+              <span className={moduleTopbarButtonIconStyles.add}>
+                <span className="material-symbols-outlined text-[16px]">
+                  add
+                </span>
               </span>
               Crear nuevo evento
             </Link>

@@ -33,6 +33,8 @@ export default function EditContactPage() {
 
   return (
     <ContactForm
+      backHref="/people/all"
+      backLabel="Volver a Personas"
       initialData={contact}
       onSubmit={async (updated) => {
         await addContact(updated);

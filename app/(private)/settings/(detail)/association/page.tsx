@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import Modal from "@/components/Modal";
+import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
 import {
   type AssociationRepresentative,
   useSessionStore,
@@ -219,6 +220,25 @@ export default function AssociationProfilePage() {
 
   return (
     <div className="space-y-8">
+      <SettingsPageHeader
+        section={"Perfil de la asociaci\u00f3n"}
+        title={"Perfil de la asociaci\u00f3n"}
+        subtitle={
+          "Actualiza la informaci\u00f3n legal y de contacto de tu asociaci\u00f3n."
+        }
+        actions={
+          <button
+            type="button"
+            onClick={() =>
+              document.getElementById("association-save")?.click()
+            }
+            className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
+          >
+            Guardar cambios
+          </button>
+        }
+      />
+      <div className="hidden">
       <PageTopbar>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
@@ -252,6 +272,7 @@ export default function AssociationProfilePage() {
           </div>
         </div>
       </PageTopbar>
+      </div>
 
       {!canEditAssociation ? (
         <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">

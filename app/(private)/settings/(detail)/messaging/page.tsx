@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import ModuleTopbar, {
   moduleTopbarButtonStyles,
 } from "@/components/shared/ModuleTopbar";
+import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
 import { useSessionStore } from "@/core/session/session.store";
 import {
   type EmailProvider,
@@ -112,6 +113,14 @@ export default function MessagingSettingsPage() {
   if (mode === "guest") {
     return (
       <div className="space-y-8">
+        <SettingsPageHeader
+          section={"Mensajer\u00eda"}
+          title={"Credenciales de mensajer\u00eda"}
+          subtitle={
+            "Plantillas, campa\u00f1as y comunicaciones personalizadas."
+          }
+        />
+        <div className="hidden">
         <ModuleTopbar
           module={MESSAGING_MODULE_TITLE}
           title="Credenciales de mensajeria"
@@ -121,10 +130,11 @@ export default function MessagingSettingsPage() {
               href="/settings"
               className={moduleTopbarButtonStyles.secondary}
             >
-              Volver a configuracion
+              {"<"} Volver a configuracion
             </Link>
           }
         />
+        </div>
 
         <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
@@ -143,6 +153,14 @@ export default function MessagingSettingsPage() {
 
   return (
     <div className="space-y-8">
+      <SettingsPageHeader
+        section={"Mensajer\u00eda"}
+        title={"Credenciales de mensajer\u00eda"}
+        subtitle={
+          "Plantillas, campa\u00f1as y comunicaciones personalizadas."
+        }
+      />
+      <div className="hidden">
       <ModuleTopbar
         module={MESSAGING_MODULE_TITLE}
         title="Credenciales de mensajeria"
@@ -152,10 +170,11 @@ export default function MessagingSettingsPage() {
             href="/settings"
             className={moduleTopbarButtonStyles.secondary}
           >
-            Volver a configuracion
+            {"<"} Volver a configuracion
           </Link>
         }
       />
+      </div>
 
       <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1.2fr_1fr]">
         <div className="space-y-2">

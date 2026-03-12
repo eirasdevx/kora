@@ -12,6 +12,8 @@ export default function NewEventPage() {
 
   return (
     <EventForm
+      backHref="/events"
+      backLabel="Volver a Eventos"
       onSubmit={async (event) => {
         await addOrUpdateEvent(event);
         router.push("/events");

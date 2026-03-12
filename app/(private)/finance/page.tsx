@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import ModuleTopbar, {
+  moduleTopbarButtonIconStyles,
   moduleTopbarButtonStyles,
 } from "@/components/shared/ModuleTopbar";
 import SectionBlock from "@/components/shared/SectionBlock";
@@ -16,11 +17,10 @@ import {
   Transaction,
 } from "@/modules/accounting/transaction.types";
 
-const STATUS_STYLES: Record<keyof typeof TransactionStatusLabels, string> =
-  {
-    completed: "bg-emerald-50 text-emerald-700",
-    pending: "bg-amber-50 text-amber-700",
-  };
+const STATUS_STYLES: Record<keyof typeof TransactionStatusLabels, string> = {
+  completed: "bg-emerald-50 text-emerald-700",
+  pending: "bg-amber-50 text-amber-700",
+};
 
 const FINANCE_MODULE_TITLE = "Finanzas";
 const FINANCE_PAGE_TITLE = "Centro financiero";
@@ -71,7 +71,7 @@ export default function FinancePage() {
       transactions.filter(
         (tx) => tx.category === "membership" && tx.type === "income"
       ),
-    [transactions, formatLocale]
+    [transactions]
   );
 
   const feePaidCount = feeTransactions.filter(
@@ -104,8 +104,7 @@ export default function FinancePage() {
   const recentTransactions = useMemo(() => {
     return [...transactions]
       .sort(
-        (a, b) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime()
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       )
       .slice(0, 6);
   }, [transactions]);
@@ -119,7 +118,7 @@ export default function FinancePage() {
         formatSignedAmount(tx.amount, tx.type, formatLocale),
         TransactionStatusLabels[tx.status],
       ]),
-    [transactions]
+    [transactions, formatLocale]
   );
 
   const handleExport = () => {
@@ -178,19 +177,23 @@ export default function FinancePage() {
               type="button"
               onClick={handleExport}
               disabled={transactions.length === 0}
-              className={`${moduleTopbarButtonStyles.secondary} inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60`}
+              className={`${moduleTopbarButtonStyles.secondary} disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                download
+              <span className={moduleTopbarButtonIconStyles.secondary}>
+                <span className="material-symbols-outlined text-[16px]">
+                  download
+                </span>
               </span>
               Exportar
             </button>
             <Link
               href="/accounting/new"
-              className={`${moduleTopbarButtonStyles.primary} inline-flex items-center gap-2`}
+              className={moduleTopbarButtonStyles.primary}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                add
+              <span className={moduleTopbarButtonIconStyles.add}>
+                <span className="material-symbols-outlined text-[16px]">
+                  add
+                </span>
               </span>
               Nuevo registro
             </Link>
@@ -202,14 +205,6 @@ export default function FinancePage() {
         <SectionBlock
           title="Gestión de cuotas"
           subtitle="Estado de cuotas y pagos"
-          actions={
-            <Link
-              href="/finance/fees"
-              className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white shadow"
-            >
-              Ver cuotas
-            </Link>
-          }
         >
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
@@ -245,14 +240,6 @@ export default function FinancePage() {
         <SectionBlock
           title="Contabilidad general"
           subtitle="Ingresos y gastos operativos"
-          actions={
-            <Link
-              href="/finance/accounting"
-              className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-            >
-              Ver contabilidad
-            </Link>
-          }
         >
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">

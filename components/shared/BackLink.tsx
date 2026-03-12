@@ -21,14 +21,19 @@ export default function BackLink({
     <Link
       href={href}
       className={cx(
-        "inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 shadow-sm transition hover:bg-gray-50",
+        "group inline-grid h-5 max-w-full grid-cols-[16px_minmax(0,1fr)] items-center gap-2 align-middle text-xs font-semibold uppercase tracking-[0.16em] text-gray-400 transition hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/15 focus:ring-offset-2",
         className
       )}
+      aria-label={label}
     >
-      <span className="material-symbols-outlined text-[16px]">
-        arrow_back
+      <span className="flex h-5 w-4 items-center justify-center">
+        <span className="material-symbols-rounded -translate-y-px text-[18px] leading-none transition-transform duration-200 group-hover:-translate-x-0.5">
+          chevron_left
+        </span>
       </span>
-      {label}
+      <span className="inline-flex min-w-0 items-center truncate leading-none">
+        {label}
+      </span>
     </Link>
   );
 }

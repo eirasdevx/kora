@@ -12,6 +12,8 @@ export default function NewTransactionPage() {
 
   return (
     <TransactionForm
+      backHref="/accounting"
+      backLabel="Volver a Contabilidad"
       onSubmit={async (tx) => {
         await addTransaction(tx);
         router.push("/accounting");

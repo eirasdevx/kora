@@ -2,16 +2,20 @@
 
 import { useState } from "react";
 import { Event, EventStatus } from "./event.types";
+import PageHeader from "@/components/shared/PageHeader";
+import { moduleTopbarButtonStyles } from "@/components/shared/ModuleTopbar";
 
 interface Props {
   initialData?: Event;
   onSubmit: (event: Event) => void;
   onCancel: () => void;
+  backHref?: string;
+  backLabel?: string;
 }
 
 const CATEGORY_OPTIONS = [
-  "Social / Recaudación",
-  "Formación",
+  "Social / RecaudaciÃ³n",
+  "FormaciÃ³n",
   "Deportivo",
   "Cultural",
   "Comunidad",
@@ -32,6 +36,8 @@ export default function EventForm({
   initialData,
   onSubmit,
   onCancel,
+  backHref,
+  backLabel,
 }: Props) {
   const isEditing = Boolean(initialData);
 
@@ -127,43 +133,37 @@ export default function EventForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 shadow-sm transition hover:bg-gray-50"
-            aria-label="Cerrar"
-          >
-            X
-          </button>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              {isEditing ? "Editar evento" : "Crear Nuevo Evento"}
-            </h1>
-            <p className="text-sm text-gray-500">
-              Planificación de actividades
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            value="draft"
-            className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
-          >
-            Guardar Borrador
-          </button>
-          <button
-            type="submit"
-            value="publish"
-            className="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
-          >
-            Publicar
-          </button>
-        </div>
-      </header>
+      <PageHeader
+        title={isEditing ? "Editar evento" : "Crear nuevo evento"}
+        subtitle={"Planificaci\u00f3n de actividades"}
+        backHref={backHref}
+        backLabel={backLabel}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={onCancel}
+              className={moduleTopbarButtonStyles.secondary}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              value="draft"
+              className={moduleTopbarButtonStyles.secondary}
+            >
+              Guardar borrador
+            </button>
+            <button
+              type="submit"
+              value="publish"
+              className={moduleTopbarButtonStyles.primary}
+            >
+              Publicar
+            </button>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm xl:col-span-12">
@@ -172,7 +172,7 @@ export default function EventForm({
               i
             </span>
             <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-gray-500">
-              Información general
+              InformaciÃ³n general
             </h2>
           </div>
 
@@ -180,20 +180,20 @@ export default function EventForm({
             <div className="grid gap-4 md:grid-cols-[1.4fr_0.6fr]">
               <div>
                 <label className="text-xs font-semibold uppercase text-gray-400">
-                  Título del evento
+                  TÃ­tulo del evento
                 </label>
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                  placeholder="Ej: Gala de Beneficencia Otoño"
+                  placeholder="Ej: Gala de Beneficencia OtoÃ±o"
                   required
                 />
               </div>
 
               <div>
                 <label className="text-xs font-semibold uppercase text-gray-400">
-                  Categoría
+                  CategorÃ­a
                 </label>
                 <div className="relative mt-2">
                   <select
@@ -216,13 +216,13 @@ export default function EventForm({
 
             <div>
               <label className="text-xs font-semibold uppercase text-gray-400">
-                Descripción
+                DescripciÃ³n
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="mt-2 min-h-[180px] w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm text-gray-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-                placeholder="Escribe aquí los detalles del evento..."
+                placeholder="Escribe aquÃ­ los detalles del evento..."
               />
             </div>
           </div>
@@ -234,7 +234,7 @@ export default function EventForm({
               U
             </span>
             <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-gray-500">
-              Logística y ubicación
+              LogÃ­stica y ubicaciÃ³n
             </h2>
           </div>
 
@@ -278,12 +278,12 @@ export default function EventForm({
 
           <div className="mt-4">
             <label className="text-xs font-semibold uppercase text-gray-400">
-              Dirección o enlace de reunión
+              DirecciÃ³n o enlace de reuniÃ³n
             </label>
             <div className="mt-2 flex flex-wrap gap-2">
               {[
                 { label: "Presencial", value: "onsite" },
-                { label: "En línea", value: "online" },
+                { label: "En lÃ­nea", value: "online" },
               ].map((option) => (
                 <button
                   key={option.value}
@@ -308,7 +308,7 @@ export default function EventForm({
               placeholder={
                 locationType === "online"
                   ? "Ej: https://zoom.us/..."
-                  : "Ej: Hotel Continental, Salón Real"
+                  : "Ej: Hotel Continental, SalÃ³n Real"
               }
             />
           </div>
@@ -317,7 +317,7 @@ export default function EventForm({
         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm xl:col-span-5">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-              €
+              â‚¬
             </span>
             <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-gray-500">
               Entradas y aforo
@@ -332,7 +332,7 @@ export default function EventForm({
                 </label>
                 <div className="relative mt-2">
                   <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                    €
+                    â‚¬
                   </span>
                   <input
                     type="number"
@@ -348,7 +348,7 @@ export default function EventForm({
 
               <div>
                 <label className="text-xs font-semibold uppercase text-gray-400">
-                  Capacidad máxima
+                  Capacidad mÃ¡xima
                 </label>
                 <input
                   type="number"
@@ -363,7 +363,7 @@ export default function EventForm({
 
             <div>
               <label className="text-xs font-semibold uppercase text-gray-400">
-                Cierre de inscripción
+                Cierre de inscripciÃ³n
               </label>
               <input
                 type="date"

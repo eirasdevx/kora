@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/shared/PageHeader";
+import {
+  moduleTopbarButtonIconStyles,
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 import SectionBlock from "@/components/shared/SectionBlock";
 import StatCard from "@/components/shared/StatCard";
 import DataTable from "@/components/shared/DataTable";
@@ -280,7 +284,7 @@ export default function ResourcesInventoryPage() {
     <div className="space-y-6 lg:space-y-8">
       <PageHeader
         title="Inventario"
-        subtitle="Control de activos y préstamos"
+        subtitle={"Control de activos y pr\u00e9stamos"}
         backHref="/resources"
         backLabel="Volver a Recursos"
         actions={
@@ -291,12 +295,14 @@ export default function ResourcesInventoryPage() {
               disabled={items.length === 0}
               aria-label="Exportar Excel"
               title="Exportar Excel"
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className={`${moduleTopbarButtonStyles.secondary} disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                grid_on
+              <span className={moduleTopbarButtonIconStyles.secondary}>
+                <span className="material-symbols-outlined text-[16px]">
+                  grid_on
+                </span>
               </span>
-              Excel
+              Exportar Excel
             </button>
             <button
               type="button"
@@ -304,19 +310,23 @@ export default function ResourcesInventoryPage() {
               disabled={items.length === 0}
               aria-label="Exportar PDF"
               title="Exportar PDF"
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className={`${moduleTopbarButtonStyles.secondary} disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                picture_as_pdf
+              <span className={moduleTopbarButtonIconStyles.secondary}>
+                <span className="material-symbols-outlined text-[16px]">
+                  picture_as_pdf
+                </span>
               </span>
-              PDF
+              Exportar PDF
             </button>
             <Link
               href="/resources/inventory/new"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
+              className={moduleTopbarButtonStyles.primary}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                add
+              <span className={moduleTopbarButtonIconStyles.add}>
+                <span className="material-symbols-outlined text-[16px]">
+                  add
+                </span>
               </span>
               Nuevo activo
             </Link>

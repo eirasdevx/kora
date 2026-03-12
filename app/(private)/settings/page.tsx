@@ -8,7 +8,7 @@ import { type UserRole, useUsersStore } from "@/core/users/users.store";
 
 const cards = [
   {
-    title: "Mi Perfil",
+    title: "Mi perfil",
     description:
       "Actualiza tu información personal, credenciales y preferencias de cuenta.",
     href: "/settings/profile",
@@ -16,7 +16,7 @@ const cards = [
     icon: <span className="material-symbols-outlined text-[20px]">person</span>,
   },
   {
-    title: "Perfil de Asociación",
+    title: "Perfil de asociación",
     description:
       "Información legal, NIF/CIF, datos de contacto, dirección y logotipos oficiales de la entidad.",
     href: "/settings/association",
@@ -26,7 +26,7 @@ const cards = [
     ),
   },
   {
-    title: "Gestión de Usuarios",
+    title: "Gestión de usuarios",
     description:
       "Administra los accesos del equipo, define roles, permisos y monitoriza la actividad.",
     href: "/settings/users",
@@ -37,7 +37,7 @@ const cards = [
     title: "Notificaciones",
     description:
       "Revisa el centro de notificaciones con cambios, pagos y eventos clave.",
-    href: "/notifications",
+    href: "/settings/notifications",
     tone: "bg-amber-50 text-amber-600",
     icon: (
       <span className="material-symbols-outlined text-[20px]">
@@ -46,16 +46,12 @@ const cards = [
     ),
   },
   {
-    title: "Mensajeria",
+    title: "Mensajería",
     description:
-      "Guarda credenciales de correo y numeros para envios masivos.",
+      "Guarda credenciales de correo y números para envíos masivos.",
     href: "/settings/messaging",
     tone: "bg-sky-50 text-sky-600",
-    icon: (
-      <span className="material-symbols-outlined text-[20px]">
-        mail
-      </span>
-    ),
+    icon: <span className="material-symbols-outlined text-[20px]">mail</span>,
   },
   {
     title: "Seguridad",
@@ -89,7 +85,7 @@ const cards = [
       </span>
     ),
   },
-];
+] as const;
 
 const GUEST_HIDDEN_CARD_HREFS = [
   "/settings/users",
@@ -136,7 +132,9 @@ export default function SettingsPage() {
     const term = search.trim().toLowerCase();
     if (!term) return visibleCards;
     return visibleCards.filter((card) => {
-      const haystack = `${card.title} ${card.description}`.toLowerCase().trim();
+      const haystack = `${card.title} ${card.description}`
+        .toLowerCase()
+        .trim();
       return haystack.includes(term);
     });
   }, [search, visibleCards]);
@@ -144,68 +142,56 @@ export default function SettingsPage() {
   return (
     <div className="space-y-10">
       <PageTopbar>
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <span className="material-symbols-outlined text-[20px]">
-                  settings
-                </span>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                  Kora Management Suite
-                </p>
-                <p className="text-sm text-gray-500">Administrador Global</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                  <span className="material-symbols-outlined text-[16px] leading-none">
-                    search
-                  </span>
-                </span>
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Buscar en configuración..."
-                  className="w-60 rounded-2xl border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                />
-              </div>
-              <Link
-                href="/settings/profile"
-                className="flex items-center gap-3 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 shadow-sm transition hover:bg-gray-50"
-              >
-                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                  {activeUserPhotoUrl ? (
-                    <img
-                      src={activeUserPhotoUrl}
-                      alt={`Perfil de ${activeUserName}`}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span>{activeUserInitials}</span>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-gray-800">
-                    {activeUserName}
-                  </p>
-                  <p className="text-xs text-gray-500">{activeUserRoleLabel}</p>
-                </div>
-              </Link>
-            </div>
-          </div>
-
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Configuración General
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0 max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
+              Configuración
+            </p>
+            <h1 className="mt-2 text-2xl font-semibold text-gray-900">
+              Configuración general
             </h1>
             <p className="mt-2 text-sm text-gray-500">
               Gestiona todos los aspectos centrales de tu asociación desde un
               único lugar. Selecciona una categoría para empezar.
             </p>
+          </div>
+
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center xl:w-auto xl:justify-end">
+            <div className="relative w-full sm:w-72">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                <span className="material-symbols-outlined text-[16px] leading-none">
+                  search
+                </span>
+              </span>
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar en configuración..."
+                className="w-full rounded-2xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+              />
+            </div>
+            <Link
+              href="/settings/profile"
+              className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 shadow-sm transition hover:bg-gray-50"
+            >
+              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
+                {activeUserPhotoUrl ? (
+                  <img
+                    src={activeUserPhotoUrl}
+                    alt={`Perfil de ${activeUserName}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span>{activeUserInitials}</span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-gray-800">
+                  {activeUserName}
+                </p>
+                <p className="text-xs text-gray-500">{activeUserRoleLabel}</p>
+              </div>
+            </Link>
           </div>
         </div>
       </PageTopbar>
@@ -253,7 +239,7 @@ export default function SettingsPage() {
             Privacidad
           </Link>
           <Link href="/settings/status" className="transition hover:text-gray-700">
-            Estado del Sistema
+            Estado del sistema
           </Link>
         </div>
       </footer>

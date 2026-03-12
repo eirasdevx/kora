@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
+import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
 import { db } from "@/core/storage/kora.db";
 import {
   type AssociationProfile,
@@ -771,6 +772,14 @@ export default function MigrationSettingsPage() {
 
   return (
     <div className="space-y-8">
+      <SettingsPageHeader
+        section={"Migraci\u00f3n"}
+        title={"Gesti\u00f3n de datos"}
+        subtitle={
+          "Importa y exporta la informaci\u00f3n de tu organizaci\u00f3n de forma segura y r\u00e1pida."
+        }
+      />
+      <div className="hidden">
       <PageTopbar>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
@@ -801,6 +810,7 @@ export default function MigrationSettingsPage() {
           </button>
         </div>
       </PageTopbar>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">

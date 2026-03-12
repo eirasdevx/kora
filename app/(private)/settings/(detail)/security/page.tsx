@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
+import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
 import { useSessionStore } from "@/core/session/session.store";
 import {
   createDefaultPreferences,
@@ -459,6 +460,12 @@ export default function SecuritySettingsPage() {
   if (mode === "guest") {
     return (
       <div className="space-y-8">
+        <SettingsPageHeader
+          section="Seguridad"
+          title="Seguridad"
+          subtitle="Esta sección solo está disponible en cuentas autenticadas."
+        />
+        <div className="hidden">
         <PageTopbar>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
@@ -481,6 +488,7 @@ export default function SecuritySettingsPage() {
             </button>
           </div>
         </PageTopbar>
+        </div>
 
         <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
@@ -500,6 +508,12 @@ export default function SecuritySettingsPage() {
 
   return (
     <div className="space-y-8">
+      <SettingsPageHeader
+        section="Seguridad"
+        title="Seguridad"
+        subtitle="Gestiona el acceso a tu cuenta y protege la integridad de los datos."
+      />
+      <div className="hidden">
       <PageTopbar>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
@@ -520,6 +534,7 @@ export default function SecuritySettingsPage() {
           </button>
         </div>
       </PageTopbar>
+      </div>
 
       <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1.1fr_1fr]">
         <div>

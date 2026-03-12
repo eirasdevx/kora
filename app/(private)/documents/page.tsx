@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import Modal from "@/components/Modal";
-import PageTopbar from "@/components/PageTopbar";
+import PageHeader from "@/components/shared/PageHeader";
+import {
+  moduleTopbarButtonIconStyles,
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
 import {
@@ -358,47 +362,28 @@ export default function DocumentsPage() {
 
   return (
     <div className="space-y-6">
-      <PageTopbar>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Documentos</h1>
-            <p className="text-sm text-gray-500">
-              Biblioteca segura para actas, contratos y hojas de calculo.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative w-full sm:w-80">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                <span className="material-symbols-outlined text-[16px] leading-none">
-                  search
-                </span>
+      <PageHeader
+        title="Documentos"
+        subtitle={
+          "Biblioteca segura para actas, contratos y hojas de c\u00e1lculo."
+        }
+        backHref="/resources"
+        backLabel="Volver a Recursos"
+        actions={
+          <button
+            type="button"
+            onClick={() => setUploadOpen(true)}
+            className={moduleTopbarButtonStyles.primary}
+          >
+            <span className={moduleTopbarButtonIconStyles.add}>
+              <span className="material-symbols-outlined text-[16px]">
+                add
               </span>
-              <input
-                type="text"
-                placeholder="Buscar documentos, facturas..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => setUploadOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-                <span className="material-symbols-outlined text-[16px]">
-                  add
-                </span>
-              </span>
-              Subir Archivo
-            </button>
-          </div>
-        </div>
-      </PageTopbar>
+            </span>
+            Subir documento
+          </button>
+        }
+      />
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         <div
@@ -473,7 +458,7 @@ export default function DocumentsPage() {
           </section>
 
           <section className="rounded-3xl border border-gray-200 bg-white shadow-sm">
-            <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
                   Todos los archivos
@@ -482,46 +467,65 @@ export default function DocumentsPage() {
                   Gestiona permisos y organiza la documentacion clave.
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 shadow-sm"
-                >
-                  <span className="material-symbols-outlined text-[16px]">
-                    tune
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
+                <div className="relative w-full xl:w-80">
+                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                    <span className="material-symbols-outlined text-[16px] leading-none">
+                      search
+                    </span>
                   </span>
-                  Filtros
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("list")}
-                  className={cx(
-                    "flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm",
-                    viewMode === "list"
-                      ? "border-primary/40 bg-gray-50 text-primary"
-                      : "border-gray-200 bg-white text-gray-500"
-                  )}
-                  aria-label="Vista lista"
-                >
-                  <span className="material-symbols-outlined text-[16px]">
-                    view_list
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("grid")}
-                  className={cx(
-                    "flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm",
-                    viewMode === "grid"
-                      ? "border-primary/40 bg-gray-50 text-primary"
-                      : "border-gray-200 bg-white text-gray-500"
-                  )}
-                  aria-label="Vista cuadrilla"
-                >
-                  <span className="material-symbols-outlined text-[16px]">
-                    grid_view
-                  </span>
-                </button>
+                  <input
+                    type="text"
+                    placeholder="Buscar documentos, facturas..."
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 shadow-sm"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      tune
+                    </span>
+                    Filtros
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("list")}
+                    className={cx(
+                      "flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm",
+                      viewMode === "list"
+                        ? "border-primary/40 bg-gray-50 text-primary"
+                        : "border-gray-200 bg-white text-gray-500"
+                    )}
+                    aria-label="Vista lista"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      view_list
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("grid")}
+                    className={cx(
+                      "flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm",
+                      viewMode === "grid"
+                        ? "border-primary/40 bg-gray-50 text-primary"
+                        : "border-gray-200 bg-white text-gray-500"
+                    )}
+                    aria-label="Vista cuadrilla"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      grid_view
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
 

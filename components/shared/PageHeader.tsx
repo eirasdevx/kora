@@ -12,6 +12,10 @@ type PageHeaderProps = {
   backLabel?: string;
 };
 
+function cx(...classes: Array<string | undefined | null | false>) {
+  return classes.filter(Boolean).join(" ");
+}
+
 export default function PageHeader({
   title,
   subtitle,
@@ -20,32 +24,39 @@ export default function PageHeader({
   backHref,
   backLabel,
 }: PageHeaderProps) {
+  const hasBackLink = Boolean(backHref && backLabel);
+  const headerActions = actions ? (
+    <div className="flex flex-wrap items-center gap-2">
+      {actions}
+    </div>
+  ) : null;
+
   return (
     <PageTopbar>
-      {backHref && backLabel ? (
-        <div className="mb-4">
-          <BackLink href={backHref} label={backLabel} />
-        </div>
-      ) : null}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          {eyebrow ? (
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
-              {eyebrow}
-            </p>
-          ) : null}
-          <h1 className="text-2xl font-semibold text-gray-900">
-            {title}
-          </h1>
-          {subtitle ? (
-            <p className="text-sm text-gray-500">{subtitle}</p>
-          ) : null}
-        </div>
-        {actions ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {actions}
-          </div>
+      <div className="flex flex-col gap-3">
+        {hasBackLink ? (
+          <BackLink href={backHref!} label={backLabel!} />
         ) : null}
+        <div
+          className={cx(
+            "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+          )}
+        >
+          <div className="min-w-0">
+            {eyebrow ? (
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
+                {eyebrow}
+              </p>
+            ) : null}
+            <h1 className="text-2xl font-semibold text-gray-900">
+              {title}
+            </h1>
+            {subtitle ? (
+              <p className="text-sm text-gray-500">{subtitle}</p>
+            ) : null}
+          </div>
+          {headerActions}
+        </div>
       </div>
     </PageTopbar>
   );

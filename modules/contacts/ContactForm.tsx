@@ -7,11 +7,16 @@ import {
   ContactType,
   ContactTypeLabels,
 } from "./contact.types";
+import BackLink from "@/components/shared/BackLink";
+import PageHeader from "@/components/shared/PageHeader";
+import { moduleTopbarButtonStyles } from "@/components/shared/ModuleTopbar";
 
 interface Props {
   initialData?: Contact;
   onSubmit: (contact: Contact) => Promise<void>;
   onCancel?: () => void;
+  backHref?: string;
+  backLabel?: string;
 }
 
 const CONTACT_TYPES: ContactType[] = [
@@ -114,6 +119,8 @@ export default function ContactForm({
   initialData,
   onSubmit,
   onCancel,
+  backHref,
+  backLabel,
 }: Props) {
   const isEditing = Boolean(initialData);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -291,18 +298,39 @@ export default function ContactForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          {onCancel && (
+      <PageHeader
+        title={isEditing ? "Editar contacto" : "Crear nuevo contacto"}
+        subtitle={"Informaci\u00f3n detallada y notas internas"}
+        backHref={backHref}
+        backLabel={backLabel}
+        actions={
+          <>
+            {onCancel ? (
+              <button
+                type="button"
+                onClick={onCancel}
+                className={moduleTopbarButtonStyles.secondary}
+              >
+                Cancelar
+              </button>
+            ) : null}
             <button
-              type="button"
-              onClick={onCancel}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 shadow-sm transition hover:bg-gray-50"
-              aria-label="Volver"
+              type="submit"
+              className={moduleTopbarButtonStyles.primary}
             >
-              &lt;
+              <span className="material-symbols-outlined text-[18px]">
+                save
+              </span>
+              {primaryLabel}
             </button>
-          )}
+          </>
+        }
+      />
+      <header className="hidden flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-3">
+          {backHref && backLabel ? (
+            <BackLink href={backHref} label={backLabel} />
+          ) : null}
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">
               {isEditing ? "Editar contacto" : "Crear Nuevo Contacto"}

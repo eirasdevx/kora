@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import ModuleTopbar, {
+  moduleTopbarButtonIconStyles,
   moduleTopbarButtonStyles,
 } from "@/components/shared/ModuleTopbar";
 import SectionBlock from "@/components/shared/SectionBlock";
@@ -180,19 +181,23 @@ export default function PeoplePage() {
           <>
             <Link
               href="/people/all"
-              className={`${moduleTopbarButtonStyles.secondary} inline-flex items-center gap-2`}
+              className={moduleTopbarButtonStyles.secondary}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                groups
+              <span className={moduleTopbarButtonIconStyles.secondary}>
+                <span className="material-symbols-outlined text-[16px]">
+                  groups
+                </span>
               </span>
               Total personas
             </Link>
             <Link
               href="/contacts/new"
-              className={`${moduleTopbarButtonStyles.primary} inline-flex items-center gap-2`}
+              className={moduleTopbarButtonStyles.primary}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                add
+              <span className={moduleTopbarButtonIconStyles.add}>
+                <span className="material-symbols-outlined text-[16px]">
+                  add
+                </span>
               </span>
               Nueva persona
             </Link>

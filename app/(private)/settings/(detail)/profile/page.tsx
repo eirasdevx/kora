@@ -8,8 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
-import PageTopbar from "@/components/PageTopbar";
+import PageHeader from "@/components/shared/PageHeader";
 import { useSessionStore } from "@/core/session/session.store";
 import {
   LOCALE_DATE_FORMATS,
@@ -1080,7 +1079,6 @@ function UserProfileCard({
 }
 
 export default function ProfileSettingsPage() {
-  const router = useRouter();
   const hydrated = useSessionStore((s) => s.hydrated);
   const mode = useSessionStore((s) => s.mode);
   const admin = useSessionStore((s) => s.admin);
@@ -1116,26 +1114,14 @@ export default function ProfileSettingsPage() {
   if (mode === "guest") {
     return (
       <div className="space-y-8">
-        <PageTopbar>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                {copy.breadcrumb}
-              </p>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                {copy.pageTitle}
-              </h1>
-              <p className="text-sm text-gray-500">{copy.guestNotice}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => router.push("/settings")}
-              className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
-            >
-              {copy.backToSettings}
-            </button>
-          </div>
-        </PageTopbar>
+        <PageHeader
+          title={"Configuraci\u00f3n del perfil"}
+          subtitle={
+            "Esta secci\u00f3n solo est\u00e1 disponible en cuentas autenticadas."
+          }
+          backHref="/settings"
+          backLabel={"Volver a configuraci\u00f3n"}
+        />
 
         <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
@@ -1152,28 +1138,14 @@ export default function ProfileSettingsPage() {
 
   return (
     <div className="space-y-8">
-      <PageTopbar>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-              {copy.breadcrumb}
-            </p>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              {copy.pageTitle}
-            </h1>
-            <p className="text-sm text-gray-500">{copy.pageSubtitle}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => router.push("/settings")}
-              className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
-            >
-              {copy.backToSettings}
-            </button>
-          </div>
-        </div>
-      </PageTopbar>
+      <PageHeader
+        title={"Configuraci\u00f3n del perfil"}
+        subtitle={
+          "Gestiona tu informaci\u00f3n personal y preferencias de cuenta."
+        }
+        backHref="/settings"
+        backLabel={"Volver a configuraci\u00f3n"}
+      />
 
       <UserProfileCard
         user={activeUser}

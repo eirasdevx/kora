@@ -33,6 +33,8 @@ export default function EditTransactionPage() {
 
   return (
     <TransactionForm
+      backHref="/accounting"
+      backLabel="Volver a Contabilidad"
       initialData={transaction}
       onSubmit={async (tx) => {
         await updateTransaction(tx);

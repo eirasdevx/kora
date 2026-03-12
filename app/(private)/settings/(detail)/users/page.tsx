@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import Modal from "@/components/Modal";
+import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
 import { useSessionStore } from "@/core/session/session.store";
 import {
   type UserAccount,
@@ -541,6 +542,12 @@ export default function UsersSettingsPage() {
   if (mode === "guest") {
     return (
       <div className="space-y-8">
+        <SettingsPageHeader
+          section="Usuarios y permisos"
+          title="Usuarios y permisos"
+          subtitle="Esta sección solo está disponible en cuentas autenticadas."
+        />
+        <div className="hidden">
         <PageTopbar>
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
@@ -565,6 +572,7 @@ export default function UsersSettingsPage() {
             </div>
           </div>
         </PageTopbar>
+        </div>
 
         <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
@@ -583,6 +591,33 @@ export default function UsersSettingsPage() {
 
   return (
     <div className="space-y-8">
+      <SettingsPageHeader
+        section="Usuarios y permisos"
+        title="Usuarios y permisos"
+        subtitle="Administra el acceso de tu equipo a los diferentes módulos de la asociación."
+        actions={
+          isAdmin ? (
+            <button
+              type="button"
+              onClick={() => {
+                setFormError(null);
+                setUserForm(createEmptyForm());
+                setShowPassword(false);
+                setShowRepeat(false);
+                setPanelMode("create");
+                setSelectedId(null);
+              }}
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                person_add
+              </span>
+              Añadir usuario
+            </button>
+          ) : null
+        }
+      />
+      <div className="hidden">
       <PageTopbar>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -624,6 +659,7 @@ export default function UsersSettingsPage() {
           </div>
         </div>
       </PageTopbar>
+      </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">

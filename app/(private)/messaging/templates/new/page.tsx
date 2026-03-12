@@ -1,11 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import ModuleTopbar, {
-  moduleTopbarButtonStyles,
-} from "@/components/shared/ModuleTopbar";
+import PageHeader from "@/components/shared/PageHeader";
+import { moduleTopbarButtonStyles } from "@/components/shared/ModuleTopbar";
 import { useSessionStore } from "@/core/session/session.store";
 import { useMessagingStore } from "@/modules/messaging/messaging.store";
 import {
@@ -44,10 +42,6 @@ const applyPreviewVariables = (value: string) => {
     value
   );
 };
-
-const MESSAGING_MODULE_TITLE = "Mensajeria";
-const MESSAGING_MODULE_DESCRIPTION =
-  "Plantillas, campanas y comunicaciones personalizadas.";
 
 function TemplateEditor({
   activeTemplate,
@@ -99,26 +93,19 @@ function TemplateEditor({
 
   return (
     <div className="space-y-6">
-      <ModuleTopbar
-        module={MESSAGING_MODULE_TITLE}
+      <PageHeader
         title={pageTitle}
-        description={MESSAGING_MODULE_DESCRIPTION}
+        subtitle="Plantillas, campañas y comunicaciones personalizadas."
+        backHref="/messaging"
+        backLabel="Volver a Mensajería"
         actions={
-          <>
-            <Link
-              href="/messaging"
-              className={moduleTopbarButtonStyles.secondary}
-            >
-              Volver a mensajes
-            </Link>
-            <button
-              type="button"
-              onClick={handleSave}
-              className={moduleTopbarButtonStyles.primary}
-            >
-              Guardar plantilla
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={handleSave}
+            className={moduleTopbarButtonStyles.primary}
+          >
+            Guardar plantilla
+          </button>
         }
       />
 
@@ -256,18 +243,11 @@ export default function NewTemplatePage() {
   if (mode === "guest") {
     return (
       <div className="space-y-6">
-        <ModuleTopbar
-          module={MESSAGING_MODULE_TITLE}
+        <PageHeader
           title="Crear nueva plantilla"
-          description={MESSAGING_MODULE_DESCRIPTION}
-          actions={
-            <Link
-              href="/dashboard"
-              className={moduleTopbarButtonStyles.secondary}
-            >
-              Volver al panel
-            </Link>
-          }
+          subtitle="Plantillas, campañas y comunicaciones personalizadas."
+          backHref="/dashboard"
+          backLabel="Volver al panel"
         />
 
         <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">

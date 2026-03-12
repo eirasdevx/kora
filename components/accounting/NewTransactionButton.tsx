@@ -1,13 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import {
+  moduleTopbarButtonIconStyles,
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 
 export default function NewTransactionButton() {
   return (
-    <Link
-      href="/accounting/new"
-      className="bg-primary text-white px-6 py-3 rounded-lg font-bold shadow inline-flex items-center"
-    >
+    <Link href="/accounting/new" className={moduleTopbarButtonStyles.primary}>
+      <span className={moduleTopbarButtonIconStyles.add}>
+        <span className="material-symbols-outlined text-[16px]">
+          add
+        </span>
+      </span>
       Nueva transacción
     </Link>
   );

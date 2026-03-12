@@ -11,9 +11,18 @@ type ModuleTopbarProps = {
 
 export const moduleTopbarButtonStyles = {
   secondary:
-    "rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50",
+    "group inline-flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto sm:min-w-[158px]",
   primary:
-    "rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-primary/90",
+    "group inline-flex h-11 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-3.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90 sm:w-auto sm:min-w-[158px]",
+};
+
+export const moduleTopbarButtonIconStyles = {
+  secondary:
+    "flex h-4 w-4 shrink-0 items-center justify-center text-slate-500 transition group-hover:text-primary",
+  primary:
+    "flex h-4 w-4 shrink-0 items-center justify-center text-white transition",
+  add:
+    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/10 transition group-hover:bg-white/20",
 };
 
 export default function ModuleTopbar({
@@ -33,7 +42,9 @@ export default function ModuleTopbar({
           <p className="text-sm text-slate-500">{description}</p>
         </div>
         {actions ? (
-          <div className="flex flex-wrap items-center gap-2">{actions}</div>
+          <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
+            {actions}
+          </div>
         ) : null}
       </div>
     </PageTopbar>

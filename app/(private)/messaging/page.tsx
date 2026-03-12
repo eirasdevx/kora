@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import Modal from "@/components/Modal";
 import ModuleTopbar, {
+  moduleTopbarButtonIconStyles,
   moduleTopbarButtonStyles,
 } from "@/components/shared/ModuleTopbar";
 import { useLocale } from "@/core/i18n/use-locale";
@@ -25,9 +26,9 @@ const formatDateTime = (value: string, locale: string) =>
     timeStyle: "short",
   });
 
-const MESSAGING_MODULE_TITLE = "Mensajeria";
+const MESSAGING_MODULE_TITLE = "Mensajer\u00eda";
 const MESSAGING_MODULE_DESCRIPTION =
-  "Plantillas, campanas y comunicaciones personalizadas.";
+  "Plantillas, campa\u00f1as y comunicaciones personalizadas.";
 
 export default function MessagingPage() {
   const { formatLocale } = useLocale();
@@ -129,6 +130,11 @@ export default function MessagingPage() {
               href="/messaging/templates/new"
               className={moduleTopbarButtonStyles.primary}
             >
+              <span className={moduleTopbarButtonIconStyles.add}>
+                <span className="material-symbols-outlined text-[14px]">
+                  add
+                </span>
+              </span>
               Nueva plantilla
             </Link>
           </>

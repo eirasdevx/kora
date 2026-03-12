@@ -128,7 +128,7 @@ export default function MemberDetailPage() {
     return (
       <div className="space-y-6">
         <PageTopbar>
-          <div className="flex items-center gap-4">
+          <div className="space-y-4">
             <BackLink
               href="/people/members"
               label="Volver a Socios"
@@ -170,8 +170,8 @@ export default function MemberDetailPage() {
   return (
     <div className="space-y-6 lg:space-y-8">
       <PageTopbar>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div className="space-y-4">
             <BackLink
               href="/people/members"
               label="Volver a Socios"
@@ -185,7 +185,7 @@ export default function MemberDetailPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="relative">
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
                 <span className="material-symbols-outlined text-[18px]">
