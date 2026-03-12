@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
-import PageHeader from "@/components/shared/PageHeader";
+import ModuleTopbar, {
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 import SectionBlock from "@/components/shared/SectionBlock";
 import DataTable from "@/components/shared/DataTable";
 import { useLocale } from "@/core/i18n/use-locale";
@@ -19,6 +21,11 @@ const STATUS_STYLES: Record<keyof typeof TransactionStatusLabels, string> =
     completed: "bg-emerald-50 text-emerald-700",
     pending: "bg-amber-50 text-amber-700",
   };
+
+const FINANCE_MODULE_TITLE = "Finanzas";
+const FINANCE_PAGE_TITLE = "Centro financiero";
+const FINANCE_MODULE_DESCRIPTION =
+  "Cuotas, ingresos, gastos y contabilidad general.";
 
 function formatCurrency(value: number, locale: string) {
   return new Intl.NumberFormat(locale, {
@@ -161,16 +168,17 @@ export default function FinancePage() {
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <PageHeader
-        title="Finanzas"
-        subtitle="Control de cuotas y contabilidad general"
+      <ModuleTopbar
+        module={FINANCE_MODULE_TITLE}
+        title={FINANCE_PAGE_TITLE}
+        description={FINANCE_MODULE_DESCRIPTION}
         actions={
           <>
             <button
               type="button"
               onClick={handleExport}
               disabled={transactions.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className={`${moduleTopbarButtonStyles.secondary} inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60`}
             >
               <span className="material-symbols-outlined text-[18px]">
                 download
@@ -179,7 +187,7 @@ export default function FinancePage() {
             </button>
             <Link
               href="/accounting/new"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
+              className={`${moduleTopbarButtonStyles.primary} inline-flex items-center gap-2`}
             >
               <span className="material-symbols-outlined text-[18px]">
                 add

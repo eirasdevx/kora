@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import PageTopbar from "@/components/PageTopbar";
-import BackLink from "@/components/shared/BackLink";
+import ModuleTopbar, {
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 import { useSessionStore } from "@/core/session/session.store";
 import {
   type EmailProvider,
@@ -63,16 +65,15 @@ const PROVIDER_STEPS: Record<EmailProvider, string[]> = {
   ],
 };
 
+const MESSAGING_MODULE_TITLE = "Mensajeria";
+const MESSAGING_MODULE_DESCRIPTION =
+  "Plantillas, campanas y comunicaciones personalizadas.";
+
 export default function MessagingSettingsPage() {
   const mode = useSessionStore((s) => s.mode);
   const association = useSessionStore((s) => s.association);
-  const {
-    settings,
-    hydrated,
-    loadSettings,
-    updateSettings,
-    saveSettings,
-  } = useMessagingSettingsStore();
+  const { settings, hydrated, loadSettings, updateSettings, saveSettings } =
+    useMessagingSettingsStore();
 
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">(
     "idle"
@@ -91,7 +92,13 @@ export default function MessagingSettingsPage() {
     if (!settings.emailAddress && association.contactEmail) {
       updateSettings({ emailAddress: association.contactEmail });
     }
-  }, [association, hydrated, settings.senderName, settings.emailAddress, updateSettings]);
+  }, [
+    association,
+    hydrated,
+    settings.senderName,
+    settings.emailAddress,
+    updateSettings,
+  ]);
 
   const handleSave = async () => {
     setStatus("saving");
@@ -105,22 +112,19 @@ export default function MessagingSettingsPage() {
   if (mode === "guest") {
     return (
       <div className="space-y-8">
-        <PageTopbar>
-          <div className="mb-4">
-            <BackLink href="/settings" label="Volver a Configuracion" />
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-              Configuracion &gt; Mensajeria
-            </p>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Credenciales de mensajeria
-            </h1>
-            <p className="text-sm text-gray-500">
-              Esta seccion solo esta disponible en cuentas autenticadas.
-            </p>
-          </div>
-        </PageTopbar>
+        <ModuleTopbar
+          module={MESSAGING_MODULE_TITLE}
+          title="Credenciales de mensajeria"
+          description={MESSAGING_MODULE_DESCRIPTION}
+          actions={
+            <Link
+              href="/settings"
+              className={moduleTopbarButtonStyles.secondary}
+            >
+              Volver a configuracion
+            </Link>
+          }
+        />
 
         <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
@@ -139,24 +143,19 @@ export default function MessagingSettingsPage() {
 
   return (
     <div className="space-y-8">
-      <PageTopbar>
-        <div className="mb-4">
-          <BackLink href="/settings" label="Volver a Configuración" />
-        </div>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-              Configuracion &gt; Mensajeria
-            </p>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Credenciales de mensajeria
-            </h1>
-            <p className="text-sm text-gray-500">
-              Guarda el correo, App Password y numeros de contacto.
-            </p>
-          </div>
-        </div>
-      </PageTopbar>
+      <ModuleTopbar
+        module={MESSAGING_MODULE_TITLE}
+        title="Credenciales de mensajeria"
+        description={MESSAGING_MODULE_DESCRIPTION}
+        actions={
+          <Link
+            href="/settings"
+            className={moduleTopbarButtonStyles.secondary}
+          >
+            Volver a configuracion
+          </Link>
+        }
+      />
 
       <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1.2fr_1fr]">
         <div className="space-y-2">

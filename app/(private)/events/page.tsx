@@ -1,19 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import EventsTopbar, { EventsView } from "@/components/topbars/EventsTopbar";
+import type { EventsView } from "@/components/topbars/EventsTopbar";
 import MonthlyCalendar from "@/components/events/MonthlyCalendar";
 import WeeklyCalendar from "@/components/events/WeeklyCalendar";
 import DayAgenda from "@/components/events/DayAgenda";
 import EventDetailsPanel from "@/components/events/EventDetailsPanel";
-import PageTopbar from "@/components/PageTopbar";
+import ModuleTopbar, {
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 
 import { useLocale } from "@/core/i18n/use-locale";
 import { Event } from "@/modules/events/event.types";
 import { useEventsStore } from "@/modules/events/events.store";
 import { downloadPdf, downloadXlsx } from "@/lib/exporters";
+
+const EVENTS_MODULE_TITLE = "Eventos";
+const EVENTS_PAGE_TITLE = "Agenda de eventos";
+const EVENTS_MODULE_DESCRIPTION =
+  "Calendario, inscripciones y seguimiento de actividades.";
 
 /* =======================
    Helpers de fechas
@@ -313,13 +321,22 @@ export default function EventsPage() {
     <div className="flex gap-6">
       {/* Columna principal */}
       <div className="flex-1 space-y-6">
-        <PageTopbar>
-          <EventsTopbar
-            onCreate={() => {
-              router.push("/events/new");
-            }}
-          />
-        </PageTopbar>
+        <ModuleTopbar
+          module={EVENTS_MODULE_TITLE}
+          title={EVENTS_PAGE_TITLE}
+          description={EVENTS_MODULE_DESCRIPTION}
+          actions={
+            <Link
+              href="/events/new"
+              className={`${moduleTopbarButtonStyles.primary} inline-flex items-center gap-2`}
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                add
+              </span>
+              Crear nuevo evento
+            </Link>
+          }
+        />
 
         <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

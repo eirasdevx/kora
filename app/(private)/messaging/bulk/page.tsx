@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import PageTopbar from "@/components/PageTopbar";
-import BackLink from "@/components/shared/BackLink";
+import ModuleTopbar, {
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 import { useSessionStore } from "@/core/session/session.store";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { ContactType } from "@/modules/contacts/contact.types";
@@ -102,6 +103,10 @@ const applyPreviewVariables = (value: string) => {
     value
   );
 };
+
+const MESSAGING_MODULE_TITLE = "Mensajeria";
+const MESSAGING_MODULE_DESCRIPTION =
+  "Plantillas, campanas y comunicaciones personalizadas.";
 
 export default function MessagingBulkPage() {
   const mode = useSessionStore((s) => s.mode);
@@ -322,24 +327,19 @@ export default function MessagingBulkPage() {
   if (mode === "guest") {
     return (
       <div className="space-y-6">
-        <PageTopbar>
-          <div className="mb-4">
-            <BackLink href="/dashboard" label="Volver al panel" />
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-                Mensajeria / Envio masivo
-              </p>
-              <h1 className="text-2xl font-semibold text-slate-900">
-                Envio de mensajes masivos
-              </h1>
-              <p className="text-sm text-slate-500">
-                Esta seccion solo esta disponible en cuentas autenticadas.
-              </p>
-            </div>
-          </div>
-        </PageTopbar>
+        <ModuleTopbar
+          module={MESSAGING_MODULE_TITLE}
+          title="Envio de mensajes masivos"
+          description={MESSAGING_MODULE_DESCRIPTION}
+          actions={
+            <Link
+              href="/dashboard"
+              className={moduleTopbarButtonStyles.secondary}
+            >
+              Volver al panel
+            </Link>
+          }
+        />
 
         <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
@@ -358,24 +358,19 @@ export default function MessagingBulkPage() {
 
   return (
     <div className="space-y-6">
-      <PageTopbar>
-        <div className="mb-4">
-          <BackLink href="/messaging" label="Volver a Mensajería" />
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-              Mensajeria / Envio masivo
-            </p>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              Envio de mensajes masivos
-            </h1>
-            <p className="text-sm text-slate-500">
-              Configura y distribuye comunicaciones a tu base de socios.
-            </p>
-          </div>
-        </div>
-      </PageTopbar>
+      <ModuleTopbar
+        module={MESSAGING_MODULE_TITLE}
+        title="Envio de mensajes masivos"
+        description={MESSAGING_MODULE_DESCRIPTION}
+        actions={
+          <Link
+            href="/messaging"
+            className={moduleTopbarButtonStyles.secondary}
+          >
+            Volver a mensajes
+          </Link>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <section className="space-y-6">

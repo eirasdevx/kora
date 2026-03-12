@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import PageTopbar from "@/components/PageTopbar";
-import BackLink from "@/components/shared/BackLink";
+import ModuleTopbar, {
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 import { useSessionStore } from "@/core/session/session.store";
 import { useMessagingStore } from "@/modules/messaging/messaging.store";
 import {
@@ -42,6 +44,10 @@ const applyPreviewVariables = (value: string) => {
     value
   );
 };
+
+const MESSAGING_MODULE_TITLE = "Mensajeria";
+const MESSAGING_MODULE_DESCRIPTION =
+  "Plantillas, campanas y comunicaciones personalizadas.";
 
 function TemplateEditor({
   activeTemplate,
@@ -89,36 +95,32 @@ function TemplateEditor({
   const insertToken = (token: string) => {
     setHtml((prev) => `${prev}${prev ? " " : ""}${token}`);
   };
+  const pageTitle = activeTemplate ? "Editar plantilla" : "Crear nueva plantilla";
 
   return (
     <div className="space-y-6">
-      <PageTopbar>
-        <div className="mb-4">
-          <BackLink href="/messaging" label="Volver a Mensajeria" />
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-              Plantillas / Nueva plantilla
-            </p>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              Crear nueva plantilla
-            </h1>
-            <p className="text-sm text-slate-500">
-              Disena el contenido para envios masivos.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
+      <ModuleTopbar
+        module={MESSAGING_MODULE_TITLE}
+        title={pageTitle}
+        description={MESSAGING_MODULE_DESCRIPTION}
+        actions={
+          <>
+            <Link
+              href="/messaging"
+              className={moduleTopbarButtonStyles.secondary}
+            >
+              Volver a mensajes
+            </Link>
             <button
               type="button"
               onClick={handleSave}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-primary/90"
+              className={moduleTopbarButtonStyles.primary}
             >
               Guardar plantilla
             </button>
-          </div>
-        </div>
-      </PageTopbar>
+          </>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <section className="space-y-6">
@@ -254,24 +256,19 @@ export default function NewTemplatePage() {
   if (mode === "guest") {
     return (
       <div className="space-y-6">
-        <PageTopbar>
-          <div className="mb-4">
-            <BackLink href="/dashboard" label="Volver al panel" />
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-                Plantillas / Nueva plantilla
-              </p>
-              <h1 className="text-2xl font-semibold text-slate-900">
-                Crear nueva plantilla
-              </h1>
-              <p className="text-sm text-slate-500">
-                Esta seccion solo esta disponible en cuentas autenticadas.
-              </p>
-            </div>
-          </div>
-        </PageTopbar>
+        <ModuleTopbar
+          module={MESSAGING_MODULE_TITLE}
+          title="Crear nueva plantilla"
+          description={MESSAGING_MODULE_DESCRIPTION}
+          actions={
+            <Link
+              href="/dashboard"
+              className={moduleTopbarButtonStyles.secondary}
+            >
+              Volver al panel
+            </Link>
+          }
+        />
 
         <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">

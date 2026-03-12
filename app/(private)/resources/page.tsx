@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
-import PageHeader from "@/components/shared/PageHeader";
+import ModuleTopbar, {
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 import StatCard from "@/components/shared/StatCard";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
@@ -22,6 +24,11 @@ const ITEM_STATUS_STYLES: Record<InventoryStatus, string> = {
   maintenance: "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
   retired: "bg-slate-100 text-slate-500 ring-1 ring-slate-200",
 };
+
+const RESOURCES_MODULE_TITLE = "Recursos";
+const RESOURCES_PAGE_TITLE = "Centro de recursos";
+const RESOURCES_MODULE_DESCRIPTION =
+  "Inventario, prestamos y documentacion clave.";
 
 function resolveItemStatus(item: InventoryItem): InventoryStatus {
   if (item.status) return item.status;
@@ -122,14 +129,15 @@ export default function ResourcesPage() {
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <PageHeader
-        title="Recursos"
-        subtitle="Visión global del inventario y la documentación clave"
+      <ModuleTopbar
+        module={RESOURCES_MODULE_TITLE}
+        title={RESOURCES_PAGE_TITLE}
+        description={RESOURCES_MODULE_DESCRIPTION}
         actions={
           <>
             <Link
               href="/resources/inventory"
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-primary/40 hover:text-primary"
+              className={`${moduleTopbarButtonStyles.secondary} inline-flex items-center gap-2`}
             >
               <span className="material-symbols-outlined text-[18px]">
                 inventory_2
@@ -138,7 +146,7 @@ export default function ResourcesPage() {
             </Link>
             <Link
               href="/documents"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
+              className={`${moduleTopbarButtonStyles.primary} inline-flex items-center gap-2`}
             >
               <span className="material-symbols-outlined text-[18px]">
                 upload_file

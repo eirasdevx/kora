@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Modal from "@/components/Modal";
-import PageTopbar from "@/components/PageTopbar";
+import ModuleTopbar, {
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useSessionStore } from "@/core/session/session.store";
 import { useMessagingStore } from "@/modules/messaging/messaging.store";
@@ -22,6 +24,10 @@ const formatDateTime = (value: string, locale: string) =>
     dateStyle: "medium",
     timeStyle: "short",
   });
+
+const MESSAGING_MODULE_TITLE = "Mensajeria";
+const MESSAGING_MODULE_DESCRIPTION =
+  "Plantillas, campanas y comunicaciones personalizadas.";
 
 export default function MessagingPage() {
   const { formatLocale } = useLocale();
@@ -76,27 +82,19 @@ export default function MessagingPage() {
   if (mode === "guest") {
     return (
       <div className="space-y-6">
-        <PageTopbar>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-                Mensajeria
-              </p>
-              <h1 className="text-2xl font-semibold text-slate-900">
-                Centro de mensajes
-              </h1>
-              <p className="text-sm text-slate-500">
-                Esta seccion solo esta disponible en cuentas autenticadas.
-              </p>
-            </div>
+        <ModuleTopbar
+          module={MESSAGING_MODULE_TITLE}
+          title="Centro de mensajes"
+          description={MESSAGING_MODULE_DESCRIPTION}
+          actions={
             <Link
               href="/dashboard"
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              className={moduleTopbarButtonStyles.secondary}
             >
               Volver al panel
             </Link>
-          </div>
-        </PageTopbar>
+          }
+        />
 
         <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
@@ -115,35 +113,27 @@ export default function MessagingPage() {
 
   return (
     <div className="space-y-6">
-      <PageTopbar>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-              Mensajeria
-            </p>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              Centro de mensajes
-            </h1>
-            <p className="text-sm text-slate-500">
-              Plantillas, campanas y comunicaciones personalizadas.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <ModuleTopbar
+        module={MESSAGING_MODULE_TITLE}
+        title="Centro de mensajes"
+        description={MESSAGING_MODULE_DESCRIPTION}
+        actions={
+          <>
             <Link
               href="/settings/messaging"
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              className={moduleTopbarButtonStyles.secondary}
             >
               Configurar remitente
             </Link>
             <Link
               href="/messaging/templates/new"
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-primary/90"
+              className={moduleTopbarButtonStyles.primary}
             >
               Nueva plantilla
             </Link>
-          </div>
-        </div>
-      </PageTopbar>
+          </>
+        }
+      />
 
       <section className="grid gap-4 lg:grid-cols-3">
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">

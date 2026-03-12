@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import PageHeader from "@/components/shared/PageHeader";
+import ModuleTopbar, {
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 import SectionBlock from "@/components/shared/SectionBlock";
 import StatCard from "@/components/shared/StatCard";
 import { useLocale } from "@/core/i18n/use-locale";
@@ -13,6 +15,10 @@ import { useVolunteerActivitiesStore } from "@/modules/volunteers/volunteer-acti
 type PeopleSegment = "member" | "volunteer" | "contact";
 
 const PAGE_SIZE = 5;
+const PEOPLE_MODULE_TITLE = "Personas";
+const PEOPLE_PAGE_TITLE = "Centro de personas";
+const PEOPLE_MODULE_DESCRIPTION =
+  "Socios, voluntarios y contactos en un solo lugar.";
 
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
@@ -166,14 +172,15 @@ export default function PeoplePage() {
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <PageHeader
-        title="Personas"
-        subtitle="Gestión de socios, voluntarios y contactos"
+      <ModuleTopbar
+        module={PEOPLE_MODULE_TITLE}
+        title={PEOPLE_PAGE_TITLE}
+        description={PEOPLE_MODULE_DESCRIPTION}
         actions={
           <>
             <Link
               href="/people/all"
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+              className={`${moduleTopbarButtonStyles.secondary} inline-flex items-center gap-2`}
             >
               <span className="material-symbols-outlined text-[18px]">
                 groups
@@ -182,14 +189,12 @@ export default function PeoplePage() {
             </Link>
             <Link
               href="/contacts/new"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
+              className={`${moduleTopbarButtonStyles.primary} inline-flex items-center gap-2`}
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-                <span className="material-symbols-outlined text-[16px]">
-                  add
-                </span>
+              <span className="material-symbols-outlined text-[18px]">
+                add
               </span>
-              Añadir nueva
+              Nueva persona
             </Link>
           </>
         }
