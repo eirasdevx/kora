@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import ContactForm from "@/modules/contacts/ContactForm";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 
 export default function EditContactPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const { contacts, loadContacts, addContact } =
     useContactsStore();
 
@@ -22,6 +23,11 @@ export default function EditContactPage() {
     () => contacts.find((c) => c.id === contactId),
     [contacts, contactId]
   );
+  const requestedReturnTo = searchParams.get("returnTo");
+  const returnTo =
+    requestedReturnTo && requestedReturnTo.startsWith("/")
+      ? requestedReturnTo
+      : "/people/all";
 
   if (!contact) {
     return (
@@ -33,14 +39,14 @@ export default function EditContactPage() {
 
   return (
     <ContactForm
-      backHref="/people/all"
+      backHref={returnTo}
       backLabel="Volver a Personas"
       initialData={contact}
       onSubmit={async (updated) => {
         await addContact(updated);
-        router.push("/people/all");
+        router.push(returnTo);
       }}
-      onCancel={() => router.push("/people/all")}
+      onCancel={() => router.push(returnTo)}
     />
   );
 }

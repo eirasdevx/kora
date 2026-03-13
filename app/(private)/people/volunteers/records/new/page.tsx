@@ -143,9 +143,6 @@ export default function VolunteerRecordPage() {
           <BackLink href="/people/volunteers" label="Volver a Voluntarios" />
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-            Voluntarios &nbsp;›&nbsp; Registros
-          </p>
           <h1 className="text-3xl font-semibold text-gray-900">
             Nuevo registro de actividad
           </h1>

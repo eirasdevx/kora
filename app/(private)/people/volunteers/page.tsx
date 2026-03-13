@@ -15,6 +15,7 @@ import {
   tablePagerButtonStyles,
   tablePagerCurrentStyles,
   tableRowStyles,
+  tableWrapperStyles,
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
@@ -32,6 +33,10 @@ const STATUS_STYLES: Record<VolunteerStatus, string> = {
 };
 
 const PAGE_SIZE = 10;
+const filterControlStyles =
+  "h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10";
+const volunteersTableSectionStyles =
+  "rounded-[26px] border border-slate-200 bg-white shadow-sm";
 
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
@@ -74,6 +79,7 @@ export default function VolunteersPage() {
   const [typeFilter, setTypeFilter] = useState<"all" | VolunteerType>(
     "all"
   );
+  const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -207,6 +213,12 @@ export default function VolunteersPage() {
     (currentPageSafe - 1) * PAGE_SIZE,
     currentPageSafe * PAGE_SIZE
   );
+  const activeFiltersCount = useMemo(() => {
+    let total = 0;
+    if (statusFilter !== "all") total += 1;
+    if (typeFilter !== "all") total += 1;
+    return total;
+  }, [statusFilter, typeFilter]);
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -215,24 +227,13 @@ export default function VolunteersPage() {
           <BackLink href="/people" label="Volver a Personas" />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div>
             <h1 className="text-2xl font-semibold text-gray-900">
               Voluntarios
             </h1>
-            <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                <span className="material-symbols-outlined text-[18px]">
-                  search
-                </span>
-              </span>
-              <input
-                type="text"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar voluntarios..."
-                className="w-64 rounded-xl border border-gray-200 bg-gray-50 py-2 pl-10 pr-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-              />
-            </div>
+            <p className="text-sm text-gray-500">
+              Gestiona disponibilidad, horas registradas y tareas activas.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
@@ -315,119 +316,169 @@ export default function VolunteersPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 px-6 py-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <select
-              value={statusFilter}
-              onChange={(event) =>
-                setStatusFilter(event.target.value as VolunteerStatus | "all")
-              }
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm"
-            >
-              <option value="all">Estado: Todos</option>
-              <option value="Disponible">Estado: Disponible</option>
-              <option value="En Servicio">Estado: En servicio</option>
-              <option value="Inactivo">Estado: Inactivo</option>
-            </select>
-            <select
-              value={typeFilter}
-              onChange={(event) =>
-                setTypeFilter(event.target.value as VolunteerType | "all")
-              }
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm"
-            >
-              <option value="all">Tipo: Todos</option>
-              <option value="Socio">Tipo: Socio</option>
-              <option value="Contacto">Tipo: Contacto</option>
-            </select>
+      <section className={volunteersTableSectionStyles}>
+        <div className="border-b border-slate-100 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="relative min-w-[260px] flex-1">
+              <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-gray-400">
+                <span className="material-symbols-outlined text-[18px]">
+                  search
+                </span>
+              </span>
+              <input
+                type="text"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar voluntarios..."
+                className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 py-2.5 pl-12 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowFilters((current) => !current)}
+                aria-expanded={showFilters}
+                className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-semibold shadow-sm transition ${
+                  showFilters || activeFiltersCount > 0
+                    ? "border-primary/30 bg-primary/5 text-primary"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  tune
+                </span>
+                Más Filtros
+                {activeFiltersCount > 0 ? (
+                  <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                    {activeFiltersCount}
+                  </span>
+                ) : null}
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-gray-500">
-            Mostrando {pageVolunteers.length} de {filteredVolunteers.length} voluntarios
-          </p>
+
+          {showFilters ? (
+            <div className="mt-3 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 lg:grid-cols-[1fr_1fr_auto]">
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as VolunteerStatus | "all")
+                }
+                className={`${filterControlStyles} appearance-none`}
+              >
+                <option value="all">Estado: Todos</option>
+                <option value="Disponible">Estado: Disponible</option>
+                <option value="En Servicio">Estado: En servicio</option>
+                <option value="Inactivo">Estado: Inactivo</option>
+              </select>
+              <select
+                value={typeFilter}
+                onChange={(event) =>
+                  setTypeFilter(event.target.value as VolunteerType | "all")
+                }
+                className={`${filterControlStyles} appearance-none`}
+              >
+                <option value="all">Tipo: Todos</option>
+                <option value="Socio">Tipo: Socio</option>
+                <option value="Contacto">Tipo: Contacto</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setTypeFilter("all");
+                }}
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+              >
+                Limpiar
+              </button>
+            </div>
+          ) : null}
         </div>
 
-        <table className="w-full text-left text-sm">
-          <thead className={tableHeadStyles}>
-            <tr>
-              <th className={tableHeadCellStyles}>Voluntario</th>
-              <th className={tableHeadCellStyles}>Estado</th>
-              <th className={tableHeadCellStyles}>Horas Totales</th>
-              <th className={tableHeadCellStyles}>Tareas Actuales</th>
-              <th className={`${tableHeadCellStyles} text-right`}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody className={tableBodyStyles}>
-            {pageVolunteers.length === 0 ? (
+        <div className={tableWrapperStyles}>
+          <table className="w-full text-left text-sm">
+            <thead className={tableHeadStyles}>
               <tr>
-                <td
-                  colSpan={5}
-                  className="px-6 py-8 text-center text-sm text-gray-500"
-                >
-                  No se encontraron voluntarios con los filtros actuales.
-                </td>
+                <th className={tableHeadCellStyles}>Voluntario</th>
+                <th className={tableHeadCellStyles}>Estado</th>
+                <th className={tableHeadCellStyles}>Horas Totales</th>
+                <th className={tableHeadCellStyles}>Tareas Actuales</th>
+                <th className={`${tableHeadCellStyles} text-right`}>Acciones</th>
               </tr>
-            ) : (
-              pageVolunteers.map((item) => {
-                const displayName = getDisplayName(item.volunteer);
-                return (
-                  <tr
-                    key={item.volunteer.id}
-                    className={tableRowStyles}
+            </thead>
+            <tbody className={tableBodyStyles}>
+              {pageVolunteers.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-8 text-center text-sm text-gray-500"
                   >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                          {item.volunteer.photoUrl ? (
-                            <img
-                              src={item.volunteer.photoUrl}
-                              alt={displayName}
-                              className="h-full w-full rounded-full object-cover"
-                            />
-                          ) : (
-                            getInitials(item.volunteer)
-                          )}
+                    No se encontraron voluntarios con los filtros actuales.
+                  </td>
+                </tr>
+              ) : (
+                pageVolunteers.map((item) => {
+                  const displayName = getDisplayName(item.volunteer);
+                  return (
+                    <tr
+                      key={item.volunteer.id}
+                      className={tableRowStyles}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                            {item.volunteer.photoUrl ? (
+                              <img
+                                src={item.volunteer.photoUrl}
+                                alt={displayName}
+                                className="h-full w-full rounded-full object-cover"
+                              />
+                            ) : (
+                              getInitials(item.volunteer)
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {displayName}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {item.volunteer.email || "Sin correo"}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {displayName}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {item.volunteer.email || "Sin correo"}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[item.status]}`}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 font-semibold text-gray-900">
-                      {formatNumber(item.totalHours, formatLocale)}h
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {item.taskLabel}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <Link
-                        href={`/people/volunteers/records/new?volunteerId=${item.volunteer.id}`}
-                        className={tableIconActionStyles}
-                        aria-label={`Editar ${displayName}`}
-                      >
-                        <span className="material-symbols-outlined text-[18px]">
-                          edit
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[item.status]}`}
+                        >
+                          {item.status}
                         </span>
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                      </td>
+                      <td className="px-6 py-4 font-semibold text-gray-900">
+                        {formatNumber(item.totalHours, formatLocale)}h
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">
+                        {item.taskLabel}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link
+                          href={`/people/volunteers/records/new?volunteerId=${item.volunteer.id}`}
+                          className={tableIconActionStyles}
+                          aria-label={`Editar ${displayName}`}
+                        >
+                          <span className="material-symbols-outlined text-[18px]">
+                            edit
+                          </span>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
         <div className={tableFooterStyles}>
           <span>

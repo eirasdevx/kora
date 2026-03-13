@@ -9,7 +9,7 @@ import ModuleTopbar, {
 import SectionBlock from "@/components/shared/SectionBlock";
 import DataTable from "@/components/shared/DataTable";
 import { useLocale } from "@/core/i18n/use-locale";
-import { downloadXlsx } from "@/lib/exporters";
+import { downloadPdf, downloadXlsx } from "@/lib/exporters";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import {
   TransactionCategoryLabels,
@@ -121,12 +121,28 @@ export default function FinancePage() {
     [transactions, formatLocale]
   );
 
-  const handleExport = () => {
+  const handleExportXlsx = () => {
     if (transactions.length === 0) return;
     downloadXlsx("finanzas-transacciones.xlsx", "Transacciones", [
       ["Fecha", "Concepto", "Categoria", "Importe", "Estado"],
       ...exportRows,
     ]);
+  };
+
+  const handleExportPdf = () => {
+    if (transactions.length === 0) return;
+    downloadPdf(
+      "finanzas-transacciones.pdf",
+      "Transacciones financieras",
+      [
+        { label: "Fecha", width: 12 },
+        { label: "Concepto", width: 28 },
+        { label: "Categoria", width: 18 },
+        { label: "Importe", width: 14 },
+        { label: "Estado", width: 14 },
+      ],
+      exportRows
+    );
   };
 
   const rows = recentTransactions.map((tx) => ({
@@ -175,16 +191,29 @@ export default function FinancePage() {
           <>
             <button
               type="button"
-              onClick={handleExport}
+              onClick={handleExportXlsx}
               disabled={transactions.length === 0}
               className={`${moduleTopbarButtonStyles.secondary} disabled:cursor-not-allowed disabled:opacity-60`}
             >
               <span className={moduleTopbarButtonIconStyles.secondary}>
                 <span className="material-symbols-outlined text-[16px]">
-                  download
+                  grid_on
                 </span>
               </span>
-              Exportar
+              Exportar Excel
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              disabled={transactions.length === 0}
+              className={`${moduleTopbarButtonStyles.secondary} disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              <span className={moduleTopbarButtonIconStyles.secondary}>
+                <span className="material-symbols-outlined text-[16px]">
+                  picture_as_pdf
+                </span>
+              </span>
+              Exportar PDF
             </button>
             <Link
               href="/accounting/new"
@@ -195,7 +224,7 @@ export default function FinancePage() {
                   add
                 </span>
               </span>
-              Nuevo registro
+              Nueva transacción
             </Link>
           </>
         }

@@ -243,10 +243,10 @@ export default function AppearanceSettingsPage() {
       <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">
-            Tipografia y Escala
+            Escala tipografica
           </h2>
           <p className="mt-2 text-sm text-gray-500">
-            Ajusta el tamano base de la fuente para optimizar la experiencia de
+            Ajusta el tamano base del texto para optimizar la experiencia de
             lectura.
           </p>
         </div>
@@ -280,20 +280,6 @@ export default function AppearanceSettingsPage() {
               "La asociación gestiona eficazmente sus recursos."
             </span>
           </p>
-          <div className="flex items-center justify-between rounded-2xl border border-gray-200 px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                Fuente del Sistema
-              </p>
-              <p className="text-xs text-gray-500">Inter, sans-serif</p>
-            </div>
-            <button
-              type="button"
-              className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600"
-            >
-              Cambiar Familia
-            </button>
-          </div>
         </div>
       </section>
 

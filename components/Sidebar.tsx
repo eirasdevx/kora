@@ -96,7 +96,12 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const moduleAccess = activeUser?.permissions?.modules;
   const showSettings = true;
   const visibleItems = mainItems.filter((item) => {
-    if (mode === "guest" && item.href === "/messaging") return false;
+    if (
+      mode === "guest" &&
+      (item.href === "/messaging" || item.href === "/resources")
+    ) {
+      return false;
+    }
     if (!item.moduleKey) return true;
     if (!activeUser || isAdmin || !moduleAccess) return true;
     return moduleAccess[item.moduleKey];

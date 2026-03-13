@@ -244,14 +244,6 @@ export default function DashboardPage() {
 
   const associationName =
     association?.name?.trim() || "Panel Integral 360°";
-  const logoUrl = association?.logoUrl;
-  const logoInitials = associationName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-
   const senderName = settings.senderName || association?.name || "";
   const senderEmail = settings.emailAddress || association?.contactEmail || "";
   const senderPassword = settings.emailAppPassword || "";
@@ -271,31 +263,16 @@ export default function DashboardPage() {
     <div className="space-y-6 lg:space-y-8">
       <PageTopbar>
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm">
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt={associationName}
-                  className="h-10 w-10 rounded-xl object-cover"
-                />
-              ) : (
-                <span className="text-sm font-semibold text-gray-600">
-                  {logoInitials || "KA"}
-                </span>
-              )}
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
-                Panel de control
-              </p>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                {associationName}
-              </h1>
-              <p className="text-sm text-gray-500">
-                Resumen operativo y financiero en tiempo real.
-              </p>
-            </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
+              Panel de control
+            </p>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              {associationName}
+            </h1>
+            <p className="text-sm text-gray-500">
+              Resumen operativo y financiero en tiempo real.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm">

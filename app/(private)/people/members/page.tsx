@@ -6,14 +6,11 @@ import PageHeader from "@/components/shared/PageHeader";
 import {
   tableBodyStyles,
   tableFooterStyles,
-  tableHeadCellStyles,
-  tableHeadStyles,
   tableIconActionStyles,
   tablePagerButtonDisabledStyles,
   tablePagerButtonEnabledStyles,
   tablePagerButtonStyles,
   tablePagerCurrentStyles,
-  tableRowStyles,
   tableWrapperStyles,
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
@@ -24,8 +21,6 @@ import {
   formatMemberId,
   resolveFeeCycle,
   resolveMemberPermissions,
-  resolveMemberTier,
-  type MemberTier,
 } from "@/modules/people/people.utils";
 
 type MemberStatus = "Activo" | "Pendiente" | "Baja";
@@ -50,14 +45,21 @@ const PAYMENT_FILTERS: Array<{ label: string; value: "all" | "pending" | "overdu
   { label: "Al dia", value: "paid" },
 ];
 
-const TIER_FILTERS: Array<{ label: string; value: MemberTier | "all" }> = [
+const FEE_CYCLE_FILTERS: Array<{ label: string; value: "all" | "Mensual" | "Anual" }> = [
   { label: "Todos", value: "all" },
-  { label: "Pleno", value: "Pleno" },
-  { label: "Premium", value: "Premium" },
-  { label: "Junior", value: "Junior" },
+  { label: "Mensual", value: "Mensual" },
+  { label: "Anual", value: "Anual" },
 ];
 
 const PAGE_SIZE = 6;
+const filterControlStyles =
+  "h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10";
+const membersTableSectionStyles =
+  "rounded-[26px] border border-slate-200 bg-white shadow-sm";
+const membersTableHeadStyles =
+  "border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-[0.08em] text-slate-400";
+const membersTableHeadCellStyles = "px-6 py-4 font-semibold";
+const membersTableRowStyles = "border-b border-slate-100 last:border-b-0";
 
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
@@ -114,7 +116,10 @@ export default function MembersPage() {
   const [paymentFilter, setPaymentFilter] = useState<
     "all" | "pending" | "overdue" | "paid"
   >("all");
-  const [tierFilter, setTierFilter] = useState<MemberTier | "all">("all");
+  const [feeCycleFilter, setFeeCycleFilter] = useState<
+    "all" | "Mensual" | "Anual"
+  >("all");
+  const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -124,7 +129,7 @@ export default function MembersPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, paymentFilter, tierFilter]);
+  }, [query, paymentFilter, feeCycleFilter]);
 
   const now = useMemo(() => new Date(), []);
   const startOfMonth = useMemo(
@@ -217,7 +222,6 @@ export default function MembersPage() {
         status,
         paymentStatus,
         lastPaymentDate,
-        tier: resolveMemberTier(member.id),
         feeCycle: resolveFeeCycle(member.id),
         permissions: resolveMemberPermissions(member.id),
       };
@@ -242,7 +246,9 @@ export default function MembersPage() {
       idLabel.includes(query.toLowerCase());
     if (!matchesQuery) return false;
 
-    if (tierFilter !== "all" && item.tier !== tierFilter) return false;
+    if (feeCycleFilter !== "all" && item.feeCycle !== feeCycleFilter) {
+      return false;
+    }
 
     if (paymentFilter === "pending") return item.paymentStatus === "Deuda";
     if (paymentFilter === "overdue") return item.paymentStatus === "Vencido";
@@ -250,6 +256,13 @@ export default function MembersPage() {
 
     return true;
   });
+
+  const activeFiltersCount = useMemo(() => {
+    let total = 0;
+    if (paymentFilter !== "all") total += 1;
+    if (feeCycleFilter !== "all") total += 1;
+    return total;
+  }, [paymentFilter, feeCycleFilter]);
 
   const totalPages = Math.max(
     1,
@@ -340,75 +353,105 @@ export default function MembersPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_auto] lg:items-center">
-          <div className="relative">
-            <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-gray-400">
-              <span className="material-symbols-outlined text-[18px]">
-                search
+      <section className={membersTableSectionStyles}>
+        <div className="border-b border-slate-100 p-4">
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-gray-400">
+                <span className="material-symbols-outlined text-[18px]">
+                  search
+                </span>
               </span>
-            </span>
-            <input
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar socio por nombre, ID o email..."
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-12 pr-4 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-            />
+              <input
+                type="text"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar socio por nombre, ID o email..."
+                className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 py-2.5 pl-12 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFilters((current) => !current)}
+              aria-expanded={showFilters}
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-semibold shadow-sm transition ${
+                showFilters || activeFiltersCount > 0
+                  ? "border-primary/30 bg-primary/5 text-primary"
+                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                tune
+              </span>
+              Más Filtros
+              {activeFiltersCount > 0 ? (
+                <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                  {activeFiltersCount}
+                </span>
+              ) : null}
+            </button>
           </div>
-          <select
-            value={paymentFilter}
-            onChange={(event) =>
-              setPaymentFilter(
-                event.target.value as "all" | "pending" | "overdue" | "paid"
-              )
-            }
-            className="w-full appearance-none rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-          >
-            {PAYMENT_FILTERS.map((filter) => (
-              <option key={filter.value} value={filter.value}>
-                Estado Pago: {filter.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={tierFilter}
-            onChange={(event) =>
-              setTierFilter(event.target.value as MemberTier | "all")
-            }
-            className="w-full appearance-none rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-          >
-            {TIER_FILTERS.map((filter) => (
-              <option key={filter.value} value={filter.value}>
-                Tipo de Socio: {filter.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-600 shadow-sm transition hover:bg-white"
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              tune
-            </span>
-            Más Filtros
-          </button>
-        </div>
-      </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+          {showFilters ? (
+            <div className="mt-3 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 lg:grid-cols-[1fr_1fr_auto]">
+              <select
+                value={paymentFilter}
+                onChange={(event) =>
+                  setPaymentFilter(
+                    event.target.value as "all" | "pending" | "overdue" | "paid"
+                  )
+                }
+                className={`${filterControlStyles} appearance-none`}
+              >
+                {PAYMENT_FILTERS.map((filter) => (
+                  <option key={filter.value} value={filter.value}>
+                    Saldo: {filter.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={feeCycleFilter}
+                onChange={(event) =>
+                  setFeeCycleFilter(
+                    event.target.value as "all" | "Mensual" | "Anual"
+                  )
+                }
+                className={`${filterControlStyles} appearance-none`}
+              >
+                {FEE_CYCLE_FILTERS.map((filter) => (
+                  <option key={filter.value} value={filter.value}>
+                    Cuota: {filter.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentFilter("all");
+                  setFeeCycleFilter("all");
+                }}
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+              >
+                Limpiar
+              </button>
+            </div>
+          ) : null}
+        </div>
+
         <div className={tableWrapperStyles}>
-          <table className="w-full text-left text-sm">
-          <thead className={tableHeadStyles}>
+          <table className="min-w-[1180px] w-full text-left text-sm">
+          <thead className={membersTableHeadStyles}>
             <tr>
-              <th className={tableHeadCellStyles}>Socio</th>
-              <th className={tableHeadCellStyles}>ID Socio</th>
-              <th className={tableHeadCellStyles}>Estado</th>
-              <th className={tableHeadCellStyles}>Cuota</th>
-              <th className={tableHeadCellStyles}>Último Pago</th>
-              <th className={tableHeadCellStyles}>Saldo</th>
-              <th className={tableHeadCellStyles}>Permisos</th>
-              <th className={`${tableHeadCellStyles} text-right`}>Acción</th>
+              <th className={membersTableHeadCellStyles}>Socio</th>
+              <th className={membersTableHeadCellStyles}>ID Socio</th>
+              <th className={membersTableHeadCellStyles}>Estado</th>
+              <th className={membersTableHeadCellStyles}>Cuota</th>
+              <th className={membersTableHeadCellStyles}>Último Pago</th>
+              <th className={membersTableHeadCellStyles}>Saldo</th>
+              <th className={membersTableHeadCellStyles}>Permisos</th>
+              <th className={`${membersTableHeadCellStyles} text-right`}>
+                Acción
+              </th>
             </tr>
           </thead>
           <tbody className={tableBodyStyles}>
@@ -427,11 +470,11 @@ export default function MembersPage() {
                 return (
                   <tr
                     key={member.id}
-                    className={tableRowStyles}
+                    className={membersTableRowStyles}
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                        <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
                           {member.photoUrl ? (
                             <img
                               src={member.photoUrl}
@@ -455,7 +498,7 @@ export default function MembersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[status]}`}
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[status]}`}
                       >
                         {status}
                       </span>
@@ -468,7 +511,7 @@ export default function MembersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${PAYMENT_STYLES[paymentStatus]}`}
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${PAYMENT_STYLES[paymentStatus]}`}
                       >
                         {paymentStatus}
                       </span>

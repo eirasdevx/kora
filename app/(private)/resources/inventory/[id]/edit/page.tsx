@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import AssigneeSelect from "@/components/resources/AssigneeSelect";
 import PageHeader from "@/components/shared/PageHeader";
 import Modal from "@/components/Modal";
 import { useInventoryStore } from "@/modules/resources/inventory.store";
@@ -369,22 +370,15 @@ export default function InventoryEditPage() {
                 </div>
                 <label className="mt-4 block space-y-2 text-sm font-semibold text-gray-700">
                   Responsable asignado
-                  <div className="relative">
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[18px] text-gray-400">
-                      search
-                    </span>
-                    <input
-                      value={form.assignee}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          assignee: event.target.value,
-                        }))
-                      }
-                      placeholder="Buscar empleado..."
-                      className="mt-2 w-full rounded-2xl border border-gray-200 py-3 pl-11 pr-4 text-sm font-normal text-gray-700 shadow-sm focus:border-primary focus:outline-none"
-                    />
-                  </div>
+                  <AssigneeSelect
+                    value={form.assignee}
+                    onChange={(assignee) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        assignee,
+                      }))
+                    }
+                  />
                 </label>
               </div>
 

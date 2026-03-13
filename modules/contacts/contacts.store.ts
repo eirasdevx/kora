@@ -3,6 +3,9 @@ import { Contact, ContactKind, ContactType } from "./contact.types";
 import { db } from "@/core/storage/kora.db";
 import { useSessionStore } from "@/core/session/session.store";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
+import { useTransactionsStore } from "@/modules/accounting/transactions.store";
+import { Transaction } from "@/modules/accounting/transaction.types";
+import { resolveFeeCycle } from "@/modules/people/people.utils";
 
 interface ContactsState {
   contacts: Contact[];
@@ -15,6 +18,90 @@ interface ContactsState {
 
 const isAuthenticated = () =>
   useSessionStore.getState().mode === "authenticated";
+
+const MEMBERSHIP_FEE_AMOUNT: Record<"Mensual" | "Anual", number> = {
+  Mensual: 25,
+  Anual: 250,
+};
+
+const buildTransactionId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const getContactDisplayName = (contact: Contact) => {
+  const composed = `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
+  return composed || contact.fullName || contact.email || "contacto";
+};
+
+const hasMembershipTransaction = async (contactId: string) => {
+  const inMemory = useTransactionsStore
+    .getState()
+    .transactions.some(
+      (tx) =>
+        tx.category === "membership" &&
+        (tx.contactId === contactId || tx.contactIds?.includes(contactId))
+    );
+
+  if (inMemory) return true;
+  if (!isAuthenticated()) return false;
+
+  const persisted = await db.transactions.toArray();
+  return persisted.some(
+    (tx) =>
+      tx.category === "membership" &&
+      (tx.contactId === contactId || tx.contactIds?.includes(contactId))
+  );
+};
+
+const createPendingMembershipTransaction = (contact: Contact): Transaction => {
+  const cycle = resolveFeeCycle(contact.id);
+  const displayName = getContactDisplayName(contact);
+  const createdAt = new Date().toISOString();
+  const txDate = (contact.createdAt || createdAt).slice(0, 10);
+
+  return {
+    id: buildTransactionId(),
+    type: "income",
+    amount: MEMBERSHIP_FEE_AMOUNT[cycle],
+    date: txDate,
+    concept: `Cuota ${cycle.toLowerCase()} pendiente`,
+    description: `Generada automaticamente al registrar al socio ${displayName}.`,
+    category: "membership",
+    status: "pending",
+    contactId: contact.id,
+    contactIds: [contact.id],
+    createdAt,
+  };
+};
+
+const registerPendingMembershipTransaction = async (contact: Contact) => {
+  const exists = await hasMembershipTransaction(contact.id);
+  if (exists) return;
+
+  const transaction = createPendingMembershipTransaction(contact);
+
+  if (isAuthenticated()) {
+    await db.transactions.put(transaction);
+  }
+
+  useTransactionsStore.setState((state) => ({
+    transactions: [...state.transactions, transaction],
+  }));
+
+  const cycle = resolveFeeCycle(contact.id);
+  useNotificationsStore.getState().addNotification({
+    category: "payments",
+    title: "Cuota pendiente generada",
+    description: `Se genero una cuota ${cycle.toLowerCase()} pendiente para ${getContactDisplayName(contact)}.`,
+    href: "/finance",
+    actionLabel: "Ver cuotas",
+    icon: "schedule",
+    tone: "bg-amber-50 text-amber-600",
+  });
+};
 
 const parseContactTypes = (value: unknown): ContactType[] => {
   if (Array.isArray(value)) {
@@ -69,7 +156,8 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
 
   // Crear o actualizar contacto (UPSERT)
   addContact: async (contact) => {
-    const exists = get().contacts.some((c) => c.id === contact.id);
+    const previousContact = get().contacts.find((c) => c.id === contact.id);
+    const exists = Boolean(previousContact);
     const fullName =
       contact.fullName ??
       `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
@@ -93,6 +181,10 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
       createdAt: contact.createdAt ?? new Date().toISOString(),
       deactivatedAt: contact.deactivatedAt ?? undefined,
     };
+    const wasMember = previousContact?.types.includes("member") ?? false;
+    const isMember = normalized.types.includes("member");
+    const shouldCreatePendingMembership = isMember && !wasMember;
+
     if (!isAuthenticated()) {
       set((state) => {
         const exists = state.contacts.some(
@@ -118,6 +210,9 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
         icon: exists ? "edit" : "person_add",
         tone: exists ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600",
       });
+      if (shouldCreatePendingMembership) {
+        await registerPendingMembershipTransaction(normalized);
+      }
       return;
     }
 
@@ -148,6 +243,10 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
       icon: exists ? "edit" : "person_add",
       tone: exists ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600",
     });
+
+    if (shouldCreatePendingMembership) {
+      await registerPendingMembershipTransaction(normalized);
+    }
   },
 
   // Eliminar contacto

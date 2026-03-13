@@ -13,18 +13,18 @@ import {
   tableFooterStyles,
   tableHeadCellStyles,
   tableHeadStyles,
+  tableIconActionStyles,
   tablePagerButtonDisabledStyles,
   tablePagerButtonEnabledStyles,
   tablePagerNumberStyles,
   tablePagerButtonStyles,
   tablePagerCurrentStyles,
   tableRowStyles,
-  tableTextActionStyles,
   tableWrapperStyles,
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
-import { Contact, ContactTypeLabels } from "@/modules/contacts/contact.types";
+import { Contact } from "@/modules/contacts/contact.types";
 import { useVolunteerActivitiesStore } from "@/modules/volunteers/volunteer-activities.store";
 
 type PeopleSegment = "member" | "volunteer" | "contact";
@@ -65,13 +65,6 @@ function formatNumber(value: number, locale: string) {
   return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
   }).format(value);
-}
-
-function getTypeBadges(contact: Contact) {
-  if (!contact.types || contact.types.length === 0) {
-    return ["Otro"];
-  }
-  return contact.types.map((type) => ContactTypeLabels[type]);
 }
 
 function isOnOrAfter(dateValue: string | undefined, start: Date) {
@@ -185,6 +178,28 @@ export default function PeoplePage() {
     return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   }, [currentPageSafe, totalPages]);
 
+  const tableMeta = useMemo(() => {
+    if (tableFilter === "member") {
+      return {
+        title: "Miembros",
+        subtitle: "Listado general de socios",
+        pluralLabel: "miembros",
+      };
+    }
+    if (tableFilter === "volunteer") {
+      return {
+        title: "Voluntarios",
+        subtitle: "Listado general de voluntarios",
+        pluralLabel: "voluntarios",
+      };
+    }
+    return {
+      title: "Contactos",
+      subtitle: "Listado general de contactos",
+      pluralLabel: "contactos",
+    };
+  }, [tableFilter]);
+
   return (
     <div className="space-y-6 lg:space-y-8">
       <ModuleTopbar
@@ -219,7 +234,15 @@ export default function PeoplePage() {
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          title="Todos"
+          value={formatNumber(contacts.length, formatLocale)}
+          meta="Base general unificada"
+          href="/people/all"
+          icon="groups"
+          accentClassName="bg-indigo-50 text-indigo-600"
+        />
         <StatCard
           title="Socios"
           value={formatNumber(members.length, formatLocale)}
@@ -247,16 +270,24 @@ export default function PeoplePage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <SectionBlock
-          title="Contactos"
-          subtitle="Listado general de contactos"
-        >
+        <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 px-6 py-4">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {tableMeta.title}
+              </h2>
+              <p className="text-sm text-gray-500">{tableMeta.subtitle}</p>
+            </div>
+            <p className="text-xs text-gray-500">
+              Mostrando {pagedContacts.length} de {sortedContacts.length} {tableMeta.pluralLabel}
+            </p>
+          </div>
+
           <div className={tableWrapperStyles}>
             <table className="w-full text-left text-sm">
               <thead className={tableHeadStyles}>
                 <tr>
                   <th className={tableHeadCellStyles}>Contacto</th>
-                  <th className={tableHeadCellStyles}>Tipo</th>
                   <th className={tableHeadCellStyles}>Registro</th>
                   <th className={`${tableHeadCellStyles} text-right`}>Acciones</th>
                 </tr>
@@ -265,22 +296,18 @@ export default function PeoplePage() {
                 {pagedContacts.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={3}
                       className="px-6 py-8 text-center text-sm text-gray-500"
                     >
-                      No hay contactos registrados.
+                      No se encontraron {tableMeta.pluralLabel} con el filtro actual.
                     </td>
                   </tr>
                 ) : (
                   pagedContacts.map((person) => {
                     const displayName = getDisplayName(person);
                     const email = person.email?.trim() || "Sin correo";
-                    const typeLabels = getTypeBadges(person);
                     return (
-                      <tr
-                        key={person.id}
-                        className={tableRowStyles}
-                      >
+                      <tr key={person.id} className={tableRowStyles}>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
@@ -295,25 +322,11 @@ export default function PeoplePage() {
                               )}
                             </div>
                             <div>
-                              <p className="text-sm font-semibold text-gray-900">
+                              <p className="font-semibold text-gray-900">
                                 {displayName}
                               </p>
-                              <p className="text-xs text-gray-500">
-                                {email}
-                              </p>
+                              <p className="text-xs text-gray-500">{email}</p>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-2">
-                            {typeLabels.map((label) => (
-                              <span
-                                key={`${person.id}-${label}`}
-                                className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
-                              >
-                                {label}
-                              </span>
-                            ))}
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
@@ -321,29 +334,31 @@ export default function PeoplePage() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <Link
-                            href={`/contacts/${person.id}/edit`}
-                            className={tableTextActionStyles}
+                            href={`/contacts/${person.id}/edit?returnTo=/people`}
+                            className={tableIconActionStyles}
+                            aria-label={`Editar ${displayName}`}
                           >
-                            Ver ficha
+                            <span className="material-symbols-outlined text-[18px]">
+                              edit
+                            </span>
                           </Link>
                         </td>
                       </tr>
                     );
                   })
-                )}
-              </tbody>
-            </table>
+              )}
+            </tbody>
+          </table>
           </div>
 
-          <div className={`mt-4 ${tableFooterStyles} px-0 py-0 pt-4`}>
+          <div className={tableFooterStyles}>
             <span>
               Mostrando{" "}
               {pagedContacts.length === 0
                 ? 0
                 : (currentPageSafe - 1) * PAGE_SIZE + 1}{" "}
-              a{" "}
-              {Math.min(currentPageSafe * PAGE_SIZE, sortedContacts.length)}{" "}
-              de {sortedContacts.length} contactos
+              a {Math.min(currentPageSafe * PAGE_SIZE, sortedContacts.length)} de{" "}
+              {sortedContacts.length} {tableMeta.pluralLabel}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -352,11 +367,11 @@ export default function PeoplePage() {
                   setCurrentPage((prev) => Math.max(1, prev - 1))
                 }
                 disabled={currentPageSafe === 1}
-                  className={`${tablePagerButtonStyles} ${
-                    currentPageSafe === 1
-                      ? tablePagerButtonDisabledStyles
-                      : tablePagerButtonEnabledStyles
-                  }`}
+                className={`${tablePagerButtonStyles} ${
+                  currentPageSafe === 1
+                    ? tablePagerButtonDisabledStyles
+                    : tablePagerButtonEnabledStyles
+                }`}
               >
                 Anterior
               </button>
@@ -380,17 +395,17 @@ export default function PeoplePage() {
                   setCurrentPage((prev) => Math.min(totalPages, prev + 1))
                 }
                 disabled={currentPageSafe === totalPages}
-                  className={`${tablePagerButtonStyles} ${
-                    currentPageSafe === totalPages
-                      ? tablePagerButtonDisabledStyles
-                      : tablePagerButtonEnabledStyles
-                  }`}
+                className={`${tablePagerButtonStyles} ${
+                  currentPageSafe === totalPages
+                    ? tablePagerButtonDisabledStyles
+                    : tablePagerButtonEnabledStyles
+                }`}
               >
                 Siguiente
               </button>
             </div>
           </div>
-        </SectionBlock>
+        </section>
 
         <SectionBlock
           title="Filtrado tabla"

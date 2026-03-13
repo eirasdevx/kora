@@ -3,12 +3,49 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/shared/PageHeader";
-import SectionBlock from "@/components/shared/SectionBlock";
 import StatCard from "@/components/shared/StatCard";
-import DataTable from "@/components/shared/DataTable";
+import {
+  tableBodyStyles,
+  tableEmptyCellStyles,
+  tableFooterStyles,
+  tableHeadCellStyles,
+  tableHeadStyles,
+  tablePagerButtonDisabledStyles,
+  tablePagerButtonEnabledStyles,
+  tablePagerButtonStyles,
+  tablePagerCurrentStyles,
+  tableRowStyles,
+  tableTextActionStyles,
+  tableWrapperStyles,
+} from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
-import { Contact, ContactTypeLabels } from "@/modules/contacts/contact.types";
+import {
+  Contact,
+  ContactKind,
+  ContactType,
+  ContactTypeLabels,
+} from "@/modules/contacts/contact.types";
+
+const PAGE_SIZE = 6;
+const filterControlStyles =
+  "h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10";
+const contactsTableSectionStyles =
+  "rounded-[26px] border border-slate-200 bg-white shadow-sm";
+
+const CONTACT_TYPE_FILTERS: Array<{ label: string; value: "all" | ContactType }> = [
+  { label: "Todos", value: "all" },
+  { label: "Proveedor", value: "provider" },
+  { label: "Colaborador", value: "collaborator" },
+  { label: "Patrocinador", value: "sponsor" },
+  { label: "Otro", value: "other" },
+];
+
+const CONTACT_KIND_FILTERS: Array<{ label: string; value: "all" | ContactKind }> = [
+  { label: "Todos", value: "all" },
+  { label: "Persona", value: "person" },
+  { label: "Entidad", value: "entity" },
+];
 
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
@@ -39,87 +76,60 @@ export default function PeopleContactsPage() {
   const { formatLocale } = useLocale();
   const { contacts, loadContacts } = useContactsStore();
   const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | ContactType>("all");
+  const [kindFilter, setKindFilter] = useState<"all" | ContactKind>("all");
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     loadContacts();
   }, [loadContacts]);
 
-  const contactPool = useMemo(
-    () => contacts.filter(isContact),
-    [contacts]
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, typeFilter, kindFilter]);
+
+  const contactPool = useMemo(() => contacts.filter(isContact), [contacts]);
+  const providers = useMemo(
+    () => contactPool.filter((contact) => contact.types.includes("provider")),
+    [contactPool]
   );
-  const providers = contactPool.filter((c) =>
-    c.types.includes("provider")
-  );
-  const collaborators = contactPool.filter((c) =>
-    c.types.includes("collaborator")
+  const collaborators = useMemo(
+    () =>
+      contactPool.filter((contact) => contact.types.includes("collaborator")),
+    [contactPool]
   );
 
-  const filteredContacts = contactPool.filter((contact) => {
-    if (!query.trim()) return true;
-    const name = getDisplayName(contact).toLowerCase();
-    const email = contact.email?.toLowerCase() ?? "";
-    return name.includes(query.toLowerCase()) || email.includes(query.toLowerCase());
-  });
+  const filteredContacts = useMemo(() => {
+    return contactPool.filter((contact) => {
+      if (typeFilter !== "all" && !contact.types.includes(typeFilter)) {
+        return false;
+      }
+      if (kindFilter !== "all" && contact.kind !== kindFilter) {
+        return false;
+      }
+      if (!query.trim()) return true;
+      const name = getDisplayName(contact).toLowerCase();
+      const email = contact.email?.toLowerCase() ?? "";
+      return (
+        name.includes(query.toLowerCase()) || email.includes(query.toLowerCase())
+      );
+    });
+  }, [contactPool, kindFilter, query, typeFilter]);
 
-  const rows = filteredContacts.map((contact) => {
-    const displayName = getDisplayName(contact);
-    const email = contact.email?.trim() || "Sin correo";
-    const phone = contact.phone?.trim() || contact.secondaryPhone?.trim() || "-";
+  const totalPages = Math.max(1, Math.ceil(filteredContacts.length / PAGE_SIZE));
+  const currentPageSafe = Math.min(currentPage, totalPages);
+  const pageContacts = useMemo(() => {
+    const start = (currentPageSafe - 1) * PAGE_SIZE;
+    return filteredContacts.slice(start, start + PAGE_SIZE);
+  }, [currentPageSafe, filteredContacts]);
 
-    return {
-      key: contact.id,
-      cells: [
-        <div key={`${contact.id}-person`} className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
-            {contact.photoUrl ? (
-              <img
-                src={contact.photoUrl}
-                alt={displayName}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              getInitials(contact)
-            )}
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">
-              {displayName}
-            </p>
-            <p className="text-xs text-gray-500">{email}</p>
-          </div>
-        </div>,
-        <div key={`${contact.id}-type`} className="flex flex-wrap gap-2">
-          {contact.types.length === 0 ? (
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-              Otro
-            </span>
-          ) : (
-            contact.types.map((type) => (
-              <span
-                key={`${contact.id}-${type}`}
-                className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600"
-              >
-                {ContactTypeLabels[type]}
-              </span>
-            ))
-          )}
-        </div>,
-        <span key={`${contact.id}-phone`} className="text-sm text-gray-600">
-          {phone}
-        </span>,
-        <div key={`${contact.id}-actions`} className="flex justify-end">
-          <Link
-            href={`/contacts/${contact.id}/edit`}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
-          >
-            Ver ficha
-          </Link>
-        </div>,
-      ],
-      className: "hover:bg-gray-50",
-    };
-  });
+  const activeFiltersCount = useMemo(() => {
+    let total = 0;
+    if (typeFilter !== "all") total += 1;
+    if (kindFilter !== "all") total += 1;
+    return total;
+  }, [kindFilter, typeFilter]);
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -133,9 +143,7 @@ export default function PeopleContactsPage() {
             href="/contacts/new"
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
           >
-            <span className="material-symbols-outlined text-[18px]">
-              add
-            </span>
+            <span className="material-symbols-outlined text-[18px]">add</span>
             Nuevo contacto
           </Link>
         }
@@ -165,37 +173,217 @@ export default function PeopleContactsPage() {
         />
       </section>
 
-      <SectionBlock
-        title="Base de contactos"
-        subtitle="Listado general de contactos externos"
-        actions={
-          <div className="relative w-full sm:w-64">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-              <span className="material-symbols-outlined text-[16px]">
-                search
+      <section className={contactsTableSectionStyles}>
+        <div className="border-b border-slate-100 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="relative min-w-[260px] flex-1">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                <span className="material-symbols-outlined text-[16px]">
+                  search
+                </span>
               </span>
-            </span>
-            <input
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar contacto..."
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pl-10 pr-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-            />
+              <input
+                type="text"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar contacto por nombre o email..."
+                className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 py-2.5 pl-10 pr-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFilters((current) => !current)}
+              aria-expanded={showFilters}
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-semibold shadow-sm transition ${
+                showFilters || activeFiltersCount > 0
+                  ? "border-primary/30 bg-primary/5 text-primary"
+                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                tune
+              </span>
+              Más Filtros
+              {activeFiltersCount > 0 ? (
+                <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                  {activeFiltersCount}
+                </span>
+              ) : null}
+            </button>
           </div>
-        }
-      >
-        <DataTable
-          columns={[
-            { key: "contact", label: "Contacto" },
-            { key: "type", label: "Tipo" },
-            { key: "phone", label: "Teléfono" },
-            { key: "actions", label: "Acciones", align: "right" },
-          ]}
-          rows={rows}
-          emptyLabel="No hay contactos disponibles."
-        />
-      </SectionBlock>
+
+          {showFilters ? (
+            <div className="mt-3 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 lg:grid-cols-[1fr_1fr_auto]">
+              <select
+                value={typeFilter}
+                onChange={(event) =>
+                  setTypeFilter(event.target.value as "all" | ContactType)
+                }
+                className={`${filterControlStyles} appearance-none`}
+              >
+                {CONTACT_TYPE_FILTERS.map((filter) => (
+                  <option key={filter.value} value={filter.value}>
+                    Tipo: {filter.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={kindFilter}
+                onChange={(event) =>
+                  setKindFilter(event.target.value as "all" | ContactKind)
+                }
+                className={`${filterControlStyles} appearance-none`}
+              >
+                {CONTACT_KIND_FILTERS.map((filter) => (
+                  <option key={filter.value} value={filter.value}>
+                    Perfil: {filter.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  setTypeFilter("all");
+                  setKindFilter("all");
+                }}
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+              >
+                Limpiar
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        <div className={tableWrapperStyles}>
+          <table className="w-full text-left text-sm">
+            <thead className={tableHeadStyles}>
+              <tr>
+                <th className={tableHeadCellStyles}>Contacto</th>
+                <th className={tableHeadCellStyles}>Tipo</th>
+                <th className={tableHeadCellStyles}>Teléfono</th>
+                <th className={`${tableHeadCellStyles} text-right`}>
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className={tableBodyStyles}>
+              {pageContacts.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className={tableEmptyCellStyles}>
+                    No hay contactos disponibles.
+                  </td>
+                </tr>
+              ) : (
+                pageContacts.map((contact) => {
+                  const displayName = getDisplayName(contact);
+                  const email = contact.email?.trim() || "Sin correo";
+                  const phone =
+                    contact.phone?.trim() ||
+                    contact.secondaryPhone?.trim() ||
+                    "-";
+
+                  return (
+                    <tr key={contact.id} className={tableRowStyles}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+                            {contact.photoUrl ? (
+                              <img
+                                src={contact.photoUrl}
+                                alt={displayName}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              getInitials(contact)
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {displayName}
+                            </p>
+                            <p className="text-xs text-gray-500">{email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-2">
+                          {contact.types.length === 0 ? (
+                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                              Otro
+                            </span>
+                          ) : (
+                            contact.types.map((type) => (
+                              <span
+                                key={`${contact.id}-${type}`}
+                                className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600"
+                              >
+                                {ContactTypeLabels[type]}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {phone}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link
+                          href={`/contacts/${contact.id}/edit`}
+                          className={tableTextActionStyles}
+                        >
+                          Ver ficha
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className={tableFooterStyles}>
+          <span>
+            Mostrando{" "}
+            {pageContacts.length === 0
+              ? 0
+              : (currentPageSafe - 1) * PAGE_SIZE + 1}{" "}
+            a {Math.min(currentPageSafe * PAGE_SIZE, filteredContacts.length)} de{" "}
+            {filteredContacts.length} contactos
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentPage((prev) => Math.max(1, prev - 1))
+              }
+              disabled={currentPageSafe === 1}
+              className={`${tablePagerButtonStyles} ${
+                currentPageSafe === 1
+                  ? tablePagerButtonDisabledStyles
+                  : tablePagerButtonEnabledStyles
+              }`}
+            >
+              Anterior
+            </button>
+            <span className={tablePagerCurrentStyles}>{currentPageSafe}</span>
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+              }
+              disabled={currentPageSafe === totalPages}
+              className={`${tablePagerButtonStyles} ${
+                currentPageSafe === totalPages
+                  ? tablePagerButtonDisabledStyles
+                  : tablePagerButtonEnabledStyles
+              }`}
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
