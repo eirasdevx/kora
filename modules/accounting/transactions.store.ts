@@ -3,6 +3,7 @@ import { Transaction } from "./transaction.types";
 import { db } from "@/core/storage/kora.db";
 import { useSessionStore } from "@/core/session/session.store";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
+import { ensureTransactionAccountingCode } from "@/modules/accounting/accounting-codes";
 
 interface TransactionsState {
   transactions: Transaction[];
@@ -30,19 +31,40 @@ export const useTransactionsStore = create<TransactionsState>(
     loadTransactions: async () => {
       if (!isAuthenticated()) return;
       const all = await db.transactions.toArray();
-      set({ transactions: all });
+      const association = useSessionStore.getState().association;
+      const normalizedTransactions = all.map((transaction) =>
+        ensureTransactionAccountingCode(transaction, association)
+      );
+      const shouldBackfill = normalizedTransactions.some((transaction, index) => {
+        const source = all[index];
+        return (
+          transaction.accountingAccountKey !== source.accountingAccountKey ||
+          transaction.accountCode !== source.accountCode ||
+          transaction.accountLabel !== source.accountLabel
+        );
+      });
+
+      if (shouldBackfill) {
+        await db.transactions.bulkPut(normalizedTransactions);
+      }
+
+      set({
+        transactions: normalizedTransactions,
+      });
     },
 
     addTransaction: async (tx) => {
+      const association = useSessionStore.getState().association;
+      const normalizedTx = ensureTransactionAccountingCode(tx, association);
       if (!isAuthenticated()) {
         set((state) => ({
-          transactions: [...state.transactions, tx],
+          transactions: [...state.transactions, normalizedTx],
         }));
-        const isIncome = tx.type === "income";
+        const isIncome = normalizedTx.type === "income";
         useNotificationsStore.getState().addNotification({
           category: "payments",
           title: isIncome ? "Ingreso registrado" : "Gasto registrado",
-          description: `${tx.concept} por ${formatCurrency(tx.amount)}.`,
+          description: `${normalizedTx.concept} por ${formatCurrency(normalizedTx.amount)}.`,
           href: "/finance",
           actionLabel: "Ver detalle",
           icon: isIncome ? "check_circle" : "receipt_long",
@@ -52,15 +74,15 @@ export const useTransactionsStore = create<TransactionsState>(
         });
         return;
       }
-      await db.transactions.put(tx);
+      await db.transactions.put(normalizedTx);
       set((state) => ({
-        transactions: [...state.transactions, tx],
+        transactions: [...state.transactions, normalizedTx],
       }));
-      const isIncome = tx.type === "income";
+      const isIncome = normalizedTx.type === "income";
       useNotificationsStore.getState().addNotification({
         category: "payments",
         title: isIncome ? "Ingreso registrado" : "Gasto registrado",
-        description: `${tx.concept} por ${formatCurrency(tx.amount)}.`,
+        description: `${normalizedTx.concept} por ${formatCurrency(normalizedTx.amount)}.`,
         href: "/finance",
         actionLabel: "Ver detalle",
         icon: isIncome ? "check_circle" : "receipt_long",
@@ -71,17 +93,19 @@ export const useTransactionsStore = create<TransactionsState>(
     },
 
     updateTransaction: async (tx) => {
+      const association = useSessionStore.getState().association;
+      const normalizedTx = ensureTransactionAccountingCode(tx, association);
       if (!isAuthenticated()) {
         set((state) => ({
           transactions: state.transactions.map((t) =>
-            t.id === tx.id ? tx : t
+            t.id === normalizedTx.id ? normalizedTx : t
           ),
         }));
-        const isIncome = tx.type === "income";
+        const isIncome = normalizedTx.type === "income";
         useNotificationsStore.getState().addNotification({
           category: "payments",
           title: isIncome ? "Ingreso actualizado" : "Gasto actualizado",
-          description: `${tx.concept} por ${formatCurrency(tx.amount)}.`,
+          description: `${normalizedTx.concept} por ${formatCurrency(normalizedTx.amount)}.`,
           href: "/finance",
           actionLabel: "Ver detalle",
           icon: isIncome ? "edit" : "edit",
@@ -91,17 +115,17 @@ export const useTransactionsStore = create<TransactionsState>(
         });
         return;
       }
-      await db.transactions.put(tx);
+      await db.transactions.put(normalizedTx);
       set((state) => ({
         transactions: state.transactions.map((t) =>
-          t.id === tx.id ? tx : t
+          t.id === normalizedTx.id ? normalizedTx : t
         ),
       }));
-      const isIncome = tx.type === "income";
+      const isIncome = normalizedTx.type === "income";
       useNotificationsStore.getState().addNotification({
         category: "payments",
         title: isIncome ? "Ingreso actualizado" : "Gasto actualizado",
-        description: `${tx.concept} por ${formatCurrency(tx.amount)}.`,
+        description: `${normalizedTx.concept} por ${formatCurrency(normalizedTx.amount)}.`,
         href: "/finance",
         actionLabel: "Ver detalle",
         icon: "edit",
@@ -122,7 +146,7 @@ export const useTransactionsStore = create<TransactionsState>(
           title: "Movimiento eliminado",
           description: target
             ? `${target.concept} por ${formatCurrency(target.amount)}.`
-            : "Se elimino un movimiento.",
+            : "Se eliminó un movimiento.",
           href: "/finance",
           actionLabel: "Ver movimientos",
           icon: "delete",
@@ -141,7 +165,7 @@ export const useTransactionsStore = create<TransactionsState>(
         title: "Movimiento eliminado",
         description: target
           ? `${target.concept} por ${formatCurrency(target.amount)}.`
-          : "Se elimino un movimiento.",
+          : "Se eliminó un movimiento.",
         href: "/finance",
         actionLabel: "Ver movimientos",
         icon: "delete",

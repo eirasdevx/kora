@@ -246,7 +246,7 @@ export default function AppearanceSettingsPage() {
             Escala tipografica
           </h2>
           <p className="mt-2 text-sm text-gray-500">
-            Ajusta el tamano base del texto para optimizar la experiencia de
+            Ajusta el tamaño base del texto para optimizar la experiencia de
             lectura.
           </p>
         </div>

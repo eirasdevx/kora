@@ -2,14 +2,36 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import PageTopbar from "@/components/PageTopbar";
 import Modal from "@/components/Modal";
 import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
+import {
+  createEmptyMembershipPlan,
+  getAssociationMembershipSettings,
+  getDefaultMembershipPlan,
+  getMembershipExecutionLabel,
+  getMonthMaxDay,
+  getNextMembershipChargeDate,
+  normalizeAssociationMembershipSettings,
+  type MembershipBillingCycle,
+  type MembershipFeePlan,
+} from "@/core/session/membership-settings";
 import {
   type AssociationRepresentative,
   useSessionStore,
 } from "@/core/session/session.store";
 import { useUsersStore } from "@/core/users/users.store";
+
+type MembershipPlanFormState = {
+  id: string;
+  name: string;
+  cycle: MembershipBillingCycle;
+  amount: string;
+  monthlyChargeDay: string;
+  annualChargeMonth: string;
+  annualChargeDay: string;
+  description: string;
+  benefits: string;
+};
 
 type ProfileFormState = {
   name: string;
@@ -19,15 +41,40 @@ type ProfileFormState = {
   contactEmail: string;
   location: string;
   address: string;
+  membershipPlans: MembershipPlanFormState[];
+  defaultMembershipPlanId: string;
   representatives: AssociationRepresentative[];
 };
 
-type RepresentativeField = "role" | "name" | "email" | "phone";
+const MONTHS = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+];
+
+const control =
+  "mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10";
 
 function normalize(value: string) {
   return value.trim();
 }
 
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+  }).format(value);
+}
 
 function createRepresentativeId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -37,51 +84,45 @@ function createRepresentativeId() {
 }
 
 function createRepresentative(): AssociationRepresentative {
+  return { id: createRepresentativeId(), role: "", name: "", email: "", phone: "" };
+}
+
+function createPlanFormState(plan?: MembershipFeePlan): MembershipPlanFormState {
+  const source = plan ?? createEmptyMembershipPlan();
   return {
-    id: createRepresentativeId(),
-    role: "",
-    name: "",
-    email: "",
-    phone: "",
+    id: source.id,
+    name: source.name,
+    cycle: source.cycle,
+    amount: String(source.amount),
+    monthlyChargeDay: String(source.monthlyChargeDay),
+    annualChargeMonth: String(source.annualChargeMonth),
+    annualChargeDay: String(source.annualChargeDay),
+    description: source.description ?? "",
+    benefits: source.benefits ?? "",
   };
 }
 
-function normalizeRepresentative(rep: AssociationRepresentative) {
-  return {
-    id: rep.id,
-    role: normalize(rep.role),
-    name: normalize(rep.name),
-    email: normalize(rep.email ?? ""),
-    phone: normalize(rep.phone ?? ""),
-  };
+function getSettingsFromForm(form: ProfileFormState) {
+  return normalizeAssociationMembershipSettings({
+    plans: form.membershipPlans.map((plan) => ({
+      id: plan.id,
+      name: normalize(plan.name),
+      cycle: plan.cycle,
+      amount: plan.amount,
+      monthlyChargeDay: plan.monthlyChargeDay,
+      annualChargeMonth: plan.annualChargeMonth,
+      annualChargeDay: plan.annualChargeDay,
+      description: normalize(plan.description) || undefined,
+      benefits: normalize(plan.benefits) || undefined,
+    })),
+    defaultPlanId: form.defaultMembershipPlanId,
+  });
 }
 
-function serializeRepresentatives(reps: AssociationRepresentative[]) {
-  return JSON.stringify(reps.map(normalizeRepresentative));
-}
-
-function cleanRepresentatives(reps: AssociationRepresentative[]) {
-  return reps
-    .map((rep) => ({
-      id: rep.id || createRepresentativeId(),
-      role: normalize(rep.role),
-      name: normalize(rep.name),
-      email: normalize(rep.email ?? ""),
-      phone: normalize(rep.phone ?? ""),
-    }))
-    .filter((rep) => rep.role || rep.name || rep.email || rep.phone)
-    .map((rep) => ({
-      id: rep.id,
-      role: rep.role,
-      name: rep.name,
-      email: rep.email || undefined,
-      phone: rep.phone || undefined,
-    }));
-}
-
-function getAssociationFormState(
+function getInitialState(
   association: ReturnType<typeof useSessionStore.getState>["association"]
 ): ProfileFormState {
+  const settings = getAssociationMembershipSettings(association);
   return {
     name: association?.name ?? "",
     logoUrl: association?.logoUrl ?? "",
@@ -90,6 +131,8 @@ function getAssociationFormState(
     contactEmail: association?.contactEmail ?? "",
     location: association?.location ?? "",
     address: association?.address ?? "",
+    membershipPlans: settings.plans.map((plan) => createPlanFormState(plan)),
+    defaultMembershipPlanId: getDefaultMembershipPlan(settings).id,
     representatives:
       association?.representatives?.map((rep) => ({
         id: rep.id || createRepresentativeId(),
@@ -101,553 +144,684 @@ function getAssociationFormState(
   };
 }
 
+function serializeForm(form: ProfileFormState) {
+  return JSON.stringify({
+    name: normalize(form.name),
+    logoUrl: normalize(form.logoUrl),
+    taxId: normalize(form.taxId),
+    phone: normalize(form.phone),
+    contactEmail: normalize(form.contactEmail),
+    location: normalize(form.location),
+    address: normalize(form.address),
+    membershipSettings: getSettingsFromForm(form),
+    representatives: form.representatives
+      .map((rep) => ({
+        id: rep.id,
+        role: normalize(rep.role),
+        name: normalize(rep.name),
+        email: normalize(rep.email ?? ""),
+        phone: normalize(rep.phone ?? ""),
+      }))
+      .filter((rep) => rep.role || rep.name || rep.email || rep.phone),
+  });
+}
+
 export default function AssociationProfilePage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const hydrated = useSessionStore((s) => s.hydrated);
   const association = useSessionStore((s) => s.association);
   const companyCode = useSessionStore((s) => s.companyCode);
+  const activeAssociationId = useSessionStore((s) => s.activeAssociationId);
   const setAssociation = useSessionStore((s) => s.setAssociation);
   const removeAssociation = useSessionStore((s) => s.removeAssociation);
-  const activeAssociationId = useSessionStore((s) => s.activeAssociationId);
   const logout = useSessionStore((s) => s.logout);
   const activeUserId = useSessionStore((s) => s.activeUserId);
-
   const users = useUsersStore((s) => s.users);
   const activeUser = users.find((user) => user.id === activeUserId) ?? null;
   const canEditAssociation = activeUser?.role === "Admin";
-
+  const initialForm = useMemo(() => getInitialState(association), [association]);
+  const [form, setForm] = useState(initialForm);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeleteFinal, setConfirmDeleteFinal] = useState(false);
-
-  const initialForm = useMemo(
-    () => getAssociationFormState(association),
-    [association]
-  );
-  const [form, setForm] = useState<ProfileFormState>(initialForm);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setForm(initialForm);
   }, [initialForm]);
 
-  const hasChanges = useMemo(() => {
-    return (
-      normalize(form.name) !== normalize(initialForm.name) ||
-      normalize(form.logoUrl) !== normalize(initialForm.logoUrl) ||
-      normalize(form.taxId) !== normalize(initialForm.taxId) ||
-      normalize(form.phone) !== normalize(initialForm.phone) ||
-      normalize(form.contactEmail) !== normalize(initialForm.contactEmail) ||
-      normalize(form.location) !== normalize(initialForm.location) ||
-      normalize(form.address) !== normalize(initialForm.address) ||
-      serializeRepresentatives(form.representatives) !==
-        serializeRepresentatives(initialForm.representatives)
-    );
-  }, [form, initialForm]);
-
-  const canSave = normalize(form.name).length > 0 && hasChanges;
-
-  const handleLogoChange = (file?: File | null) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === "string") {
-        setForm((prev) => ({ ...prev, logoUrl: result }));
-      }
+  const membershipPreview = useMemo(() => {
+    const settings = getSettingsFromForm(form);
+    const defaultPlan = getDefaultMembershipPlan(settings);
+    return {
+      settings,
+      defaultPlan,
+      nextCharge: getNextMembershipChargeDate(defaultPlan).toLocaleDateString("es-ES"),
     };
-    reader.readAsDataURL(file);
-  };
+  }, [form]);
 
-  const handleRepresentativeChange = (
-    id: string,
-    field: RepresentativeField,
-    value: string
-  ) => {
-    setForm((prev) => ({
-      ...prev,
-      representatives: prev.representatives.map((rep) =>
-        rep.id === id ? { ...rep, [field]: value } : rep
-      ),
-    }));
-  };
-
-  const handleAddRepresentative = () => {
-    setForm((prev) => ({
-      ...prev,
-      representatives: [...prev.representatives, createRepresentative()],
-    }));
-  };
-
-  const handleRemoveRepresentative = (id: string) => {
-    setForm((prev) => ({
-      ...prev,
-      representatives: prev.representatives.filter((rep) => rep.id !== id),
-    }));
-  };
-
-  const handleSave = () => {
-    if (!canEditAssociation) return;
-    const name = normalize(form.name);
-    if (!name) return;
-    const representatives = cleanRepresentatives(form.representatives);
-
-    setAssociation({
-      name,
-      logoUrl: form.logoUrl || undefined,
-      taxId: normalize(form.taxId) || undefined,
-      phone: normalize(form.phone) || undefined,
-      contactEmail: normalize(form.contactEmail) || undefined,
-      location: normalize(form.location) || undefined,
-      address: normalize(form.address) || undefined,
-      representatives: representatives.length ? representatives : undefined,
-    });
-    setLastSavedAt(Date.now());
-  };
-
-  const handleDeleteAssociation = () => {
-    if (!canEditAssociation || !activeAssociationId) return;
-    removeAssociation(activeAssociationId);
-    logout();
-    router.replace("/login");
-  };
-
-  const associationLabel = association?.name?.trim() || "esta asociación";
+  const hasChanges = serializeForm(form) !== serializeForm(initialForm);
 
   if (!hydrated) {
     return <div className="min-h-screen bg-background-light" aria-busy="true" />;
   }
 
+  if (!canEditAssociation) {
+    return (
+      <div className="space-y-8">
+        <SettingsPageHeader
+          section="Perfil de la asociación"
+          title="Perfil de la asociación"
+          subtitle="Solo los administradores pueden editar esta página."
+        />
+        <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">
+          No tienes permisos para modificar la configuración de la empresa.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <SettingsPageHeader
-        section={"Perfil de la asociaci\u00f3n"}
-        title={"Perfil de la asociaci\u00f3n"}
-        subtitle={
-          "Actualiza la informaci\u00f3n legal y de contacto de tu asociaci\u00f3n."
-        }
+        section="Perfil de la asociación"
+        title="Perfil de la asociación"
+        subtitle="Configura datos generales y varios tipos de cuota para tus socios."
         actions={
           <button
             type="button"
-            onClick={() =>
-              document.getElementById("association-save")?.click()
-            }
+            onClick={() => document.getElementById("association-save")?.click()}
             className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
           >
             Guardar cambios
           </button>
         }
       />
-      <div className="hidden">
-      <PageTopbar>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-              Configuración &nbsp;&gt;&nbsp; Perfil de Asociación
-            </p>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Perfil de Asociación
-            </h1>
-            <p className="text-sm text-gray-500">
-              Actualiza la información legal y de contacto de tu asociación.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => router.push("/settings")}
-              className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
-            >
-              ← Volver a configuración
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                document.getElementById("association-save")?.click()
-              }
-              className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
-            >
-              Guardar Cambios
-            </button>
-          </div>
+      <section className="grid gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Información general</h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Datos legales, contacto y logo de la asociación.
+          </p>
         </div>
-      </PageTopbar>
-      </div>
-
-      {!canEditAssociation ? (
-        <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">
-          Solo los administradores pueden editar el perfil de la asociación.
-        </div>
-      ) : null}
-
-      {!canEditAssociation ? null : (
-        <>
-          <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Identidad visual
-              </h2>
-              <p className="mt-2 text-sm text-gray-500">
-                Carga el logotipo oficial de tu asociación. Este se utilizará en
-                facturas, documentos PDF y en el portal de socios.
-              </p>
-            </div>
-            <label className="group flex cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-500 transition hover:border-primary/40">
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+            <label className="flex cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 p-4 text-center text-xs text-gray-500 hover:border-primary/40">
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/png,image/jpeg,image/svg+xml"
                 className="sr-only"
-                onChange={(event) => handleLogoChange(event.target.files?.[0])}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    const result = reader.result;
+                    if (typeof result === "string") {
+                      setForm((prev) => ({ ...prev, logoUrl: result }));
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }}
               />
               {form.logoUrl ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-                    <img
-                      src={form.logoUrl}
-                      alt={form.name || "Logo asociación"}
-                      className="h-full w-full object-contain"
-                    />
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Haz clic para reemplazar el logo
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      setForm((prev) => ({ ...prev, logoUrl: "" }));
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                      }
-                    }}
-                    className="rounded-xl border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-500 shadow-sm hover:bg-gray-50"
-                  >
-                    Quitar logo
-                  </button>
-                </div>
+                <img
+                  src={form.logoUrl}
+                  alt={form.name || "Logo asociación"}
+                  className="h-20 w-20 rounded-2xl object-contain"
+                />
               ) : (
-                <div>
-                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-sm text-gray-400">
-                    <span className="material-symbols-outlined text-[32px]">
-                      upload
-                    </span>
-                  </div>
-                  <p className="mt-4 font-semibold text-primary">
-                    Haz clic para subir un logo
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Formatos recomendados: SVG, PNG de alta calidad (Max. 5MB)
-                  </p>
-                </div>
+                <span>Subir logo</span>
               )}
             </label>
-          </section>
-
-          <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Información general
-              </h2>
-              <p className="mt-2 text-sm text-gray-500">
-                Estos datos se sincronizan con la información registrada al
-                crear la asociación.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-semibold text-gray-700">
-                  Código de asociación
-                </label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="text-sm font-semibold text-gray-700">Código</label>
                 <input
                   value={companyCode ?? "No disponible"}
                   readOnly
-                  className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm outline-none"
+                  className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm outline-none"
                 />
               </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700">
-                  Nombre de la asociación
-                </label>
+              <div className="md:col-span-2">
+                <label className="text-sm font-semibold text-gray-700">Nombre</label>
                 <input
                   value={form.name}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, name: event.target.value }))
                   }
-                  placeholder="Asociación Cultural"
-                  className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  className={control}
                 />
               </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-semibold text-gray-700">
-                    NIF / CIF
-                  </label>
-                  <input
-                    value={form.taxId}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, taxId: event.target.value }))
-                    }
-                    placeholder="G12345678"
-                    className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-700">
-                    Teléfono
-                  </label>
-                  <input
-                    value={form.phone}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, phone: event.target.value }))
-                    }
-                    placeholder="+34 600 000 000"
-                    className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                  />
-                </div>
-              </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700">
-                  Correo electrónico de contacto
-                </label>
+                <label className="text-sm font-semibold text-gray-700">NIF / CIF</label>
                 <input
-                  value={form.contactEmail}
+                  value={form.taxId}
                   onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      contactEmail: event.target.value,
-                    }))
+                    setForm((prev) => ({ ...prev, taxId: event.target.value }))
                   }
-                  placeholder="contacto@asociacion.org"
-                  className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  className={control}
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700">
-                  Ciudad / Provincia
-                </label>
+                <label className="text-sm font-semibold text-gray-700">Teléfono</label>
                 <input
-                  value={form.location}
+                  value={form.phone}
                   onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      location: event.target.value,
-                    }))
+                    setForm((prev) => ({ ...prev, phone: event.target.value }))
                   }
-                  placeholder="Madrid"
-                  className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  className={control}
                 />
               </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700">
-                  Dirección social (opcional)
-                </label>
-                <textarea
-                  value={form.address}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      address: event.target.value,
-                    }))
-                  }
-                  placeholder="Calle de la Innovación 42, 28014 Madrid, España"
-                  className="mt-2 min-h-[110px] w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                />
-              </div>
-            </div>
-          </section>
-
-
-          <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Representantes de la asociación
-              </h2>
-              <p className="mt-2 text-sm text-gray-500">
-                Registra los cargos principales de la junta directiva para
-                tenerlos siempre disponibles en documentos y comunicados.
-              </p>
-            </div>
-            <div className="space-y-4">
-              {form.representatives.length > 0 ? (
-                form.representatives.map((rep, index) => (
-                  <div
-                    key={rep.id}
-                    className="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                        Representante {index + 1}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveRepresentative(rep.id)}
-                        className="rounded-xl border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-500 shadow-sm hover:bg-red-50"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="text-sm font-semibold text-gray-700">
-                          Cargo
-                        </label>
-                        <input
-                          list="association-representative-roles"
-                          value={rep.role}
-                          onChange={(event) =>
-                            handleRepresentativeChange(
-                              rep.id,
-                              "role",
-                              event.target.value
-                            )
-                          }
-                          placeholder="Presidente"
-                          className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-gray-700">
-                          Nombre completo
-                        </label>
-                        <input
-                          value={rep.name}
-                          onChange={(event) =>
-                            handleRepresentativeChange(
-                              rep.id,
-                              "name",
-                              event.target.value
-                            )
-                          }
-                          placeholder="Ana Pérez"
-                          className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-gray-700">
-                          Correo electrónico (opcional)
-                        </label>
-                        <input
-                          value={rep.email ?? ""}
-                          onChange={(event) =>
-                            handleRepresentativeChange(
-                              rep.id,
-                              "email",
-                              event.target.value
-                            )
-                          }
-                          placeholder="presidencia@asociacion.org"
-                          className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-gray-700">
-                          Teléfono (opcional)
-                        </label>
-                        <input
-                          value={rep.phone ?? ""}
-                          onChange={(event) =>
-                            handleRepresentativeChange(
-                              rep.id,
-                              "phone",
-                              event.target.value
-                            )
-                          }
-                          placeholder="+34 600 000 000"
-                          className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
-                  Todavía no hay representantes registrados.
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={handleAddRepresentative}
-                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-50"
-              >
-                Añadir representante
-              </button>
-              <datalist id="association-representative-roles">
-                <option value="Presidente" />
-                <option value="Vicepresidente" />
-                <option value="Secretario" />
-                <option value="Tesorero" />
-                <option value="Vocal" />
-                <option value="Coordinador" />
-              </datalist>
-            </div>
-          </section>
-
-          {canEditAssociation ? (
-            <section className="grid grid-cols-1 gap-6 rounded-3xl border border-rose-200 bg-rose-50/40 p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
-              <div>
-                <h2 className="text-lg font-semibold text-rose-700">
-                  Eliminar asociación
-                </h2>
-                <p className="mt-2 text-sm text-rose-600">
-                  Esta acción elimina la asociación activa y cerrará tu sesión.
-                </p>
-              </div>
-              <div className="flex items-center justify-start lg:justify-end">
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(true)}
-                  className="rounded-2xl border border-rose-200 bg-white px-5 py-2.5 text-sm font-semibold text-rose-600 shadow-sm hover:bg-rose-100"
-                >
-                  Eliminar asociación
-                </button>
-              </div>
-            </section>
-          ) : null}
-
-          <div className="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white px-6 py-4 shadow-sm md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  hasChanges ? "bg-amber-400" : "bg-emerald-400"
-                }`}
-              />
-              {hasChanges
-                ? "Hay cambios pendientes de guardar"
-                : lastSavedAt
-                  ? "Cambios guardados"
-                  : "Sin cambios pendientes"}
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setForm(initialForm)}
-                disabled={!hasChanges}
-                className={`rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold shadow-sm transition ${
-                  hasChanges
-                    ? "text-gray-600 hover:bg-gray-50"
-                    : "cursor-not-allowed text-gray-300 opacity-60"
-                }`}
-              >
-                Descartar
-              </button>
-              <button
-                id="association-save"
-                type="button"
-                onClick={handleSave}
-                disabled={!canSave}
-                className={`rounded-2xl px-5 py-2 text-sm font-semibold text-white shadow transition ${
-                  canSave
-                    ? "bg-primary hover:bg-primary/90"
-                    : "cursor-not-allowed bg-primary/50"
-                }`}
-              >
-                Guardar cambios
-              </button>
             </div>
           </div>
-        </>
-      )}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-semibold text-gray-700">Correo de contacto</label>
+              <input
+                value={form.contactEmail}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, contactEmail: event.target.value }))
+                }
+                className={control}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-gray-700">Ciudad / Provincia</label>
+              <input
+                value={form.location}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, location: event.target.value }))
+                }
+                className={control}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-sm font-semibold text-gray-700">Dirección social</label>
+              <textarea
+                value={form.address}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, address: event.target.value }))
+                }
+                className={`${control} min-h-[100px]`}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="grid gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Catálogo de cuotas</h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Aquí defines todos los tipos de cuota de la asociación: menores, premium,
+            becadas, familiares, anuales o cualquier otra casuística.
+          </p>
+          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-sm text-blue-700">
+            Estos planes se reutilizan automáticamente al crear socios, al generar
+            cuotas y al registrar movimientos contables.
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 p-4">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">
+                Plan por defecto: {membershipPreview.defaultPlan.name}
+              </p>
+              <p className="text-xs text-gray-500">
+                {formatCurrency(membershipPreview.defaultPlan.amount)} ·{" "}
+                {getMembershipExecutionLabel(membershipPreview.defaultPlan)} · Próximo cobro{" "}
+                {membershipPreview.nextCharge}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setForm((prev) => ({
+                  ...prev,
+                  membershipPlans: [
+                    ...prev.membershipPlans,
+                    createPlanFormState(
+                      createEmptyMembershipPlan({
+                        name: `Plan ${prev.membershipPlans.length + 1}`,
+                      })
+                    ),
+                  ],
+                }))
+              }
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-100"
+            >
+              Añadir plan
+            </button>
+          </div>
+
+          {form.membershipPlans.map((plan, index) => {
+            const annualMaxDay = getMonthMaxDay(Number(plan.annualChargeMonth || "1"));
+            const preview = normalizeAssociationMembershipSettings({
+              plans: [{ ...plan, name: normalize(plan.name) || `Plan ${index + 1}` }],
+              defaultPlanId: plan.id,
+            }).plans[0];
+            const isDefault = form.defaultMembershipPlanId === plan.id;
+
+            return (
+              <div key={plan.id} className="rounded-3xl border border-gray-200 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-base font-semibold text-gray-900">
+                      {normalize(plan.name) || `Plan ${index + 1}`}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {preview.cycle} · Próximo cobro{" "}
+                      {getNextMembershipChargeDate(preview).toLocaleDateString("es-ES")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((prev) => ({ ...prev, defaultMembershipPlanId: plan.id }))
+                      }
+                      className={`rounded-xl px-4 py-2 text-xs font-semibold ${
+                        isDefault
+                          ? "bg-primary text-white"
+                          : "border border-gray-200 bg-white text-gray-600"
+                      }`}
+                    >
+                      {isDefault ? "Predeterminado" : "Usar por defecto"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={form.membershipPlans.length === 1}
+                      onClick={() =>
+                        setForm((prev) => {
+                          if (prev.membershipPlans.length === 1) return prev;
+                          const membershipPlans = prev.membershipPlans.filter(
+                            (item) => item.id !== plan.id
+                          );
+                          return {
+                            ...prev,
+                            membershipPlans,
+                            defaultMembershipPlanId:
+                              prev.defaultMembershipPlanId === plan.id
+                                ? membershipPlans[0]?.id ?? ""
+                                : prev.defaultMembershipPlanId,
+                          };
+                        })
+                      }
+                      className="rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Nombre</label>
+                    <input
+                      value={plan.name}
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          membershipPlans: prev.membershipPlans.map((item) =>
+                            item.id === plan.id ? { ...item, name: event.target.value } : item
+                          ),
+                        }))
+                      }
+                      className={control}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Importe</label>
+                    <input
+                      value={plan.amount}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          membershipPlans: prev.membershipPlans.map((item) =>
+                            item.id === plan.id ? { ...item, amount: event.target.value } : item
+                          ),
+                        }))
+                      }
+                      className={control}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Periodicidad</label>
+                    <select
+                      value={plan.cycle}
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          membershipPlans: prev.membershipPlans.map((item) =>
+                            item.id === plan.id
+                              ? { ...item, cycle: event.target.value as MembershipBillingCycle }
+                              : item
+                          ),
+                        }))
+                      }
+                      className={control}
+                    >
+                      <option value="Mensual">Mensual</option>
+                      <option value="Anual">Anual</option>
+                    </select>
+                  </div>
+                </div>
+
+                {plan.cycle === "Mensual" ? (
+                  <div className="mt-4">
+                    <label className="text-sm font-semibold text-gray-700">Día de cobro mensual</label>
+                    <input
+                      value={plan.monthlyChargeDay}
+                      type="number"
+                      min="1"
+                      max="31"
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          membershipPlans: prev.membershipPlans.map((item) =>
+                            item.id === plan.id
+                              ? {
+                                  ...item,
+                                  monthlyChargeDay: String(
+                                    Math.min(
+                                      31,
+                                      Math.max(1, Number(event.target.value || "1"))
+                                    )
+                                  ),
+                                }
+                              : item
+                          ),
+                        }))
+                      }
+                      className={control}
+                    />
+                    <p className="mt-2 text-xs text-gray-400">
+                      Si eliges 29, 30 o 31, en los meses más cortos se cobrará
+                      el último día disponible.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700">Mes anual</label>
+                      <select
+                        value={plan.annualChargeMonth}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            membershipPlans: prev.membershipPlans.map((item) =>
+                              item.id === plan.id
+                                ? {
+                                    ...item,
+                                    annualChargeMonth: event.target.value,
+                                    annualChargeDay: String(
+                                      Math.min(
+                                        Number(item.annualChargeDay || "1"),
+                                        getMonthMaxDay(Number(event.target.value))
+                                      )
+                                    ),
+                                  }
+                                : item
+                            ),
+                          }))
+                        }
+                        className={control}
+                      >
+                        {MONTHS.map((month, monthIndex) => (
+                          <option key={month} value={String(monthIndex + 1)}>
+                            {month}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700">Día anual</label>
+                      <input
+                        value={plan.annualChargeDay}
+                        type="number"
+                        min="1"
+                        max={String(annualMaxDay)}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            membershipPlans: prev.membershipPlans.map((item) =>
+                              item.id === plan.id
+                                ? {
+                                    ...item,
+                                    annualChargeDay: String(
+                                      Math.min(
+                                        annualMaxDay,
+                                        Math.max(1, Number(event.target.value || "1"))
+                                      )
+                                    ),
+                                  }
+                                : item
+                            ),
+                          }))
+                        }
+                        className={control}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Condiciones</label>
+                    <textarea
+                      value={plan.description}
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          membershipPlans: prev.membershipPlans.map((item) =>
+                            item.id === plan.id
+                              ? { ...item, description: event.target.value }
+                              : item
+                          ),
+                        }))
+                      }
+                      className={`${control} min-h-[96px]`}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Beneficios / privilegios</label>
+                    <textarea
+                      value={plan.benefits}
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          membershipPlans: prev.membershipPlans.map((item) =>
+                            item.id === plan.id
+                              ? { ...item, benefits: event.target.value }
+                              : item
+                          ),
+                        }))
+                      }
+                      className={`${control} min-h-[96px]`}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Planes activos
+              </p>
+              <p className="mt-2 text-lg font-semibold text-gray-900">
+                {form.membershipPlans.length}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Predeterminado
+              </p>
+              <p className="mt-2 text-sm font-semibold text-gray-900">
+                {membershipPreview.defaultPlan.name}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                Próximo cobro base
+              </p>
+              <p className="mt-2 text-sm font-semibold text-gray-900">
+                {membershipPreview.nextCharge}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Representantes</h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Junta directiva y cargos principales de la asociación.
+          </p>
+        </div>
+        <div className="space-y-4">
+          {form.representatives.map((rep, index) => (
+            <div key={rep.id} className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                  Representante {index + 1}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      representatives: prev.representatives.filter((item) => item.id !== rep.id),
+                    }))
+                  }
+                  className="rounded-xl border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-500"
+                >
+                  Eliminar
+                </button>
+              </div>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                {(["role", "name", "email", "phone"] as const).map((field) => (
+                  <input
+                    key={field}
+                    value={rep[field] ?? ""}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        representatives: prev.representatives.map((item) =>
+                          item.id === rep.id ? { ...item, [field]: event.target.value } : item
+                        ),
+                      }))
+                    }
+                    placeholder={
+                      field === "role"
+                        ? "Cargo"
+                        : field === "name"
+                          ? "Nombre completo"
+                          : field === "email"
+                            ? "Correo"
+                            : "Teléfono"
+                    }
+                    className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              setForm((prev) => ({
+                ...prev,
+                representatives: [...prev.representatives, createRepresentative()],
+              }))
+            }
+            className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-50"
+          >
+            Añadir representante
+          </button>
+        </div>
+      </section>
+      <section className="grid gap-6 rounded-3xl border border-rose-200 bg-rose-50/40 p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
+        <div>
+          <h2 className="text-lg font-semibold text-rose-700">Eliminar asociación</h2>
+          <p className="mt-2 text-sm text-rose-600">
+            Esta acción elimina la asociación activa y cierra tu sesión.
+          </p>
+        </div>
+        <div className="flex items-center justify-start lg:justify-end">
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="rounded-2xl border border-rose-200 bg-white px-5 py-2.5 text-sm font-semibold text-rose-600 shadow-sm hover:bg-rose-100"
+          >
+            Eliminar asociación
+          </button>
+        </div>
+      </section>
+
+      <div className="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white px-6 py-4 shadow-sm md:flex-row md:items-center md:justify-between">
+        <div className="text-sm text-gray-500">
+          {hasChanges
+            ? "Hay cambios pendientes de guardar"
+            : lastSavedAt
+              ? "Cambios guardados"
+              : "Sin cambios pendientes"}
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setForm(initialForm)}
+            disabled={!hasChanges}
+            className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Descartar
+          </button>
+          <button
+            id="association-save"
+            type="button"
+            onClick={() => {
+              const representatives = form.representatives
+                .map((rep) => ({
+                  id: rep.id || createRepresentativeId(),
+                  role: normalize(rep.role),
+                  name: normalize(rep.name),
+                  email: normalize(rep.email ?? ""),
+                  phone: normalize(rep.phone ?? ""),
+                }))
+                .filter((rep) => rep.role || rep.name || rep.email || rep.phone)
+                .map((rep) => ({
+                  id: rep.id,
+                  role: rep.role,
+                  name: rep.name,
+                  email: rep.email || undefined,
+                  phone: rep.phone || undefined,
+                }));
+
+              setAssociation({
+                name: normalize(form.name),
+                logoUrl: form.logoUrl || undefined,
+                taxId: normalize(form.taxId) || undefined,
+                phone: normalize(form.phone) || undefined,
+                contactEmail: normalize(form.contactEmail) || undefined,
+                location: normalize(form.location) || undefined,
+                address: normalize(form.address) || undefined,
+                membershipSettings: membershipPreview.settings,
+                representatives: representatives.length ? representatives : undefined,
+              });
+              setLastSavedAt(Date.now());
+            }}
+            disabled={!hasChanges || !normalize(form.name)}
+            className="rounded-2xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Guardar cambios
+          </button>
+        </div>
+      </div>
 
       <Modal
         isOpen={confirmDelete}
@@ -655,13 +829,12 @@ export default function AssociationProfilePage() {
         title="¿Eliminar asociación?"
       >
         <p className="mb-6">
-          ¿Seguro que quieres eliminar <strong>{associationLabel}</strong>?
+          ¿Seguro que quieres eliminar <strong>{association?.name || "esta asociación"}</strong>?
         </p>
-
         <div className="flex justify-end gap-2">
           <button
             onClick={() => setConfirmDelete(false)}
-            className="px-4 py-2 border rounded-lg"
+            className="rounded-lg border px-4 py-2"
           >
             Cancelar
           </button>
@@ -670,7 +843,7 @@ export default function AssociationProfilePage() {
               setConfirmDeleteFinal(true);
               setConfirmDelete(false);
             }}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg"
+            className="rounded-lg bg-red-600 px-4 py-2 text-white"
           >
             Sí, eliminar
           </button>
@@ -682,23 +855,26 @@ export default function AssociationProfilePage() {
         onClose={() => setConfirmDeleteFinal(false)}
         title="Confirmación final"
       >
-        <p className="mb-6 text-red-600 font-medium">
+        <p className="mb-6 font-medium text-red-600">
           Esta acción no se puede deshacer y cerrará tu sesión.
         </p>
-
         <div className="flex justify-end gap-2">
           <button
             onClick={() => setConfirmDeleteFinal(false)}
-            className="px-4 py-2 border rounded-lg"
+            className="rounded-lg border px-4 py-2"
           >
             Cancelar
           </button>
           <button
             onClick={() => {
-              handleDeleteAssociation();
+              if (activeAssociationId) {
+                removeAssociation(activeAssociationId);
+              }
+              logout();
+              router.replace("/login");
               setConfirmDeleteFinal(false);
             }}
-            className="px-4 py-2 bg-red-700 text-white rounded-lg"
+            className="rounded-lg bg-red-700 px-4 py-2 text-white"
           >
             Eliminar definitivamente
           </button>

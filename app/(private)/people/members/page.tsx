@@ -14,13 +14,17 @@ import {
   tableWrapperStyles,
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
+import {
+  getContactMembershipPlan,
+  getMembershipStatusWindowDays,
+} from "@/core/session/membership-settings";
+import { useSessionStore } from "@/core/session/session.store";
+import { normalizeContactPrivacyPermissions } from "@/modules/contacts/contact-privacy";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import { Contact } from "@/modules/contacts/contact.types";
 import {
   formatMemberId,
-  resolveFeeCycle,
-  resolveMemberPermissions,
 } from "@/modules/people/people.utils";
 
 type MemberStatus = "Activo" | "Pendiente" | "Baja";
@@ -110,6 +114,7 @@ function isOnOrAfter(dateValue: string | undefined, start: Date) {
 
 export default function MembersPage() {
   const { formatLocale } = useLocale();
+  const association = useSessionStore((state) => state.association);
   const { contacts, loadContacts } = useContactsStore();
   const { transactions, loadTransactions } = useTransactionsStore();
   const [query, setQuery] = useState("");
@@ -126,10 +131,6 @@ export default function MembersPage() {
     loadContacts();
     loadTransactions();
   }, [loadContacts, loadTransactions]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [query, paymentFilter, feeCycleFilter]);
 
   const now = useMemo(() => new Date(), []);
   const startOfMonth = useMemo(
@@ -197,6 +198,7 @@ export default function MembersPage() {
           new Date(b.date).getTime() - new Date(a.date).getTime()
       )[0];
       const lastPaymentDate = lastCompleted?.date;
+      const feePlan = getContactMembershipPlan(member, association);
 
       const isActive = !member.deactivatedAt;
       const hasPending = pendingTx.length > 0;
@@ -209,24 +211,30 @@ export default function MembersPage() {
       let paymentStatus: PaymentStatus = "Vencido";
       if (hasPending) {
         paymentStatus = "Deuda";
-      } else if (lastPaymentDate) {
-        const last = new Date(lastPaymentDate);
-        const diffDays = Math.floor(
-          (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        paymentStatus = diffDays <= 45 ? "Al dia" : "Vencido";
-      }
+        } else if (lastPaymentDate) {
+          const last = new Date(lastPaymentDate);
+          const diffDays = Math.floor(
+            (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24)
+          );
+          paymentStatus =
+            diffDays <= getMembershipStatusWindowDays(feePlan)
+              ? "Al dia"
+              : "Vencido";
+        }
 
       return {
         member,
         status,
         paymentStatus,
         lastPaymentDate,
-        feeCycle: resolveFeeCycle(member.id),
-        permissions: resolveMemberPermissions(member.id),
+        feePlan,
+        feeCycle: feePlan.cycle,
+        permissions: normalizeContactPrivacyPermissions(
+          member.privacyPermissions
+        ),
       };
     });
-  }, [members, membershipTransactions, now]);
+  }, [association, members, membershipTransactions, now]);
 
   const activeMembers = membersWithDetails.filter(
     (item) => item.status === "Activo"
@@ -365,7 +373,10 @@ export default function MembersPage() {
               <input
                 type="text"
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Buscar socio por nombre, ID o email..."
                 className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 py-2.5 pl-12 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               />
@@ -396,11 +407,12 @@ export default function MembersPage() {
             <div className="mt-3 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 lg:grid-cols-[1fr_1fr_auto]">
               <select
                 value={paymentFilter}
-                onChange={(event) =>
+                onChange={(event) => {
                   setPaymentFilter(
                     event.target.value as "all" | "pending" | "overdue" | "paid"
-                  )
-                }
+                  );
+                  setCurrentPage(1);
+                }}
                 className={`${filterControlStyles} appearance-none`}
               >
                 {PAYMENT_FILTERS.map((filter) => (
@@ -411,11 +423,12 @@ export default function MembersPage() {
               </select>
               <select
                 value={feeCycleFilter}
-                onChange={(event) =>
+                onChange={(event) => {
                   setFeeCycleFilter(
                     event.target.value as "all" | "Mensual" | "Anual"
-                  )
-                }
+                  );
+                  setCurrentPage(1);
+                }}
                 className={`${filterControlStyles} appearance-none`}
               >
                 {FEE_CYCLE_FILTERS.map((filter) => (
@@ -429,6 +442,7 @@ export default function MembersPage() {
                 onClick={() => {
                   setPaymentFilter("all");
                   setFeeCycleFilter("all");
+                  setCurrentPage(1);
                 }}
                 className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
               >
@@ -504,7 +518,13 @@ export default function MembersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-gray-600">
-                      {item.feeCycle}
+                      <div className="font-semibold text-gray-900">
+                        {item.feePlan.name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {formatCurrency(item.feePlan.amount, formatLocale)} ·{" "}
+                        {item.feePlan.cycle}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-gray-600">
                       {formatDate(item.lastPaymentDate, formatLocale)}
@@ -518,21 +538,23 @@ export default function MembersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        {(["I", "V", "C"] as const).map((key) => {
-                          const enabled = permissions[key];
-                          return (
-                            <span
-                              key={`${member.id}-${key}`}
-                              className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold ${
-                                enabled
-                                  ? "bg-emerald-50 text-emerald-600"
-                                  : "bg-slate-100 text-slate-400"
-                              }`}
-                            >
-                              {key}
-                            </span>
-                          );
-                        })}
+                        {[
+                          { key: "I", enabled: permissions.image },
+                          { key: "V", enabled: permissions.voice },
+                          { key: "C", enabled: permissions.communications },
+                          { key: "S", enabled: permissions.services },
+                        ].map((item) => (
+                          <span
+                            key={`${member.id}-${item.key}`}
+                            className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold ${
+                              item.enabled
+                                ? "bg-emerald-50 text-emerald-600"
+                                : "bg-slate-100 text-slate-400"
+                            }`}
+                          >
+                            {item.key}
+                          </span>
+                        ))}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">

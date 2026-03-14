@@ -470,13 +470,13 @@ export default function SecuritySettingsPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Configuracion &gt; Seguridad
+                Configuración &gt; Seguridad
               </p>
               <h1 className="text-2xl font-semibold text-gray-900">
                 Seguridad
               </h1>
               <p className="text-sm text-gray-500">
-                Esta seccion solo esta disponible en cuentas autenticadas.
+                Esta sección solo está disponible en cuentas autenticadas.
               </p>
             </div>
             <button
@@ -484,7 +484,7 @@ export default function SecuritySettingsPage() {
               onClick={() => router.push("/settings")}
               className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
             >
-              Volver a configuracion
+              Volver a configuración
             </button>
           </div>
         </PageTopbar>
@@ -498,7 +498,7 @@ export default function SecuritySettingsPage() {
             Seguridad no disponible en modo invitado
           </h2>
           <p className="mt-2 text-sm text-gray-500">
-            Inicia sesion para gestionar contrasenas, 2FA y actividad de acceso.
+            Inicia sesión para gestionar contraseñas, 2FA y actividad de acceso.
           </p>
         </div>
       </div>

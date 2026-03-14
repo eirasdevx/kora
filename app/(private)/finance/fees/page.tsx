@@ -5,7 +5,7 @@ import ClientRedirect from "@/components/shared/ClientRedirect";
 export default function FinanceFeesPage() {
   return (
     <ClientRedirect
-      to="/accounting"
+      to="/accounting/fees"
       label="Redirigiendo a cuotas..."
     />
   );

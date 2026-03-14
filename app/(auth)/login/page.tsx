@@ -463,7 +463,7 @@ export default function LoginPage() {
                     href="/forgot-password"
                     className="font-medium text-blue-600 hover:text-blue-700"
                   >
-                    Olvidaste tu contrasena?
+                    ¿Olvidaste tu contraseña?
                   </Link>
                 </div>
                 <div className="relative">

@@ -317,7 +317,7 @@ export const useUsersStore = create<UsersState>()(
         useNotificationsStore.getState().addNotification({
           category: "members",
           title: "Usuario creado",
-          description: `Se creo el usuario ${displayName}.`,
+          description: `Se creó el usuario ${displayName}.`,
           href: "/settings/users",
           actionLabel: "Ver usuarios",
           icon: "person_add",
@@ -347,7 +347,7 @@ export const useUsersStore = create<UsersState>()(
         useNotificationsStore.getState().addNotification({
           category: "members",
           title: "Usuario actualizado",
-          description: `Se actualizo el usuario ${displayName}.`,
+          description: `Se actualizó el usuario ${displayName}.`,
           href: "/settings/users",
           actionLabel: "Ver usuarios",
           icon: "manage_accounts",
@@ -367,7 +367,7 @@ export const useUsersStore = create<UsersState>()(
         useNotificationsStore.getState().addNotification({
           category: "members",
           title: "Usuario eliminado",
-          description: `Se elimino el usuario ${displayName}.`,
+          description: `Se eliminó el usuario ${displayName}.`,
           href: "/settings/users",
           actionLabel: "Ver usuarios",
           icon: "person_remove",

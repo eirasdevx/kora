@@ -10,6 +10,15 @@ import {
 import BackLink from "@/components/shared/BackLink";
 import PageHeader from "@/components/shared/PageHeader";
 import { moduleTopbarButtonStyles } from "@/components/shared/ModuleTopbar";
+import {
+  getAssociationMembershipSettings,
+  getDefaultMembershipPlan,
+  getMembershipExecutionLabel,
+  getMembershipPlanById,
+} from "@/core/session/membership-settings";
+import { useSessionStore } from "@/core/session/session.store";
+import { useContactsStore } from "@/modules/contacts/contacts.store";
+import { ensureContactAccountingCode } from "@/modules/accounting/accounting-codes";
 
 interface Props {
   initialData?: Contact;
@@ -124,6 +133,15 @@ export default function ContactForm({
 }: Props) {
   const isEditing = Boolean(initialData);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const association = useSessionStore((state) => state.association);
+  const contacts = useContactsStore((state) => state.contacts);
+  const loadContacts = useContactsStore((state) => state.loadContacts);
+  const membershipSettings = getAssociationMembershipSettings(association);
+  const defaultMembershipPlan = getDefaultMembershipPlan(membershipSettings);
+
+  useEffect(() => {
+    loadContacts();
+  }, [loadContacts]);
 
   const [contactKind, setContactKind] = useState<ContactKind>(
     initialData?.kind ?? "person"
@@ -146,6 +164,9 @@ export default function ContactForm({
   );
   const [types, setTypes] = useState<ContactType[]>(
     initialData?.types ?? []
+  );
+  const [membershipPlanId, setMembershipPlanId] = useState(
+    initialData?.membershipPlanId ?? defaultMembershipPlan.id
   );
   const [email, setEmail] = useState(initialData?.email ?? "");
   const [phone, setPhone] = useState(initialData?.phone ?? "");
@@ -175,9 +196,34 @@ export default function ContactForm({
     toInputDate(initialData?.deactivatedAt)
   );
   const isEntity = contactKind === "entity";
+  const selectedMembershipPlan = getMembershipPlanById(
+    membershipSettings,
+    membershipPlanId
+  );
   const allowedTypes = isEntity
     ? (["provider", "collaborator", "sponsor", "other"] as ContactType[])
     : CONTACT_TYPES;
+  const normalizedPreviewTypes = types.filter((type) => allowedTypes.includes(type));
+  const accountingContactPreview = ensureContactAccountingCode(
+    {
+      id: initialData?.id ?? "preview-contact",
+      kind: contactKind,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      fullName: `${firstName.trim()} ${lastName.trim()}`.trim() || undefined,
+      dni: dni.trim(),
+      types: normalizedPreviewTypes.length ? normalizedPreviewTypes : ["other"],
+      membershipPlanId: normalizedPreviewTypes.includes("member")
+        ? selectedMembershipPlan.id
+        : undefined,
+      email: email.trim() || undefined,
+      createdAt:
+        fromInputDate(registeredDate) ??
+        initialData?.createdAt ??
+        new Date().toISOString(),
+    },
+    contacts
+  );
 
   const [errors, setErrors] = useState<{
     firstName?: string;
@@ -188,13 +234,18 @@ export default function ContactForm({
     representativeLastName?: string;
   }>({});
 
-  useEffect(() => {
-    if (!isEntity) return;
-    setTypes((prev) => prev.filter((t) => t !== "member"));
-  }, [isEntity]);
+  const handleContactKindChange = (nextKind: ContactKind) => {
+    setContactKind(nextKind);
+    if (nextKind === "entity") {
+      setTypes((prev) => prev.filter((t) => t !== "member"));
+    }
+  };
 
   const toggleType = (type: ContactType) => {
     if (isEntity && type === "member") return;
+    if (type === "member" && !types.includes("member")) {
+      setMembershipPlanId(selectedMembershipPlan.id);
+    }
     setTypes((prev) =>
       prev.includes(type)
         ? prev.filter((t) => t !== type)
@@ -272,6 +323,9 @@ export default function ContactForm({
         ? trimmedRepLast || undefined
         : undefined,
       types: normalizedTypes,
+      membershipPlanId: normalizedTypes.includes("member")
+        ? selectedMembershipPlan.id
+        : undefined,
       email: email || undefined,
       phone: phone || undefined,
       secondaryPhone: secondaryPhone || undefined,
@@ -477,6 +531,81 @@ export default function ContactForm({
                 {errors.types}
               </p>
             )}
+            <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-600">
+                Cuenta contable automatica
+              </p>
+              <p className="mt-2 text-sm font-semibold text-slate-900">
+                {accountingContactPreview.accountingAccountCode} ·{" "}
+                {accountingContactPreview.accountingAccountLabel}
+              </p>
+              <p className="mt-1 text-xs text-slate-600">
+                Se asigna automaticamente segun el tipo principal del contacto y el plan
+                contable base.
+              </p>
+            </div>
+            {!isEntity && types.includes("member") ? (
+              <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                <label className="text-sm font-semibold text-slate-700">
+                  Plan de cuota
+                </label>
+                <select
+                  value={selectedMembershipPlan.id}
+                  onChange={(event) => setMembershipPlanId(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+                >
+                  {membershipSettings.plans.map((plan) => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl bg-white px-3 py-3 shadow-sm">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Importe
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {new Intl.NumberFormat("es-ES", {
+                        style: "currency",
+                        currency: "EUR",
+                        minimumFractionDigits: 2,
+                      }).format(selectedMembershipPlan.amount)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-white px-3 py-3 shadow-sm">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Periodicidad
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {selectedMembershipPlan.cycle}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-white px-3 py-3 shadow-sm">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Ejecución
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {getMembershipExecutionLabel(selectedMembershipPlan)}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedMembershipPlan.description || selectedMembershipPlan.benefits ? (
+                  <div className="mt-3 rounded-xl border border-blue-100 bg-white px-3 py-3 text-xs text-slate-600 shadow-sm">
+                    {selectedMembershipPlan.description ? (
+                      <p>{selectedMembershipPlan.description}</p>
+                    ) : null}
+                    {selectedMembershipPlan.benefits ? (
+                      <p className="mt-1">
+                        Privilegios: {selectedMembershipPlan.benefits}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs text-blue-700">
@@ -509,7 +638,7 @@ export default function ContactForm({
                     <button
                       key={option.value}
                       type="button"
-                      onClick={() => setContactKind(option.value)}
+                      onClick={() => handleContactKindChange(option.value)}
                       className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
                         isActive
                           ? "border-primary bg-primary text-white shadow-sm"

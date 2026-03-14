@@ -21,11 +21,6 @@ export function resolveMemberTier(id: string): MemberTier {
   return MEMBER_TIERS[hash % MEMBER_TIERS.length];
 }
 
-export function resolveFeeCycle(id: string): "Mensual" | "Anual" {
-  const hash = hashString(id);
-  return hash % 3 === 0 ? "Anual" : "Mensual";
-}
-
 export function resolveMemberPermissions(id: string) {
   const hash = hashString(id);
   return {

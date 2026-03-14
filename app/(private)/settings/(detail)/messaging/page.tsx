@@ -45,30 +45,30 @@ const PROVIDER_SMTP: Record<
 
 const PROVIDER_STEPS: Record<EmailProvider, string[]> = {
   gmail: [
-    "Activa la verificacion en dos pasos (2FA).",
+    "Activa la verificación en dos pasos (2FA).",
     "Crea una App Password para Kora.",
     "Usa tu Gmail y la App Password en la app.",
   ],
   outlook: [
-    "Activa la verificacion en dos pasos (MFA).",
-    "Crea una contrasena de aplicacion o credencial SMTP.",
-    "Usa tu correo y la contrasena SMTP en la app.",
+    "Activa la verificación en dos pasos (MFA).",
+    "Crea una contraseña de aplicación o credencial SMTP.",
+    "Usa tu correo y la contraseña SMTP en la app.",
   ],
   yahoo: [
-    "Activa la verificacion en dos pasos.",
+    "Activa la verificación en dos pasos.",
     "Genera una App Password para correo.",
     "Usa tu Yahoo y la App Password en la app.",
   ],
   custom: [
     "Solicita a tu proveedor el host, puerto y tipo de seguridad.",
-    "Usa el usuario/correo y la contrasena SMTP.",
+    "Usa el usuario/correo y la contraseña SMTP.",
     "Completa los datos y guarda los cambios.",
   ],
 };
 
-const MESSAGING_MODULE_TITLE = "Mensajeria";
+const MESSAGING_MODULE_TITLE = "Mensajería";
 const MESSAGING_MODULE_DESCRIPTION =
-  "Plantillas, campanas y comunicaciones personalizadas.";
+  "Plantillas, campañas y comunicaciones personalizadas.";
 
 export default function MessagingSettingsPage() {
   const mode = useSessionStore((s) => s.mode);
@@ -123,14 +123,14 @@ export default function MessagingSettingsPage() {
         <div className="hidden">
         <ModuleTopbar
           module={MESSAGING_MODULE_TITLE}
-          title="Credenciales de mensajeria"
+          title="Credenciales de mensajería"
           description={MESSAGING_MODULE_DESCRIPTION}
           actions={
             <Link
               href="/settings"
               className={moduleTopbarButtonStyles.secondary}
             >
-              {"<"} Volver a configuracion
+              {"<"} Volver a configuración
             </Link>
           }
         />
@@ -141,10 +141,10 @@ export default function MessagingSettingsPage() {
             <span className="material-symbols-outlined text-[24px]">info</span>
           </div>
           <h2 className="mt-4 text-lg font-semibold text-gray-900">
-            Mensajeria no disponible en modo invitado
+            Mensajería no disponible en modo invitado
           </h2>
           <p className="mt-2 text-sm text-gray-500">
-            Inicia sesion para configurar remitentes y credenciales de envio.
+            Inicia sesión para configurar remitentes y credenciales de envío.
           </p>
         </div>
       </div>
@@ -163,14 +163,14 @@ export default function MessagingSettingsPage() {
       <div className="hidden">
       <ModuleTopbar
         module={MESSAGING_MODULE_TITLE}
-        title="Credenciales de mensajeria"
+        title="Credenciales de mensajería"
         description={MESSAGING_MODULE_DESCRIPTION}
         actions={
           <Link
             href="/settings"
             className={moduleTopbarButtonStyles.secondary}
           >
-            {"<"} Volver a configuracion
+            {"<"} Volver a configuración
           </Link>
         }
       />
@@ -215,7 +215,7 @@ export default function MessagingSettingsPage() {
               onChange={(event) =>
                 updateSettings({ senderName: event.target.value })
               }
-              placeholder="Asociacion Cultural"
+              placeholder="Asociación Cultural"
               className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
             />
           </div>
@@ -235,7 +235,7 @@ export default function MessagingSettingsPage() {
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700">
-              Contrasena SMTP / App Password
+              Contraseña SMTP / App Password
             </label>
             <input
               value={settings.emailAppPassword}
@@ -292,7 +292,7 @@ export default function MessagingSettingsPage() {
                     }
                     className="h-4 w-4"
                   />
-                  Usar conexion segura (SSL/TLS)
+                  Usar conexión segura (SSL/TLS)
                 </label>
               </div>
             </div>
@@ -332,7 +332,7 @@ export default function MessagingSettingsPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <h2 className="text-lg font-semibold text-gray-900">
-              Guia de conexion
+              Guía de conexión
             </h2>
             <p className="text-sm text-gray-500">
               Pasos recomendados para conectar cualquier cuenta de correo.
@@ -376,16 +376,16 @@ export default function MessagingSettingsPage() {
       <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1.2fr_1fr]">
         <div className="space-y-2">
           <h2 className="text-lg font-semibold text-gray-900">
-            Numeros de contacto
+            Números de contacto
           </h2>
           <p className="text-sm text-gray-500">
-            Guardamos la informacion para futuras integraciones.
+            Guardamos la información para futuras integraciones.
           </p>
         </div>
         <div className="space-y-4">
           <div>
             <label className="text-sm font-semibold text-gray-700">
-              Numero de WhatsApp
+              Número de WhatsApp
             </label>
             <input
               value={settings.whatsappNumber}
@@ -398,7 +398,7 @@ export default function MessagingSettingsPage() {
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700">
-              Numero SMS
+              Número SMS
             </label>
             <input
               value={settings.smsNumber}
@@ -414,7 +414,7 @@ export default function MessagingSettingsPage() {
 
       <div className="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white px-6 py-4 shadow-sm md:flex-row md:items-center md:justify-between">
         <p className="text-sm text-gray-500">
-          Guarda las credenciales para reutilizarlas en los envios.
+          Guarda las credenciales para reutilizarlas en los envíos.
         </p>
         <div className="flex items-center gap-3">
           <button

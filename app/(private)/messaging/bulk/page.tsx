@@ -66,23 +66,23 @@ const PROVIDER_SMTP: Record<
 
 const PROVIDER_STEPS: Record<EmailProvider, string[]> = {
   gmail: [
-    "Activa la verificacion en dos pasos (2FA).",
+    "Activa la verificación en dos pasos (2FA).",
     "Crea una App Password para Kora.",
     "Usa tu Gmail y la App Password en la app.",
   ],
   outlook: [
-    "Activa la verificacion en dos pasos (MFA).",
-    "Crea una contrasena de aplicacion o credencial SMTP.",
-    "Usa tu correo y la contrasena SMTP en la app.",
+    "Activa la verificación en dos pasos (MFA).",
+    "Crea una contraseña de aplicación o credencial SMTP.",
+    "Usa tu correo y la contraseña SMTP en la app.",
   ],
   yahoo: [
-    "Activa la verificacion en dos pasos.",
+    "Activa la verificación en dos pasos.",
     "Genera una App Password para correo.",
     "Usa tu Yahoo y la App Password en la app.",
   ],
   custom: [
     "Solicita a tu proveedor el host, puerto y tipo de seguridad.",
-    "Usa el usuario/correo y la contrasena SMTP.",
+    "Usa el usuario/correo y la contraseña SMTP.",
     "Completa los datos y guarda los cambios.",
   ],
 };
@@ -90,7 +90,7 @@ const PROVIDER_STEPS: Record<EmailProvider, string[]> = {
 const applyPreviewVariables = (value: string) => {
   const replacements: Record<string, string> = {
     "{nombre_socio}": "Carlos",
-    "{apellido_socio}": "Gomez",
+    "{apellido_socio}": "Gómez",
     "{email_usuario}": "carlos@asociacion.org",
     "{nombre_evento}": "Asamblea General",
     "{monto_deuda}": "35 EUR",
@@ -104,9 +104,9 @@ const applyPreviewVariables = (value: string) => {
   );
 };
 
-const MESSAGING_MODULE_TITLE = "Mensajeria";
+const MESSAGING_MODULE_TITLE = "Mensajería";
 const MESSAGING_MODULE_DESCRIPTION =
-  "Plantillas, campanas y comunicaciones personalizadas.";
+  "Plantillas, campañas y comunicaciones personalizadas.";
 
 export default function MessagingBulkPage() {
   const mode = useSessionStore((s) => s.mode);
@@ -260,14 +260,14 @@ export default function MessagingBulkPage() {
     setSelectedIds(allSelected ? new Set() : new Set(allIds));
   };
 
-  // Envio masivo usando la API interna.
+  // Envío masivo usando la API interna.
   const handleSend = async () => {
     if (!activeTemplate) {
       setSendError("Selecciona una plantilla.");
       return;
     }
     if (!associationName || !associationEmail || !associationAppPassword) {
-      setSendError("Completa el correo y la contrasena SMTP.");
+      setSendError("Completa el correo y la contraseña SMTP.");
       return;
     }
     if (!subject || !htmlMessage) {
@@ -275,7 +275,7 @@ export default function MessagingBulkPage() {
       return;
     }
     if (selectedRecipients.length === 0) {
-      setSendError("Selecciona al menos un destinatario valido.");
+      setSendError("Selecciona al menos un destinatario válido.");
       return;
     }
 
@@ -314,7 +314,7 @@ export default function MessagingBulkPage() {
       if (errors.length > 0) {
         const first = errors[0];
         setSendError(
-          `Error en ${errors.length} envios. Ejemplo: ${first.recipient} - ${first.message}`
+          `Error en ${errors.length} envíos. Ejemplo: ${first.recipient} - ${first.message}`
         );
       }
     } catch {
@@ -329,7 +329,7 @@ export default function MessagingBulkPage() {
       <div className="space-y-6">
         <ModuleTopbar
           module={MESSAGING_MODULE_TITLE}
-          title="Envio de mensajes masivos"
+          title="Envío de mensajes masivos"
           description={MESSAGING_MODULE_DESCRIPTION}
           actions={
             <Link
@@ -346,10 +346,10 @@ export default function MessagingBulkPage() {
             <span className="material-symbols-outlined text-[24px]">info</span>
           </div>
           <h2 className="mt-4 text-lg font-semibold text-slate-900">
-            Envio masivo no disponible en modo invitado
+            Envío masivo no disponible en modo invitado
           </h2>
           <p className="mt-2 text-sm text-slate-500">
-            Inicia sesion para seleccionar destinatarios y realizar campanas.
+            Inicia sesión para seleccionar destinatarios y realizar campañas.
           </p>
         </div>
       </div>
@@ -360,7 +360,7 @@ export default function MessagingBulkPage() {
     <div className="space-y-6">
       <ModuleTopbar
         module={MESSAGING_MODULE_TITLE}
-        title="Envio de mensajes masivos"
+        title="Envío de mensajes masivos"
         description={MESSAGING_MODULE_DESCRIPTION}
         actions={
           <Link
@@ -416,7 +416,7 @@ export default function MessagingBulkPage() {
                   Filtrar destinatarios
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Selecciona a quienes recibiran el correo.
+                  Selecciona a quienes recibirán el correo.
                 </p>
               </div>
             </div>
@@ -458,7 +458,7 @@ export default function MessagingBulkPage() {
               <div className="grid grid-cols-[0.3fr_1.3fr_0.6fr_0.6fr] gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                 <span />
                 <span>Nombre</span>
-                <span>Categoria</span>
+                <span>Categoría</span>
                 <span>Correo</span>
               </div>
               <div className="max-h-[320px] divide-y divide-slate-100 overflow-y-auto">
@@ -511,7 +511,7 @@ export default function MessagingBulkPage() {
               </span>
             </div>
             <h3 className="mt-4 text-lg font-semibold text-gray-900">
-              Previsualizacion
+              Previsualización
             </h3>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-500">
               <span className="flex items-center gap-2">
@@ -543,7 +543,7 @@ export default function MessagingBulkPage() {
             </div>
             <div className="mt-6 space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">
-                Resumen del envio
+                Resumen del envío
               </p>
               <div className="grid gap-3 text-sm text-gray-600">
                 <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-3 py-2">
@@ -629,18 +629,18 @@ export default function MessagingBulkPage() {
                     </p>
                   )}
                   <p className="text-xs text-slate-400">
-                    Configura las credenciales en Ajustes &gt; Mensajeria.
+                    Configura las credenciales en Ajustes &gt; Mensajería.
                   </p>
                   <Link
                     href="/settings/messaging"
                     className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                   >
-                    Ir a configuracion
+                    Ir a configuración
                   </Link>
                 </div>
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                    Guia rapida de conexion
+                    Guía rápida de conexión
                   </p>
                   <ul className="mt-3 space-y-2 text-xs text-slate-600">
                     {PROVIDER_STEPS[settings.emailProvider].map(

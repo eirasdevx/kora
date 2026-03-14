@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
+import { normalizeAssociationAccountingSettings } from "@/core/session/accounting-settings";
+import { normalizeAssociationMembershipSettings } from "@/core/session/membership-settings";
 import { db } from "@/core/storage/kora.db";
 import {
   type AssociationProfile,
@@ -13,6 +15,7 @@ import type {
   ContactKind,
   ContactType,
 } from "@/modules/contacts/contact.types";
+import { normalizeContactPrivacyPermissions } from "@/modules/contacts/contact-privacy";
 import type { Event, EventStatus } from "@/modules/events/event.types";
 import type {
   Transaction,
@@ -458,6 +461,27 @@ function normalizeAssociationProfile(value: unknown): AssociationProfile | null 
     phone: phone || undefined,
     location: location || undefined,
     address: address || undefined,
+    accountingSettings: normalizeAssociationAccountingSettings(
+      obj.accountingSettings ?? obj.accountingCatalog
+    ),
+    membershipSettings: normalizeAssociationMembershipSettings(
+      obj.membershipSettings ?? {
+        cycle:
+          obj.membershipCycle ??
+          obj.feeCycle ??
+          obj.membershipBillingCycle,
+        amount:
+          obj.membershipFeeAmount ??
+          obj.feeAmount ??
+          obj.membershipAmount,
+        monthlyChargeDay:
+          obj.monthlyChargeDay ?? obj.membershipMonthlyChargeDay,
+        annualChargeMonth:
+          obj.annualChargeMonth ?? obj.membershipAnnualChargeMonth,
+        annualChargeDay:
+          obj.annualChargeDay ?? obj.membershipAnnualChargeDay,
+      }
+    ),
     representatives: representatives.length ? representatives : undefined,
   };
 }
@@ -514,6 +538,14 @@ function normalizeContact(value: unknown): Contact | null {
   const tags = [...tagsFromInput];
   if (role && role !== "member" && !tags.includes(role)) tags.push(role);
 
+  const privacySource =
+    obj.privacyPermissions && typeof obj.privacyPermissions === "object"
+      ? (obj.privacyPermissions as Record<string, unknown>)
+      : {};
+  const consentDocumentIds = splitList(
+    obj.consentDocumentIds ?? obj.privacyDocumentIds ?? obj.consentDocs
+  );
+
   return {
     id: ensureId(obj.id),
     kind,
@@ -535,6 +567,55 @@ function normalizeContact(value: unknown): Contact | null {
     region: safeString(obj.region) || undefined,
     photoUrl: safeString(obj.photoUrl) || undefined,
     types: normalizedTypes,
+    membershipPlanId:
+      safeString(obj.membershipPlanId) ||
+      safeString(obj.feePlanId) ||
+      safeString(obj.membershipTypeId) ||
+      undefined,
+    accountingAccountType: CONTACT_TYPES.includes(
+      safeString(obj.accountingAccountType) as ContactType
+    )
+      ? (safeString(obj.accountingAccountType) as ContactType)
+      : undefined,
+    accountingAccountCode: safeString(obj.accountingAccountCode) || undefined,
+    accountingAccountLabel: safeString(obj.accountingAccountLabel) || undefined,
+    privacyPermissions: normalizeContactPrivacyPermissions({
+      image:
+        parseBoolean(
+          privacySource.image ??
+            obj.imageConsent ??
+            obj.imagePermission ??
+            obj.imageAuthorized
+        ) ?? undefined,
+      voice:
+        parseBoolean(
+          privacySource.voice ??
+            obj.voiceConsent ??
+            obj.voicePermission ??
+            obj.voiceAuthorized
+        ) ?? undefined,
+      communications:
+        parseBoolean(
+          privacySource.communications ??
+            obj.communicationConsent ??
+            obj.communicationsConsent ??
+            obj.newsletterConsent
+        ) ?? undefined,
+      services:
+        parseBoolean(
+          privacySource.services ??
+            obj.serviceConsent ??
+            obj.servicesConsent ??
+            obj.servicesAuthorized
+        ) ?? undefined,
+    }),
+    privacyUpdatedAt:
+      safeString(obj.privacyUpdatedAt) ||
+      safeString(obj.consentUpdatedAt) ||
+      undefined,
+    consentDocumentIds: consentDocumentIds.length
+      ? consentDocumentIds
+      : undefined,
     tags: tags.length ? tags : undefined,
     notes: safeString(obj.notes) || undefined,
     createdAt: safeString(obj.createdAt) || safeString(obj.joinedAt) || nowIso(),
@@ -638,6 +719,14 @@ function normalizeTransaction(value: unknown): Transaction | null {
       safeString(obj.eventId) || safeString(obj.relatedEventId) || undefined,
     contactId:
       safeString(obj.contactId) || safeString(obj.relatedContactId) || undefined,
+    membershipPlanId: safeString(obj.membershipPlanId) || undefined,
+    membershipPlanName: safeString(obj.membershipPlanName) || undefined,
+    accountingAccountKey:
+      (safeString(obj.accountingAccountKey) || undefined) as
+        | Transaction["accountingAccountKey"]
+        | undefined,
+    accountCode: safeString(obj.accountCode) || undefined,
+    accountLabel: safeString(obj.accountLabel) || undefined,
     createdAt: safeString(obj.createdAt) || nowIso(),
   };
 }
@@ -1020,7 +1109,7 @@ export default function MigrationSettingsPage() {
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
                     Sube un archivo JSON para combinar o reemplazar la
-                    informacion de Kora.
+                    información de Kora.
                   </p>
                 </div>
               </div>
@@ -1088,7 +1177,7 @@ export default function MigrationSettingsPage() {
                   </span>
                 </div>
                 <p className="mt-5 text-base font-semibold text-slate-900">
-                  Arrastra y suelta tu archivo aqui
+                  Arrastra y suelta tu archivo aquí
                 </p>
                 <p className="mt-2 text-sm text-slate-500">
                   Compatible con exportaciones JSON de Kora y lotes
@@ -1129,7 +1218,7 @@ export default function MigrationSettingsPage() {
 
               <aside className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  Resumen de importacion
+                  Resumen de importación
                 </p>
 
                 {selectedFile ? (
@@ -1152,13 +1241,13 @@ export default function MigrationSettingsPage() {
                   </div>
                 ) : (
                   <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-4 text-sm text-slate-500">
-                    No has seleccionado ningun archivo todavia.
+                    No has seleccionado ningún archivo todavía.
                   </div>
                 )}
 
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Modulo de destino
+                    Módulo de destino
                   </p>
                   <div className="mt-3 flex items-start gap-3">
                     <span
@@ -1191,8 +1280,8 @@ export default function MigrationSettingsPage() {
                   )}
                 >
                   {importMode === "replace"
-                    ? "Atencion: se vaciaran los modulos seleccionados antes de cargar el JSON."
-                    : "Los datos existentes se mantendran y se anadiran los nuevos registros."}
+                    ? "Atención: se vaciarán los módulos seleccionados antes de cargar el JSON."
+                    : "Los datos existentes se mantendrán y se añadirán los nuevos registros."}
                 </div>
               </aside>
             </div>

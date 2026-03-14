@@ -7,6 +7,13 @@ export type ContactType =
 
 export type ContactKind = "person" | "entity";
 
+export interface ContactPrivacyPermissions {
+  image: boolean;
+  voice: boolean;
+  communications: boolean;
+  services: boolean;
+}
+
 export interface Contact {
   id: string;
   kind: ContactKind;
@@ -27,6 +34,13 @@ export interface Contact {
   birthDate?: string;
   photoUrl?: string;
   types: ContactType[];
+  membershipPlanId?: string;
+  accountingAccountType?: ContactType;
+  accountingAccountCode?: string;
+  accountingAccountLabel?: string;
+  privacyPermissions?: ContactPrivacyPermissions;
+  privacyUpdatedAt?: string;
+  consentDocumentIds?: string[];
   tags?: string[];
   notes?: string;
   createdAt: string;

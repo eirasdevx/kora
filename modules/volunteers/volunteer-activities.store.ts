@@ -37,8 +37,8 @@ export const useVolunteerActivitiesStore =
           category: "system",
           title: "Actividad creada",
           description: activity.notes
-            ? `Se creo una actividad: ${activity.notes}.`
-            : "Se creo una actividad.",
+            ? `Se creó una actividad: ${activity.notes}.`
+            : "Se creó una actividad.",
           href: "/people/volunteers",
           actionLabel: "Ver actividades",
           icon: "volunteer_activism",
@@ -54,8 +54,8 @@ export const useVolunteerActivitiesStore =
         category: "system",
         title: "Actividad creada",
         description: activity.notes
-          ? `Se creo una actividad: ${activity.notes}.`
-          : "Se creo una actividad.",
+          ? `Se creó una actividad: ${activity.notes}.`
+          : "Se creó una actividad.",
         href: "/people/volunteers",
         actionLabel: "Ver actividades",
         icon: "volunteer_activism",
@@ -74,8 +74,8 @@ export const useVolunteerActivitiesStore =
           category: "system",
           title: "Actividad actualizada",
           description: activity.notes
-            ? `Se actualizo una actividad: ${activity.notes}.`
-            : "Se actualizo una actividad.",
+            ? `Se actualizó una actividad: ${activity.notes}.`
+            : "Se actualizó una actividad.",
           href: "/people/volunteers",
           actionLabel: "Ver actividades",
           icon: "edit",
@@ -93,8 +93,8 @@ export const useVolunteerActivitiesStore =
         category: "system",
         title: "Actividad actualizada",
         description: activity.notes
-          ? `Se actualizo una actividad: ${activity.notes}.`
-          : "Se actualizo una actividad.",
+          ? `Se actualizó una actividad: ${activity.notes}.`
+          : "Se actualizó una actividad.",
         href: "/people/volunteers",
         actionLabel: "Ver actividades",
         icon: "edit",
@@ -112,8 +112,8 @@ export const useVolunteerActivitiesStore =
           category: "system",
           title: "Actividad eliminada",
           description: target?.notes
-            ? `Se elimino la actividad: ${target.notes}.`
-            : "Se elimino una actividad.",
+            ? `Se eliminó la actividad: ${target.notes}.`
+            : "Se eliminó una actividad.",
           href: "/people/volunteers",
           actionLabel: "Ver actividades",
           icon: "delete",
@@ -129,8 +129,8 @@ export const useVolunteerActivitiesStore =
         category: "system",
         title: "Actividad eliminada",
         description: target?.notes
-          ? `Se elimino la actividad: ${target.notes}.`
-          : "Se elimino una actividad.",
+          ? `Se eliminó la actividad: ${target.notes}.`
+          : "Se eliminó una actividad.",
         href: "/people/volunteers",
         actionLabel: "Ver actividades",
         icon: "delete",

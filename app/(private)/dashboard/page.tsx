@@ -301,7 +301,7 @@ export default function DashboardPage() {
                 Pulso operativo
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-gray-900">
-                Acciones rapidas para hoy
+                Acciones rápidas para hoy
               </h2>
               <p className="mt-1 text-sm text-gray-500">
                 Gestiona socios, eventos y comunicaciones desde un solo lugar.
@@ -363,7 +363,7 @@ export default function DashboardPage() {
                 Gastos: {formatCurrency(totalExpense, formatLocale)}
               </span>
               <span className="rounded-full border border-white/80 bg-white/80 px-3 py-1">
-                Rango: ultimos {safeRange} meses
+                Rango: últimos {safeRange} meses
               </span>
             </div>
           </div>
@@ -415,7 +415,7 @@ export default function DashboardPage() {
               {formatCurrency(totalIncome, formatLocale)}
             </p>
             <p className="mt-2 text-xs text-gray-500">
-              Ultimos {safeRange} meses
+              Últimos {safeRange} meses
             </p>
           </div>
 
@@ -434,7 +434,7 @@ export default function DashboardPage() {
               {formatCurrency(totalExpense, formatLocale)}
             </p>
             <p className="mt-2 text-xs text-gray-500">
-              Ultimos {safeRange} meses
+              Últimos {safeRange} meses
             </p>
           </div>
 
@@ -484,7 +484,7 @@ export default function DashboardPage() {
               >
                 {MONTH_OPTIONS.map((value) => (
                   <option key={value} value={value}>
-                    {`Ultimos ${value} meses`}
+                    {`Últimos ${value} meses`}
                   </option>
                 ))}
               </select>
@@ -561,7 +561,7 @@ export default function DashboardPage() {
                 </p>
                 {expenseBreakdown.length === 0 ? (
                   <p className="text-sm text-gray-400">
-                    No hay gastos registrados aun.
+                    No hay gastos registrados aún.
                   </p>
                 ) : (
                   expenseBreakdown.map((item) => {
@@ -596,7 +596,7 @@ export default function DashboardPage() {
                 </p>
                 {incomeBreakdown.length === 0 ? (
                   <p className="text-sm text-gray-400">
-                    No hay ingresos registrados aun.
+                    No hay ingresos registrados aún.
                   </p>
                 ) : (
                   incomeBreakdown.map((item) => {
@@ -678,7 +678,7 @@ export default function DashboardPage() {
                           {event.title}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {event.location || "Ubicacion por confirmar"} /{" "}
+                          {event.location || "Ubicación por confirmar"} /{" "}
                           {date.toLocaleTimeString(formatLocale, {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -765,13 +765,13 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">
-                  Mensajeria
+                  Mensajería
                 </p>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Centro de campanas
+                  Centro de campañas
                 </h3>
                 <p className="text-sm text-gray-500">
-                  Plantillas, segmentos y envios masivos.
+                  Plantillas, segmentos y envíos masivos.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -799,7 +799,7 @@ export default function DashboardPage() {
                   <p className="text-sm font-semibold text-gray-900">
                     {messagingReady
                       ? "Listo para enviar"
-                      : "Pendiente de configuracion"}
+                      : "Pendiente de configuración"}
                   </p>
                   <span
                     className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -819,7 +819,7 @@ export default function DashboardPage() {
                     href="/settings/messaging"
                     className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-primary"
                   >
-                    Configurar mensajeria
+                    Configurar mensajería
                     <span className="material-symbols-outlined text-[14px]">
                       arrow_forward
                     </span>
@@ -834,7 +834,7 @@ export default function DashboardPage() {
                   {totalTemplates}
                 </p>
                 <p className="text-xs text-gray-500">
-                  Ultima actualizacion:{" "}
+                  Última actualización:{" "}
                   {lastTemplateUpdate
                     ? formatShortDate(lastTemplateUpdate, formatLocale)
                     : "-"}

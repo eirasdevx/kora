@@ -3,24 +3,12 @@
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import ModuleTopbar, {
-  moduleTopbarButtonIconStyles,
   moduleTopbarButtonStyles,
 } from "@/components/shared/ModuleTopbar";
 import SectionBlock from "@/components/shared/SectionBlock";
-import DataTable from "@/components/shared/DataTable";
+import TransactionsTable from "@/components/accounting/TransactionsTable";
 import { useLocale } from "@/core/i18n/use-locale";
-import { downloadPdf, downloadXlsx } from "@/lib/exporters";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
-import {
-  TransactionCategoryLabels,
-  TransactionStatusLabels,
-  Transaction,
-} from "@/modules/accounting/transaction.types";
-
-const STATUS_STYLES: Record<keyof typeof TransactionStatusLabels, string> = {
-  completed: "bg-emerald-50 text-emerald-700",
-  pending: "bg-amber-50 text-amber-700",
-};
 
 const FINANCE_MODULE_TITLE = "Finanzas";
 const FINANCE_PAGE_TITLE = "Centro financiero";
@@ -39,23 +27,6 @@ function formatNumber(value: number, locale: string) {
   return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
   }).format(value);
-}
-
-function formatDate(value: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-function formatSignedAmount(
-  amount: number,
-  type: Transaction["type"],
-  locale: string
-) {
-  const value = type === "expense" ? -amount : amount;
-  return formatCurrency(value, locale);
 }
 
 export default function FinancePage() {
@@ -101,86 +72,6 @@ export default function FinancePage() {
     };
   }, [transactions]);
 
-  const recentTransactions = useMemo(() => {
-    return [...transactions]
-      .sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      )
-      .slice(0, 6);
-  }, [transactions]);
-
-  const exportRows = useMemo(
-    () =>
-      transactions.map((tx) => [
-        formatDate(tx.date, formatLocale),
-        tx.concept,
-        TransactionCategoryLabels[tx.category],
-        formatSignedAmount(tx.amount, tx.type, formatLocale),
-        TransactionStatusLabels[tx.status],
-      ]),
-    [transactions, formatLocale]
-  );
-
-  const handleExportXlsx = () => {
-    if (transactions.length === 0) return;
-    downloadXlsx("finanzas-transacciones.xlsx", "Transacciones", [
-      ["Fecha", "Concepto", "Categoria", "Importe", "Estado"],
-      ...exportRows,
-    ]);
-  };
-
-  const handleExportPdf = () => {
-    if (transactions.length === 0) return;
-    downloadPdf(
-      "finanzas-transacciones.pdf",
-      "Transacciones financieras",
-      [
-        { label: "Fecha", width: 12 },
-        { label: "Concepto", width: 28 },
-        { label: "Categoria", width: 18 },
-        { label: "Importe", width: 14 },
-        { label: "Estado", width: 14 },
-      ],
-      exportRows
-    );
-  };
-
-  const rows = recentTransactions.map((tx) => ({
-    key: tx.id,
-    cells: [
-      <div key={`${tx.id}-concept`}>
-        <p className="font-semibold text-gray-900">{tx.concept}</p>
-        {tx.description ? (
-          <p className="text-xs text-gray-500">{tx.description}</p>
-        ) : null}
-      </div>,
-      <span
-        key={`${tx.id}-category`}
-        className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600"
-      >
-        {TransactionCategoryLabels[tx.category]}
-      </span>,
-      <span
-        key={`${tx.id}-amount`}
-        className={`font-semibold ${
-          tx.type === "income" ? "text-emerald-600" : "text-rose-600"
-        }`}
-      >
-        {formatSignedAmount(tx.amount, tx.type, formatLocale)}
-      </span>,
-      <span key={`${tx.id}-date`} className="text-sm text-gray-600">
-        {formatDate(tx.date, formatLocale)}
-      </span>,
-      <span
-        key={`${tx.id}-status`}
-        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[tx.status]}`}
-      >
-        {TransactionStatusLabels[tx.status]}
-      </span>,
-    ],
-    className: "hover:bg-gray-50",
-  }));
-
   return (
     <div className="space-y-6 lg:space-y-8">
       <ModuleTopbar
@@ -188,45 +79,12 @@ export default function FinancePage() {
         title={FINANCE_PAGE_TITLE}
         description={FINANCE_MODULE_DESCRIPTION}
         actions={
-          <>
-            <button
-              type="button"
-              onClick={handleExportXlsx}
-              disabled={transactions.length === 0}
-              className={`${moduleTopbarButtonStyles.secondary} disabled:cursor-not-allowed disabled:opacity-60`}
-            >
-              <span className={moduleTopbarButtonIconStyles.secondary}>
-                <span className="material-symbols-outlined text-[16px]">
-                  grid_on
-                </span>
-              </span>
-              Exportar Excel
-            </button>
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              disabled={transactions.length === 0}
-              className={`${moduleTopbarButtonStyles.secondary} disabled:cursor-not-allowed disabled:opacity-60`}
-            >
-              <span className={moduleTopbarButtonIconStyles.secondary}>
-                <span className="material-symbols-outlined text-[16px]">
-                  picture_as_pdf
-                </span>
-              </span>
-              Exportar PDF
-            </button>
-            <Link
-              href="/accounting/new"
-              className={moduleTopbarButtonStyles.primary}
-            >
-              <span className={moduleTopbarButtonIconStyles.add}>
-                <span className="material-symbols-outlined text-[16px]">
-                  add
-                </span>
-              </span>
-              Nueva transacción
-            </Link>
-          </>
+          <Link
+            href="/accounting/new"
+            className={moduleTopbarButtonStyles.primary}
+          >
+            Nueva transacción
+          </Link>
         }
       />
 
@@ -234,6 +92,22 @@ export default function FinancePage() {
         <SectionBlock
           title="Gestión de cuotas"
           subtitle="Estado de cuotas y pagos"
+          actions={
+            <div className="flex items-center gap-2">
+              <Link
+                href="/settings/association"
+                className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+              >
+                Configurar planes
+              </Link>
+              <Link
+                href="/accounting/fees"
+                className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+              >
+                Gestionar cuotas
+              </Link>
+            </div>
+          }
         >
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
@@ -264,11 +138,31 @@ export default function FinancePage() {
               <p className="text-xs text-gray-500">Ingresos confirmados</p>
             </div>
           </div>
+          <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+            Los tipos de cuota, importes y periodicidades se configuran desde
+            la ficha de la asociaciÃ³n.
+          </div>
         </SectionBlock>
 
         <SectionBlock
           title="Contabilidad general"
           subtitle="Ingresos y gastos operativos"
+          actions={
+            <div className="flex items-center gap-2">
+              <Link
+                href="/accounting/accounts"
+                className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+              >
+                Elementos contables
+              </Link>
+              <Link
+                href="/accounting"
+                className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+              >
+                Abrir contabilidad
+              </Link>
+            </div>
+          }
         >
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
@@ -302,30 +196,26 @@ export default function FinancePage() {
         </SectionBlock>
       </section>
 
-      <SectionBlock
-        title="Transacciones recientes"
-        subtitle="Movimientos financieros recientes"
-        actions={
+      <section className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Transacciones
+            </h2>
+            <p className="text-sm text-gray-500">
+              Vista operativa con filtros, exportación y acciones rápidas.
+            </p>
+          </div>
           <Link
             href="/accounting"
-            className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+            className="inline-flex items-center justify-center rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
           >
-            Ver contabilidad
+            Abrir contabilidad
           </Link>
-        }
-      >
-        <DataTable
-          columns={[
-            { key: "concept", label: "Concepto" },
-            { key: "category", label: "Categoría" },
-            { key: "amount", label: "Importe", align: "right" },
-            { key: "date", label: "Fecha" },
-            { key: "status", label: "Estado", align: "right" },
-          ]}
-          rows={rows}
-          emptyLabel="No hay transacciones recientes."
-        />
-      </SectionBlock>
+        </div>
+
+        <TransactionsTable transactions={transactions} />
+      </section>
     </div>
   );
 }

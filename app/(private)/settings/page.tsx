@@ -18,7 +18,7 @@ const cards = [
   {
     title: "Perfil de asociación",
     description:
-      "Información legal, NIF/CIF, datos de contacto, dirección y logotipos oficiales de la entidad.",
+      "Información legal, contacto y configuración de cuotas, importes y periodicidades de socios.",
     href: "/settings/association",
     tone: "bg-indigo-50 text-indigo-600",
     icon: (

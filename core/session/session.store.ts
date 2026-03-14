@@ -6,6 +6,14 @@ import {
   type PasswordDigest,
   createPasswordDigest,
 } from "@/core/security/passwords";
+import {
+  type AssociationAccountingSettings,
+  getAssociationAccountingSettings,
+} from "@/core/session/accounting-settings";
+import {
+  type AssociationMembershipSettings,
+  getAssociationMembershipSettings,
+} from "@/core/session/membership-settings";
 
 const COMPANY_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -52,6 +60,8 @@ export type AssociationProfile = {
   location?: string;
   address?: string;
   representatives?: AssociationRepresentative[];
+  membershipSettings?: AssociationMembershipSettings;
+  accountingSettings?: AssociationAccountingSettings;
 };
 
 export type AssociationEntry = {
@@ -63,10 +73,23 @@ export type AssociationEntry = {
 const sanitizeAdmin = (admin: AdminAccount | null): AdminAccount | null => {
   if (!admin) return null;
   if (admin.passwordDigest && admin.password) {
-    const { password, ...rest } = admin;
+    const rest = { ...admin };
+    delete rest.password;
     return rest;
   }
   return admin;
+};
+
+const normalizeAssociationProfile = (
+  association: AssociationProfile | null
+): AssociationProfile | null => {
+  if (!association) return null;
+
+  return {
+    ...association,
+    membershipSettings: getAssociationMembershipSettings(association),
+    accountingSettings: getAssociationAccountingSettings(association),
+  };
 };
 
 interface SessionState {
@@ -110,23 +133,26 @@ export const useSessionStore = create<SessionState>()(
       setAdmin: (admin) => set({ admin: sanitizeAdmin(admin) }),
       setAssociation: (association) =>
         set((state) => {
+          const normalizedAssociation =
+            normalizeAssociationProfile(association);
           if (!association) {
             return { association: null };
           }
           if (!state.activeAssociationId) {
-            return { association };
+            return { association: normalizedAssociation };
           }
           const associations = state.associations.map((entry) =>
             entry.id === state.activeAssociationId
-              ? { ...entry, profile: association }
+              ? { ...entry, profile: normalizedAssociation! }
               : entry
           );
-          return { association, associations };
+          return { association: normalizedAssociation, associations };
         }),
       addAssociation: (association) => {
+        const normalizedAssociation = normalizeAssociationProfile(association);
         const entry = {
           id: createAssociationId(),
-          profile: association,
+          profile: normalizedAssociation!,
           companyCode: createCompanyCode(),
         };
         set((state) => ({
@@ -143,17 +169,39 @@ export const useSessionStore = create<SessionState>()(
           if (!entry) return {};
           return {
             activeAssociationId: id,
-            association: entry.profile,
+            association: normalizeAssociationProfile(entry.profile),
             companyCode: entry.companyCode,
           };
         }),
       ensureAssociations: () =>
         set((state) => {
-          if (state.associations.length > 0) return {};
-          if (!state.association) return {};
+          const normalizedAssociation =
+            normalizeAssociationProfile(state.association);
+          const normalizedAssociations = state.associations.map((entry) => ({
+            ...entry,
+            profile: normalizeAssociationProfile(entry.profile)!,
+          }));
+
+          if (normalizedAssociations.length > 0) {
+            const activeAssociationId =
+              state.activeAssociationId ?? normalizedAssociations[0].id;
+            const activeEntry =
+              normalizedAssociations.find(
+                (entry) => entry.id === activeAssociationId
+              ) ?? normalizedAssociations[0];
+
+            return {
+              associations: normalizedAssociations,
+              activeAssociationId: activeEntry.id,
+              association: activeEntry.profile,
+              companyCode: activeEntry.companyCode,
+            };
+          }
+
+          if (!normalizedAssociation) return {};
           const entry = {
             id: createAssociationId(),
-            profile: state.association,
+            profile: normalizedAssociation,
             companyCode: state.companyCode ?? createCompanyCode(),
           };
           return {
@@ -189,14 +237,15 @@ export const useSessionStore = create<SessionState>()(
         }),
       registerAdmin: ({ admin, association, companyCode }) =>
         set(() => {
+          const normalizedAssociation = normalizeAssociationProfile(association);
           const entry = {
             id: createAssociationId(),
-            profile: association,
+            profile: normalizedAssociation!,
             companyCode,
           };
           return {
             admin: sanitizeAdmin(admin),
-            association,
+            association: normalizedAssociation,
             associations: [entry],
             activeAssociationId: entry.id,
             companyCode,

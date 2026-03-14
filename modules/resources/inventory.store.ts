@@ -74,10 +74,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
         category: "system",
         title: exists ? "Recurso actualizado" : "Nuevo recurso registrado",
         description: normalized.name
-          ? `Se ${exists ? "actualizo" : "registro"} ${normalized.name}.`
+          ? `Se ${exists ? "actualizó" : "registró"} ${normalized.name}.`
           : exists
-            ? "Se actualizo un recurso."
-            : "Se registro un recurso.",
+            ? "Se actualizó un recurso."
+            : "Se registró un recurso.",
         href: "/resources",
         actionLabel: "Ver recursos",
         icon: "inventory_2",
@@ -101,10 +101,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       category: "system",
       title: exists ? "Recurso actualizado" : "Nuevo recurso registrado",
       description: normalized.name
-        ? `Se ${exists ? "actualizo" : "registro"} ${normalized.name}.`
+        ? `Se ${exists ? "actualizó" : "registró"} ${normalized.name}.`
         : exists
-          ? "Se actualizo un recurso."
-          : "Se registro un recurso.",
+          ? "Se actualizó un recurso."
+          : "Se registró un recurso.",
       href: "/resources",
       actionLabel: "Ver recursos",
       icon: "inventory_2",
@@ -122,8 +122,8 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
         category: "system",
         title: "Recurso eliminado",
         description: target?.name
-          ? `Se elimino ${target.name}.`
-          : "Se elimino un recurso.",
+          ? `Se eliminó ${target.name}.`
+          : "Se eliminó un recurso.",
         href: "/resources",
         actionLabel: "Ver recursos",
         icon: "delete",
@@ -140,8 +140,8 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       category: "system",
       title: "Recurso eliminado",
       description: target?.name
-        ? `Se elimino ${target.name}.`
-        : "Se elimino un recurso.",
+        ? `Se eliminó ${target.name}.`
+        : "Se eliminó un recurso.",
       href: "/resources",
       actionLabel: "Ver recursos",
       icon: "delete",

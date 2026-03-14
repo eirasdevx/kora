@@ -59,7 +59,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       moduleKey: "documents",
     },
     { label: "Eventos", href: "/events", icon: "event", moduleKey: "events" },
-    { label: "Mensajeria", href: "/messaging", icon: "mail" },
+    { label: "Mensajería", href: "/messaging", icon: "mail" },
   ];
 
   const isActive = (href: string) =>

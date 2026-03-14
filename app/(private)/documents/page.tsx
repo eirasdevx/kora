@@ -426,7 +426,7 @@ export default function DocumentsPage() {
             </div>
             {quickAccess.length === 0 ? (
               <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-500">
-                Todavia no hay documentos cargados.
+                Todavía no hay documentos cargados.
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -479,7 +479,7 @@ export default function DocumentsPage() {
                   Todos los archivos
                 </h3>
                 <p className="text-xs text-gray-500">
-                  Gestiona permisos y organiza la documentacion clave.
+                  Gestiona permisos y organiza la documentación clave.
                 </p>
               </div>
               <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
@@ -576,7 +576,7 @@ export default function DocumentsPage() {
                       <th className={tableHeadCellStyles}>Nombre</th>
                       <th className={tableHeadCellStyles}>Seguridad</th>
                       <th className={tableHeadCellStyles}>Modificado</th>
-                      <th className={tableHeadCellStyles}>Tamano</th>
+                      <th className={tableHeadCellStyles}>Tamaño</th>
                       <th className={`${tableHeadCellStyles} text-right`}>
                         Acciones
                       </th>
@@ -649,7 +649,7 @@ export default function DocumentsPage() {
                               <button
                                 type="button"
                                 className={tableIconActionStyles}
-                                aria-label="Mas acciones"
+                                aria-label="Más acciones"
                               >
                                 <span className="material-symbols-outlined text-[16px]">
                                   more_vert
@@ -899,7 +899,7 @@ export default function DocumentsPage() {
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-xs text-gray-400">Tamano</dt>
+                          <dt className="text-xs text-gray-400">Tamaño</dt>
                           <dd className="font-semibold text-gray-700">
                             {formatSizeLabel(selectedDoc)}
                           </dd>
@@ -911,7 +911,7 @@ export default function DocumentsPage() {
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-xs text-gray-400">Ubicacion</dt>
+                          <dt className="text-xs text-gray-400">Ubicación</dt>
                           <dd className="font-semibold text-primary">
                             {selectedDoc.location}
                           </dd>
@@ -952,7 +952,7 @@ export default function DocumentsPage() {
 
                     <div>
                       <p className="text-xs font-semibold uppercase text-gray-400">
-                        Quien tiene acceso
+                        Quién tiene acceso
                       </p>
                       <div className="mt-3 flex items-center gap-2">
                         {(selectedDoc.access?.length
@@ -1119,7 +1119,7 @@ export default function DocumentsPage() {
               </span>
             </div>
             <p className="mt-4 text-sm font-semibold text-gray-900">
-              Arrastra tus archivos aqui o haz clic para buscar
+              Arrastra tus archivos aquí o haz clic para buscar
             </p>
             <p className="mt-2 text-xs text-gray-500">
               Soporta PDF, JPG, PNG, DOCX, XLSX (Max. 50MB)
@@ -1138,7 +1138,7 @@ export default function DocumentsPage() {
                   Privacidad del archivo
                 </p>
                 <p className="text-xs text-gray-500">
-                  Determina quien puede ver estos documentos.
+                  Determina quién puede ver estos documentos.
                 </p>
               </div>
             </div>
@@ -1165,7 +1165,7 @@ export default function DocumentsPage() {
                     : "border-gray-200 text-gray-600"
                 )}
               >
-                Publico
+                  Público
               </button>
             </div>
           </div>
@@ -1176,7 +1176,7 @@ export default function DocumentsPage() {
             </p>
             {pendingFiles.length === 0 ? (
               <div className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-500">
-                Aun no hay archivos seleccionados.
+                Aún no hay archivos seleccionados.
               </div>
             ) : (
               pendingFiles.map((file) => (

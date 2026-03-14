@@ -28,8 +28,8 @@ const VARIABLE_GROUPS = [
 
 const applyPreviewVariables = (value: string) => {
   const replacements: Record<string, string> = {
-    "{nombre_socio}": "Maria",
-    "{apellido_socio}": "Lopez",
+    "{nombre_socio}": "María",
+    "{apellido_socio}": "López",
     "{email_usuario}": "maria@asociacion.org",
     "{nombre_evento}": "Asamblea General",
     "{fecha_evento}": "15/10/2026",
@@ -117,7 +117,7 @@ function TemplateEditor({
                 info
               </span>
               <h2 className="text-lg font-semibold text-slate-900">
-                Informacion basica
+                Información básica
               </h2>
             </div>
             <div className="mt-5 space-y-4">
@@ -134,7 +134,7 @@ function TemplateEditor({
               </div>
               <div>
                 <label className="text-sm font-semibold text-slate-700">
-                  Canal de envio
+                  Canal de envío
                 </label>
                 <div className="mt-2 rounded-2xl border border-primary bg-primary/5 px-4 py-3 text-sm font-semibold text-primary">
                   Email
@@ -170,7 +170,7 @@ function TemplateEditor({
               className="mt-4 min-h-[200px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm"
             />
             <p className="mt-2 text-xs text-slate-400">
-              Usa variables dinamicas para personalizar el contenido.
+              Usa variables dinámicas para personalizar el contenido.
             </p>
           </div>
 
@@ -184,7 +184,7 @@ function TemplateEditor({
         <aside className="space-y-6">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
-              Variables dinamicas
+              Variables dinámicas
             </h3>
             <div className="mt-4 space-y-4">
               {VARIABLE_GROUPS.map((group) => (
@@ -214,7 +214,7 @@ function TemplateEditor({
 
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
-              Vista previa rapida
+              Vista previa rápida
             </h3>
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
               <p className="text-xs font-semibold text-slate-400">
@@ -258,7 +258,7 @@ export default function NewTemplatePage() {
             Plantillas no disponibles en modo invitado
           </h2>
           <p className="mt-2 text-sm text-slate-500">
-            Inicia sesion para crear o editar contenido de mensajeria.
+            Inicia sesión para crear o editar contenido de mensajería.
           </p>
         </div>
       </div>

@@ -41,10 +41,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         category: "system",
         title: exists ? "Evento actualizado" : "Nuevo evento creado",
         description: event.title
-          ? `${event.title} se ${exists ? "actualizo" : "creo"}.`
+          ? `${event.title} se ${exists ? "actualizó" : "creó"}.`
           : exists
-            ? "Se actualizo un evento."
-            : "Se creo un evento.",
+            ? "Se actualizó un evento."
+            : "Se creó un evento.",
         href: "/events",
         actionLabel: "Ver calendario",
         icon: "event",
@@ -67,10 +67,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
       category: "system",
       title: exists ? "Evento actualizado" : "Nuevo evento creado",
       description: event.title
-        ? `${event.title} se ${exists ? "actualizo" : "creo"}.`
+        ? `${event.title} se ${exists ? "actualizó" : "creó"}.`
         : exists
-          ? "Se actualizo un evento."
-          : "Se creo un evento.",
+          ? "Se actualizó un evento."
+          : "Se creó un evento.",
       href: "/events",
       actionLabel: "Ver calendario",
       icon: "event",
@@ -88,8 +88,8 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         category: "system",
         title: "Evento eliminado",
         description: target?.title
-          ? `Se elimino ${target.title}.`
-          : "Se elimino un evento.",
+          ? `Se eliminó ${target.title}.`
+          : "Se eliminó un evento.",
         href: "/events",
         actionLabel: "Ver calendario",
         icon: "delete",
@@ -105,8 +105,8 @@ export const useEventsStore = create<EventsState>((set, get) => ({
       category: "system",
       title: "Evento eliminado",
       description: target?.title
-        ? `Se elimino ${target.title}.`
-        : "Se elimino un evento.",
+        ? `Se eliminó ${target.title}.`
+        : "Se eliminó un evento.",
       href: "/events",
       actionLabel: "Ver calendario",
       icon: "delete",

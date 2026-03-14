@@ -22,10 +22,15 @@ export interface Transaction {
 
   category: TransactionCategory;
   status: TransactionStatus;
+  accountingAccountKey?: `${TransactionCategory}:${TransactionType}`;
+  accountCode?: string;
+  accountLabel?: string;
 
   eventId?: string;               // opcional
   contactId?: string;
   contactIds?: string[];
+  membershipPlanId?: string;
+  membershipPlanName?: string;
   attachments?: File[];
 
   createdAt: string;

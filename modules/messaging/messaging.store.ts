@@ -21,7 +21,7 @@ const DEFAULT_TEMPLATES: MessageTemplate[] = [
     channel: "email",
     subject: "Bienvenida a la familia Kora",
     html: `<p>Hola {nombre_socio},</p>
-<p>Gracias por unirte a nuestra asociacion. Ya puedes acceder a todas las ventajas.</p>
+<p>Gracias por unirte a nuestra asociación. Ya puedes acceder a todas las ventajas.</p>
 <p>Equipo Kora</p>`,
     createdAt: nowIso(),
     updatedAt: nowIso(),
@@ -33,7 +33,7 @@ const DEFAULT_TEMPLATES: MessageTemplate[] = [
     subject: "Recordatorio de cuota pendiente",
     html: `<p>Hola {nombre_socio},</p>
 <p>Te recordamos que tienes una cuota pendiente de {monto_deuda}.</p>
-<p>Gracias por tu colaboracion.</p>`,
+<p>Gracias por tu colaboración.</p>`,
     createdAt: nowIso(),
     updatedAt: nowIso(),
   },
@@ -78,7 +78,7 @@ export const useMessagingStore = create<MessagingState>()(
         useNotificationsStore.getState().addNotification({
           category: "system",
           title: "Plantilla creada",
-          description: `Se creo la plantilla ${template.title}.`,
+          description: `Se creó la plantilla ${template.title}.`,
           href: "/messaging",
           actionLabel: "Ver plantillas",
           icon: "mail",
@@ -101,7 +101,7 @@ export const useMessagingStore = create<MessagingState>()(
         useNotificationsStore.getState().addNotification({
           category: "system",
           title: "Plantilla actualizada",
-          description: `Se actualizo la plantilla ${updated.title}.`,
+          description: `Se actualizó la plantilla ${updated.title}.`,
           href: "/messaging",
           actionLabel: "Ver plantillas",
           icon: "mark_email_read",
@@ -118,8 +118,8 @@ export const useMessagingStore = create<MessagingState>()(
           category: "system",
           title: "Plantilla eliminada",
           description: target?.title
-            ? `Se elimino la plantilla ${target.title}.`
-            : "Se elimino una plantilla.",
+            ? `Se eliminó la plantilla ${target.title}.`
+            : "Se eliminó una plantilla.",
           href: "/messaging",
           actionLabel: "Ver plantillas",
           icon: "delete",

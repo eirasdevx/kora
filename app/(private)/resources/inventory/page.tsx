@@ -384,7 +384,7 @@ export default function ResourcesInventoryPage() {
                                     : "Sin serie"}
                                 </span>
                                 <span>
-                                  {item.location ?? "Sin ubicacion"}
+                                  {item.location ?? "Sin ubicación"}
                                 </span>
                               </div>
                             </div>
@@ -544,13 +544,13 @@ export default function ResourcesInventoryPage() {
                             <p className="font-medium text-gray-700">
                               {borrower}
                             </p>
-                            <p className="text-xs text-gray-500">
-                              {item.assignee
-                                ? "Asignacion activa"
-                                : item.location
-                                  ? "Referencia por ubicacion"
-                                  : "Sin responsable definido"}
-                            </p>
+                              <p className="text-xs text-gray-500">
+                                {item.assignee
+                                  ? "Asignación activa"
+                                  : item.location
+                                    ? "Referencia por ubicación"
+                                    : "Sin responsable definido"}
+                              </p>
                           </div>
                         </td>
                         <td className="px-6 py-5 text-right">

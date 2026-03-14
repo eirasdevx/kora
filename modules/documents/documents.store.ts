@@ -42,8 +42,8 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
         category: "documents",
         title: exists ? "Documento actualizado" : "Documento agregado",
         description: doc.name
-          ? `Se ${exists ? "actualizo" : "agrego"} ${doc.name}.`
-          : "Se guardo un documento.",
+          ? `Se ${exists ? "actualizó" : "agregó"} ${doc.name}.`
+          : "Se guardó un documento.",
         href: "/documents",
         actionLabel: "Ver documento",
         icon: "description",
@@ -66,8 +66,8 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       category: "documents",
       title: exists ? "Documento actualizado" : "Documento agregado",
       description: doc.name
-        ? `Se ${exists ? "actualizo" : "agrego"} ${doc.name}.`
-        : "Se guardo un documento.",
+        ? `Se ${exists ? "actualizó" : "agregó"} ${doc.name}.`
+        : "Se guardó un documento.",
       href: "/documents",
       actionLabel: "Ver documento",
       icon: "description",
@@ -109,8 +109,8 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
         category: "documents",
         title: "Documento eliminado",
         description: target?.name
-          ? `Se elimino ${target.name}.`
-          : "Se elimino un documento.",
+          ? `Se eliminó ${target.name}.`
+          : "Se eliminó un documento.",
         href: "/documents",
         actionLabel: "Ver documentos",
         icon: "delete",
@@ -126,8 +126,8 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       category: "documents",
       title: "Documento eliminado",
       description: target?.name
-        ? `Se elimino ${target.name}.`
-        : "Se elimino un documento.",
+        ? `Se eliminó ${target.name}.`
+        : "Se eliminó un documento.",
       href: "/documents",
       actionLabel: "Ver documentos",
       icon: "delete",

@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
     transportSecure = preset.secure;
   }
 
-  // Transporter dinamico por asociacion.
+  // Transporter dinámico por asociación.
   const transporter = nodemailer.createTransport({
     host: transportHost,
     port: transportPort,
@@ -245,7 +245,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (index < normalizedRecipients.length - 1) {
-      // Delay anti-spam entre envios.
+      // Delay anti-spam entre envíos.
       await delay(1500);
     }
   }

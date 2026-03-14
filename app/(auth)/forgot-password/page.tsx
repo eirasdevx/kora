@@ -55,13 +55,13 @@ export default function ForgotPasswordPage() {
 
     const normalizedEmail = email.trim().toLowerCase();
     if (!EMAIL_REGEX.test(normalizedEmail)) {
-      setError("Introduce un correo valido.");
+      setError("Introduce un correo válido.");
       return;
     }
 
     if (!senderReady) {
       setError(
-        "No hay remitente configurado. Inicia sesion y configura el envio en Configuracion > Mensajeria."
+        "No hay remitente configurado. Inicia sesión y configura el envío en Configuración > Mensajería."
       );
       return;
     }
@@ -79,7 +79,7 @@ export default function ForgotPasswordPage() {
 
     if (!targetUser && !matchesAdmin) {
       setInfo(
-        "Si el correo esta registrado, recibiras una clave temporal en unos minutos."
+        "Si el correo está registrado, recibirás una clave temporal en unos minutos."
       );
       return;
     }
@@ -110,7 +110,7 @@ export default function ForgotPasswordPage() {
               <p>Has solicitado recuperar tu acceso a Kora.</p>
               <p>Tu clave temporal es:</p>
               <p style="font-size: 20px; font-weight: bold; letter-spacing: 2px;">${tempPassword}</p>
-              <p>Inicia sesion con tu correo y esta clave, y luego cambia la contrasena en la app.</p>
+              <p>Inicia sesión con tu correo y esta clave, y luego cambia la contraseña en la app.</p>
               <p style="margin-top: 12px;">Si no solicitaste este cambio, ignora este correo.</p>
             </div>
           `,
@@ -124,7 +124,7 @@ export default function ForgotPasswordPage() {
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.success) {
         setError(
-          "No se pudo enviar el correo. Revisa la configuracion del remitente e intentalo de nuevo."
+          "No se pudo enviar el correo. Revisa la configuración del remitente e inténtalo de nuevo."
         );
         return;
       }
@@ -144,13 +144,13 @@ export default function ForgotPasswordPage() {
       }
 
       setInfo(
-        "Te enviamos una clave temporal. Inicia sesion y cambia tu contrasena en la app."
+        "Te enviamos una clave temporal. Inicia sesión y cambia tu contraseña en la app."
       );
       setEmail("");
     } catch (err) {
       console.error(err);
       setError(
-        "Ocurrio un error al generar la clave temporal. Intentalo de nuevo."
+        "Ocurrió un error al generar la clave temporal. Inténtalo de nuevo."
       );
     } finally {
       setSending(false);
@@ -184,7 +184,7 @@ export default function ForgotPasswordPage() {
               </h1>
               <p className="text-base text-white/80">
                 Enviaremos una clave temporal para que puedas entrar y cambiar tu
-                contrasena.
+                contraseña.
               </p>
             </div>
             <p className="text-xs text-white/60">
@@ -198,18 +198,18 @@ export default function ForgotPasswordPage() {
           <div className="w-full max-w-md space-y-8">
             <div className="space-y-2">
               <h2 className="text-3xl font-semibold text-slate-900">
-                Olvidaste tu contrasena?
+                ¿Olvidaste tu contraseña?
               </h2>
               <p className="text-sm text-slate-500">
                 Ingresa tu correo y te enviaremos una clave temporal para iniciar
-                sesion.
+                sesión.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Correo electronico
+                  Correo electrónico
                 </label>
                 <input
                   name="email"
@@ -223,7 +223,7 @@ export default function ForgotPasswordPage() {
 
               {!hydrated ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                  Preparando configuracion de envio...
+                  Preparando configuración de envío...
                 </div>
               ) : null}
 
@@ -254,7 +254,7 @@ export default function ForgotPasswordPage() {
                 href="/login"
                 className="font-semibold text-blue-600 hover:text-blue-700"
               >
-                Volver a iniciar sesion
+                Volver a iniciar sesión
               </Link>
             </div>
           </div>

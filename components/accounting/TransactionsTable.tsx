@@ -1,23 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import Modal from "@/components/Modal";
 import { useLocale } from "@/core/i18n/use-locale";
-import {
-  tableBodyStyles,
-  tableFooterStyles,
-  tableHeadCellStyles,
-  tableHeadStyles,
-  tablePagerButtonDisabledStyles,
-  tablePagerButtonEnabledStyles,
-  tablePagerNumberStyles,
-  tablePagerButtonStyles,
-  tablePagerCurrentStyles,
-  tableRowStyles,
-  tableTextActionStyles,
-  tableWrapperStyles,
-} from "@/components/shared/tableStyles";
+import { tableWrapperStyles } from "@/components/shared/tableStyles";
 import {
   Transaction,
   TransactionCategoryLabels,
@@ -30,11 +17,43 @@ interface Props {
 }
 
 const STATUS_STYLES: Record<keyof typeof TransactionStatusLabels, string> = {
-  completed: "bg-emerald-50 text-emerald-700",
-  pending: "bg-amber-50 text-amber-700",
+  completed:
+    "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-100",
+  pending: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-100",
 };
 
 const PAGE_SIZE = 8;
+const TOOLBAR_BUTTON_STYLES =
+  "inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50";
+const TOOLBAR_ICON_BUTTON_STYLES =
+  "inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50";
+const SEARCH_INPUT_STYLES =
+  "w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10";
+const FILTER_FIELD_STYLES =
+  "mt-2 w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10";
+const CATEGORY_BADGE_STYLES =
+  "inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600";
+const EDIT_ACTION_STYLES =
+  "rounded-xl border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50";
+const DELETE_ACTION_STYLES =
+  "rounded-xl border border-rose-200 bg-rose-50 px-4 py-1.5 text-xs font-semibold text-rose-600 shadow-sm transition hover:bg-rose-100";
+const TABLE_HEAD_STYLES =
+  "border-y border-slate-100 bg-slate-50/90 text-[11px] uppercase tracking-[0.12em] text-slate-400";
+const TABLE_HEAD_CELL_STYLES = "px-6 py-4 font-semibold";
+const TABLE_BODY_STYLES = "divide-y divide-slate-100 text-slate-700";
+const TABLE_ROW_STYLES = "transition-colors hover:bg-slate-50/70";
+const TABLE_FOOTER_STYLES =
+  "flex flex-col gap-3 border-t border-slate-100 px-6 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between";
+const TABLE_PAGER_BUTTON_STYLES =
+  "rounded-xl border px-4 py-1.5 text-xs font-semibold shadow-sm transition";
+const TABLE_PAGER_BUTTON_ENABLED_STYLES =
+  "border-slate-200 bg-white text-slate-600 hover:bg-slate-50";
+const TABLE_PAGER_BUTTON_DISABLED_STYLES =
+  "border-slate-100 bg-slate-50 text-slate-300 shadow-none";
+const TABLE_PAGER_NUMBER_STYLES =
+  "flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50";
+const TABLE_PAGER_CURRENT_STYLES =
+  "flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-xs font-semibold text-primary";
 
 function formatAmount(
   amount: number,
@@ -78,10 +97,6 @@ function matchesDateRange(iso: string | undefined, from: string, to: string) {
 
 function formatDate(value: string, locale: string) {
   return new Date(value).toLocaleDateString(locale);
-}
-
-function escapeCsv(value: string) {
-  return `"${value.replace(/"/g, '""')}"`;
 }
 
 function triggerDownload(blob: Blob, filename: string) {
@@ -382,7 +397,7 @@ export default function TransactionsTable({ transactions }: Props) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
     let start = Math.max(1, currentPageSafe - 1);
-    let end = Math.min(totalPages, start + 2);
+    const end = Math.min(totalPages, start + 2);
     if (end - start < 2) {
       start = Math.max(1, end - 2);
     }
@@ -391,16 +406,6 @@ export default function TransactionsTable({ transactions }: Props) {
 
   const canPrev = currentPageSafe > 1;
   const canNext = currentPageSafe < totalPages;
-
-  useEffect(() => {
-    if (currentPage !== currentPageSafe) {
-      setCurrentPage(currentPageSafe);
-    }
-  }, [currentPage, currentPageSafe]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, statusFilter, typeFilter, categoryFilter, dateFrom, dateTo]);
 
   const exportRows = useMemo(() => {
     return filteredTransactions.map((tx) => ({
@@ -411,34 +416,6 @@ export default function TransactionsTable({ transactions }: Props) {
       notas: tx.description ?? "",
     }));
   }, [filteredTransactions, formatLocale]);
-
-  const handleExportCsv = () => {
-    const header = [
-      "Fecha",
-      "Concepto",
-      "Estado",
-      "Importe",
-      "Notas adicionales",
-    ];
-    const lines = [header.map(escapeCsv).join(",")];
-    exportRows.forEach((row) => {
-      lines.push(
-        [
-          row.fecha,
-          row.concepto,
-          row.estado,
-          row.importe,
-          row.notas,
-        ]
-          .map(escapeCsv)
-          .join(",")
-      );
-    });
-    const blob = new Blob([lines.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    });
-    triggerDownload(blob, "contabilidad-transacciones.csv");
-  };
 
   const handleExportPdf = () => {
     const columns = [
@@ -550,6 +527,7 @@ export default function TransactionsTable({ transactions }: Props) {
     setCategoryFilter("all");
     setDateFrom("");
     setDateTo("");
+    setCurrentPage(1);
   };
 
   const showEmptyState = transactions.length === 0;
@@ -559,34 +537,37 @@ export default function TransactionsTable({ transactions }: Props) {
     : "esta transacción";
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+      <div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <div className="relative">
             <button
               type="button"
               onClick={() => setFiltersOpen((prev) => !prev)}
               aria-expanded={filtersOpen}
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+              className={TOOLBAR_BUTTON_STYLES}
             >
-              <span className="material-symbols-outlined text-[16px]">
+              <span className="material-symbols-outlined text-[18px]">
                 tune
               </span>
               Filtros
             </button>
             {filtersOpen ? (
-              <div className="absolute left-0 z-20 mt-2 w-80 rounded-2xl border border-gray-200 bg-white p-4 shadow-lg">
+              <div className="absolute left-0 z-20 mt-2 w-80 rounded-3xl border border-slate-200 bg-white p-4 shadow-xl">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-xs font-semibold uppercase text-gray-400">
+                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
                       Tipo
                     </label>
                     <select
                       value={typeFilter}
-                      onChange={(event) =>
-                        setTypeFilter(event.target.value as "income" | "expense" | "all")
-                      }
-                      className="mt-2 w-full appearance-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                      onChange={(event) => {
+                        setTypeFilter(
+                          event.target.value as "income" | "expense" | "all"
+                        );
+                        setCurrentPage(1);
+                      }}
+                      className={FILTER_FIELD_STYLES}
                     >
                       <option value="all">Todos</option>
                       <option value="income">Ingreso</option>
@@ -594,17 +575,18 @@ export default function TransactionsTable({ transactions }: Props) {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold uppercase text-gray-400">
+                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
                       Estado
                     </label>
                     <select
                       value={statusFilter}
-                      onChange={(event) =>
+                      onChange={(event) => {
                         setStatusFilter(
                           event.target.value as keyof typeof TransactionStatusLabels | "all"
-                        )
-                      }
-                      className="mt-2 w-full appearance-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                        );
+                        setCurrentPage(1);
+                      }}
+                      className={FILTER_FIELD_STYLES}
                     >
                       <option value="all">Todos</option>
                       <option value="completed">Completado</option>
@@ -612,17 +594,18 @@ export default function TransactionsTable({ transactions }: Props) {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold uppercase text-gray-400">
-                      Categor??a
+                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                      Categoría
                     </label>
                     <select
                       value={categoryFilter}
-                      onChange={(event) =>
+                      onChange={(event) => {
                         setCategoryFilter(
                           event.target.value as keyof typeof TransactionCategoryLabels | "all"
-                        )
-                      }
-                      className="mt-2 w-full appearance-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                        );
+                        setCurrentPage(1);
+                      }}
+                      className={FILTER_FIELD_STYLES}
                     >
                       <option value="all">Todas</option>
                       {Object.entries(TransactionCategoryLabels).map(
@@ -635,21 +618,27 @@ export default function TransactionsTable({ transactions }: Props) {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold uppercase text-gray-400">
+                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
                       Fecha
                     </label>
                     <div className="mt-2 grid grid-cols-2 gap-2">
                       <input
                         type="date"
                         value={dateFrom}
-                        onChange={(event) => setDateFrom(event.target.value)}
-                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                        onChange={(event) => {
+                          setDateFrom(event.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                       />
                       <input
                         type="date"
                         value={dateTo}
-                        onChange={(event) => setDateTo(event.target.value)}
-                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                        onChange={(event) => {
+                          setDateTo(event.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                       />
                     </div>
                   </div>
@@ -664,7 +653,7 @@ export default function TransactionsTable({ transactions }: Props) {
                     <button
                       type="button"
                       onClick={() => setFiltersOpen(false)}
-                      className="rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600"
+                      className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600"
                     >
                       Listo
                     </button>
@@ -674,8 +663,8 @@ export default function TransactionsTable({ transactions }: Props) {
             ) : null}
           </div>
           <div className="relative flex-1">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-              <span className="material-symbols-outlined text-[16px] leading-none">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+              <span className="material-symbols-outlined text-[18px] leading-none">
                 search
               </span>
             </span>
@@ -683,8 +672,11 @@ export default function TransactionsTable({ transactions }: Props) {
               type="text"
               placeholder="Buscar transacciones por concepto o notas..."
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setCurrentPage(1);
+              }}
+              className={SEARCH_INPUT_STYLES}
             />
           </div>
         </div>
@@ -694,9 +686,9 @@ export default function TransactionsTable({ transactions }: Props) {
             onClick={handleExportXlsx}
             aria-label="Exportar XLSX"
             title="Exportar XLSX"
-            className="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+            className={TOOLBAR_ICON_BUTTON_STYLES}
           >
-            <span className="material-symbols-outlined text-[16px]">
+            <span className="material-symbols-outlined text-[18px]">
               grid_on
             </span>
           </button>
@@ -705,9 +697,9 @@ export default function TransactionsTable({ transactions }: Props) {
             onClick={handleExportPdf}
             aria-label="Exportar PDF"
             title="Exportar PDF"
-            className="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+            className={TOOLBAR_ICON_BUTTON_STYLES}
           >
-            <span className="material-symbols-outlined text-[16px]">
+            <span className="material-symbols-outlined text-[18px]">
               picture_as_pdf
             </span>
           </button>
@@ -715,110 +707,118 @@ export default function TransactionsTable({ transactions }: Props) {
       </div>
 
       {showEmptyState ? (
-        <div className="px-6 py-8 text-sm text-gray-500">
+        <div className="px-6 py-10 text-sm text-slate-500">
           No hay transacciones registradas.
         </div>
       ) : showNoResults ? (
-        <div className="px-6 py-8 text-sm text-gray-500">
+        <div className="px-6 py-10 text-sm text-slate-500">
           No hay resultados para los filtros seleccionados.
         </div>
       ) : (
         <div className={tableWrapperStyles}>
-          <table className="w-full text-left text-sm">
-          <thead className={tableHeadStyles}>
-            <tr>
-              <th className={`${tableHeadCellStyles} text-left`}>Fecha</th>
-              <th className={`${tableHeadCellStyles} text-left`}>Concepto</th>
-              <th className={`${tableHeadCellStyles} text-left`}>Categoría</th>
-              <th className={`${tableHeadCellStyles} text-left`}>Estado</th>
-              <th className={`${tableHeadCellStyles} text-right`}>Importe</th>
-              <th className={`${tableHeadCellStyles} text-right`}>Acciones</th>
-            </tr>
-          </thead>
+          <table className="w-full min-w-[980px] text-left text-sm">
+            <thead className={TABLE_HEAD_STYLES}>
+              <tr>
+                <th className={`${TABLE_HEAD_CELL_STYLES} text-left`}>Fecha</th>
+                <th className={`${TABLE_HEAD_CELL_STYLES} text-left`}>
+                  Concepto
+                </th>
+                <th className={`${TABLE_HEAD_CELL_STYLES} text-left`}>
+                  Categoría
+                </th>
+                <th className={`${TABLE_HEAD_CELL_STYLES} text-left`}>
+                  Estado
+                </th>
+                <th className={`${TABLE_HEAD_CELL_STYLES} text-right`}>
+                  Importe
+                </th>
+                <th className={`${TABLE_HEAD_CELL_STYLES} text-right`}>
+                  Acciones
+                </th>
+              </tr>
+            </thead>
 
-          <tbody className={tableBodyStyles}>
-            {pagedTransactions.map((tx) => (
-              <tr
-                key={tx.id}
-                className={tableRowStyles}
-              >
-                <td className="px-6 py-4 text-sm text-gray-600">
-                  {formatDate(tx.date, formatLocale)}
-                </td>
+            <tbody className={TABLE_BODY_STYLES}>
+              {pagedTransactions.map((tx) => (
+                <tr key={tx.id} className={TABLE_ROW_STYLES}>
+                  <td className="whitespace-nowrap px-6 py-5 text-sm font-medium text-slate-700">
+                    {formatDate(tx.date, formatLocale)}
+                  </td>
 
-                <td className="px-6 py-4">
-                  <div className="font-semibold text-gray-900">
-                    {tx.concept}
-                  </div>
-                  {tx.description && (
-                    <div className="text-gray-500 text-xs">
-                      {tx.description}
+                  <td className="px-6 py-5">
+                    <div className="text-[15px] font-semibold text-slate-900">
+                      {tx.concept}
                     </div>
-                  )}
-                </td>
+                    {tx.description && (
+                      <div className="mt-1 text-xs text-slate-500">
+                        {tx.description}
+                      </div>
+                    )}
+                  </td>
 
-                <td className="px-6 py-4">
-                  <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">
-                    {TransactionCategoryLabels[tx.category]}
-                  </span>
-                </td>
+                  <td className="px-6 py-5">
+                    <span className={CATEGORY_BADGE_STYLES}>
+                      {TransactionCategoryLabels[tx.category]}
+                    </span>
+                  </td>
 
-                <td className="px-6 py-4">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      STATUS_STYLES[tx.status]
+                  <td className="px-6 py-5">
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                        STATUS_STYLES[tx.status]
+                      }`}
+                    >
+                      {TransactionStatusLabels[tx.status]}
+                    </span>
+                  </td>
+
+                  <td
+                    className={`whitespace-nowrap px-6 py-5 text-right text-[15px] font-semibold ${
+                      tx.type === "income"
+                        ? "text-emerald-600"
+                        : "text-rose-600"
                     }`}
                   >
-                    {TransactionStatusLabels[tx.status]}
-                  </span>
-                </td>
+                    {formatAmount(tx.amount, tx.type, formatLocale)}
+                  </td>
 
-                <td
-                  className={`px-6 py-4 text-right font-semibold ${
-                    tx.type === "income"
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {formatAmount(tx.amount, tx.type, formatLocale)}
-                </td>
-
-                <td className="px-6 py-4 text-right">
-                  <div className="inline-flex items-center gap-2">
-                    <Link
-                      href={`/accounting/${tx.id}/edit`}
-                      className={tableTextActionStyles}
-                    >
-                      Editar
-                    </Link>
-                    <button
-                      onClick={() => setConfirmDelete(tx)}
-                      className="rounded-lg border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+                  <td className="px-6 py-5 text-right">
+                    <div className="inline-flex items-center gap-2">
+                      <Link
+                        href={`/accounting/${tx.id}/edit`}
+                        className={EDIT_ACTION_STYLES}
+                      >
+                        Editar
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(tx)}
+                        className={DELETE_ACTION_STYLES}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
           </table>
         </div>
       )}
 
-      <div className={tableFooterStyles}>
+      <div className={TABLE_FOOTER_STYLES}>
         <span>
           Mostrando {pagedTransactions.length} de {filteredTransactions.length} transacciones
         </span>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            onClick={() => setCurrentPage(Math.max(1, currentPageSafe - 1))}
             disabled={!canPrev}
-            className={`${tablePagerButtonStyles} ${
+            className={`${TABLE_PAGER_BUTTON_STYLES} ${
               canPrev
-                ? tablePagerButtonEnabledStyles
-                : tablePagerButtonDisabledStyles
+                ? TABLE_PAGER_BUTTON_ENABLED_STYLES
+                : TABLE_PAGER_BUTTON_DISABLED_STYLES
             }`}
           >
             Anterior
@@ -828,11 +828,11 @@ export default function TransactionsTable({ transactions }: Props) {
               key={page}
               type="button"
               onClick={() => setCurrentPage(page)}
-                  className={
-                    page === currentPageSafe
-                      ? tablePagerCurrentStyles
-                      : `${tablePagerNumberStyles} ${tablePagerButtonEnabledStyles}`
-                  }
+              className={
+                page === currentPageSafe
+                  ? TABLE_PAGER_CURRENT_STYLES
+                  : TABLE_PAGER_NUMBER_STYLES
+              }
             >
               {page}
             </button>
@@ -840,13 +840,13 @@ export default function TransactionsTable({ transactions }: Props) {
           <button
             type="button"
             onClick={() =>
-              setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+              setCurrentPage(Math.min(totalPages, currentPageSafe + 1))
             }
             disabled={!canNext}
-            className={`${tablePagerButtonStyles} ${
+            className={`${TABLE_PAGER_BUTTON_STYLES} ${
               canNext
-                ? tablePagerButtonEnabledStyles
-                : tablePagerButtonDisabledStyles
+                ? TABLE_PAGER_BUTTON_ENABLED_STYLES
+                : TABLE_PAGER_BUTTON_DISABLED_STYLES
             }`}
           >
             Siguiente

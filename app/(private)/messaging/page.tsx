@@ -102,10 +102,10 @@ export default function MessagingPage() {
             <span className="material-symbols-outlined text-[24px]">info</span>
           </div>
           <h2 className="mt-4 text-lg font-semibold text-slate-900">
-            Mensajeria no disponible en modo invitado
+            Mensajería no disponible en modo invitado
           </h2>
           <p className="mt-2 text-sm text-slate-500">
-            Inicia sesion para crear plantillas y enviar comunicaciones.
+            Inicia sesión para crear plantillas y enviar comunicaciones.
           </p>
         </div>
       </div>
@@ -150,7 +150,7 @@ export default function MessagingPage() {
             {totalTemplates}
           </p>
           <p className="mt-2 text-xs text-slate-500">
-            Ultima actualizacion:{" "}
+            Última actualización:{" "}
             {lastTemplateUpdate
               ? formatDateTime(lastTemplateUpdate, formatLocale)
               : "-"}
@@ -178,7 +178,7 @@ export default function MessagingPage() {
         </div>
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-            Acciones rapidas
+            Acciones rápidas
           </p>
           <div className="mt-4 grid gap-2">
             <Link
@@ -194,7 +194,7 @@ export default function MessagingPage() {
               href="/messaging/bulk"
               className="inline-flex items-center justify-between rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-primary/90"
             >
-              Iniciar campana
+              Iniciar campaña
               <span className="material-symbols-outlined text-[16px]">
                 send
               </span>
@@ -291,10 +291,10 @@ export default function MessagingPage() {
       <Modal
         isOpen={!!confirmDelete}
         onClose={() => setConfirmDelete(null)}
-        title="Eliminar plantilla?"
+        title="¿Eliminar plantilla?"
       >
         <p className="mb-6">
-          Seguro que quieres eliminar <strong>{confirmDeleteLabel}</strong>?
+          ¿Seguro que quieres eliminar <strong>{confirmDeleteLabel}</strong>?
         </p>
 
         <div className="flex justify-end gap-2">
@@ -313,7 +313,7 @@ export default function MessagingPage() {
             }}
             className="px-4 py-2 bg-red-600 text-white rounded-lg"
           >
-            Si, eliminar
+            Sí, eliminar
           </button>
         </div>
       </Modal>
@@ -321,10 +321,10 @@ export default function MessagingPage() {
       <Modal
         isOpen={!!confirmDeleteFinal}
         onClose={() => setConfirmDeleteFinal(null)}
-        title="Confirmacion final"
+        title="Confirmación final"
       >
         <p className="mb-6 text-red-600 font-medium">
-          Esta accion no se puede deshacer.
+          Esta acción no se puede deshacer.
         </p>
 
         <div className="flex justify-end gap-2">

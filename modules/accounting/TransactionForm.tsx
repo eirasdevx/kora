@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "@/core/i18n/use-locale";
 import {
+  getAccountingAccountByKey,
+  getAssociationAccountingSettings,
+  getTransactionAccountingAccountKey,
+} from "@/core/session/accounting-settings";
+import { useSessionStore } from "@/core/session/session.store";
+import {
   Transaction,
   TransactionCategory,
   TransactionCategoryLabels,
@@ -49,6 +55,7 @@ export default function TransactionForm({
 }: Props) {
   const { formatLocale } = useLocale();
   const isEditing = Boolean(initialData);
+  const association = useSessionStore((s) => s.association);
   const contacts = useContactsStore((s) => s.contacts);
   const loadContacts = useContactsStore((s) => s.loadContacts);
   const events = useEventsStore((s) => s.events);
@@ -122,6 +129,14 @@ export default function TransactionForm({
     }
   }, [numericAmount, formatLocale]);
 
+  const accountingAccount = useMemo(() => {
+    const accountingSettings = getAssociationAccountingSettings(association);
+    return getAccountingAccountByKey(
+      accountingSettings,
+      getTransactionAccountingAccountKey(category, type)
+    );
+  }, [association, category, type]);
+
   const dateLabel = useMemo(() => {
     if (!date) return "Sin fecha";
     const parsed = new Date(date);
@@ -151,16 +166,6 @@ export default function TransactionForm({
   }, [filteredContacts, contactsPageSafe, contactsPageSize]);
   const contactsCanPrev = contactsPageSafe > 1;
   const contactsCanNext = contactsPageSafe < contactsTotalPages;
-
-  useEffect(() => {
-    if (contactsPage !== contactsPageSafe) {
-      setContactsPage(contactsPageSafe);
-    }
-  }, [contactsPage, contactsPageSafe]);
-
-  useEffect(() => {
-    setContactsPage(1);
-  }, [contactFilter, contactsOpen]);
 
   const selectedContacts = useMemo(
     () => contacts.filter((c) => contactIds.includes(c.id)),
@@ -539,6 +544,15 @@ export default function TransactionForm({
                   </div>
                 </div>
 
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                  Cuenta contable automatica:{" "}
+                  <strong className="text-slate-900">
+                    {accountingAccount.code}
+                  </strong>
+                  {" · "}
+                  {accountingAccount.label}
+                </div>
+
                 <div>
                   <label className="text-sm font-semibold text-slate-700">
                     Notas adicionales
@@ -642,7 +656,10 @@ export default function TransactionForm({
                       </div>
                       <button
                         type="button"
-                        onClick={() => setContactsOpen(true)}
+                        onClick={() => {
+                          setContactsPage(1);
+                          setContactsOpen(true);
+                        }}
                         className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                       >
                         Seleccionar contactos
@@ -812,7 +829,10 @@ export default function TransactionForm({
               <select
                 value={contactFilter}
                 onChange={(e) =>
-                  setContactFilter(e.target.value as ContactType | "all")
+                  {
+                    setContactFilter(e.target.value as ContactType | "all");
+                    setContactsPage(1);
+                  }
                 }
                 className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
               >
