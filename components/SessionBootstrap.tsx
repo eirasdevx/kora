@@ -5,15 +5,18 @@ import type { SessionBootstrapPayload } from "@/core/session/session-payload";
 import { useSessionStore } from "@/core/session/session.store";
 import { useUsersStore } from "@/core/users/users.store";
 
+let bootstrapStarted = false;
+
 export default function SessionBootstrap() {
   const startedRef = useRef(false);
 
   useEffect(() => {
-    if (startedRef.current) {
+    if (startedRef.current || bootstrapStarted) {
       return;
     }
 
     startedRef.current = true;
+    bootstrapStarted = true;
 
     const hydrate = async () => {
       try {

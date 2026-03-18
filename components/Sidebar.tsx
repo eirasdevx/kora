@@ -64,14 +64,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   ];
 
   const visibleItems = mainItems.filter((item) => {
-    if (
-      mode === "guest" &&
-      (item.href === "/messaging" || item.href === "/resources")
-    ) {
-      return false;
-    }
-
-    if (!item.moduleKey || !activeUser || isAdmin || !moduleAccess) {
+    if (!item.moduleKey || mode === "guest" || !activeUser || isAdmin || !moduleAccess) {
       return true;
     }
 

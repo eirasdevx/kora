@@ -21,9 +21,11 @@ export default function LoginPage() {
   const [companyCode, setCompanyCode] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberSession, setRememberSession] = useState(false);
   const [pendingTwoFactor, setPendingTwoFactor] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hydrated || !mode) {
@@ -33,14 +35,14 @@ export default function LoginPage() {
     router.replace("/dashboard");
   }, [hydrated, mode, router]);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitLogin = async (verificationCode?: string) => {
     if (submitting) {
       return;
     }
 
     setSubmitting(true);
     setError(null);
+    setTwoFactorError(null);
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -52,13 +54,12 @@ export default function LoginPage() {
           identifier,
           password,
           companyCode,
-          twoFactorCode: pendingTwoFactor ? twoFactorCode : undefined,
+          twoFactorCode: verificationCode,
         }),
       });
 
       if (response.status === 409) {
         setPendingTwoFactor(true);
-        setSubmitting(false);
         return;
       }
 
@@ -67,95 +68,140 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (requestError) {
       console.error(requestError);
-      setError(
+      const message =
         requestError instanceof Error
           ? requestError.message
-          : "No se pudo iniciar sesión."
-      );
+          : "No se pudo iniciar sesión.";
+
+      if (pendingTwoFactor || verificationCode) {
+        setTwoFactorError(message);
+      } else {
+        setError(message);
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await submitLogin();
+  };
+
+  const handleTwoFactorSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    if (!twoFactorCode.trim()) {
+      setTwoFactorError("Introduce el código de verificación.");
+      return;
+    }
+
+    await submitLogin(twoFactorCode);
+  };
+
   return (
     <div className="min-h-screen bg-white">
-      <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="hidden bg-slate-950 px-12 py-16 text-white lg:flex lg:flex-col lg:justify-between">
-          <div>
-            <p className="text-lg font-semibold">Kora</p>
-            <p className="mt-2 max-w-md text-sm text-slate-300">
-              Gestiona una asociación compartida por varios usuarios con acceso
-              por código de empresa, roles y permisos.
+      <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
+        <section className="relative hidden overflow-hidden text-white lg:block">
+          <div className="absolute inset-0">
+            <div className="h-full w-full bg-[url('/auth-hero.png')] bg-cover bg-center" />
+            <div className="absolute inset-0 bg-[#1e5ad8]/85" />
+            <div className="absolute inset-0 bg-gradient-to-b from-blue-500/20 via-blue-600/35 to-blue-900/70" />
+          </div>
+
+          <div className="relative flex h-full flex-col justify-between px-12 py-14">
+            <div className="flex items-center gap-3 text-white">
+              <span className="kora-logo kora-logo--inverse" aria-hidden="true">
+                <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+                  <path
+                    d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </span>
+              <span className="text-lg font-semibold">Kora</span>
+            </div>
+
+            <div className="max-w-md space-y-6">
+              <h1 className="text-4xl font-semibold leading-tight">
+                Gestiona tu asociación con elegancia.
+              </h1>
+              <p className="text-base text-white/80">
+                Centraliza finanzas, recursos, eventos y mensajería en una sola
+                plataforma intuitiva diseñada para el crecimiento comunitario.
+              </p>
+            </div>
+
+            <p className="text-xs text-white/60">
+              © {new Date().getFullYear()} Kora Platform. Todos los derechos
+              reservados.
             </p>
           </div>
-          <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-blue-300">
-              Acceso compartido
-            </p>
-            <h1 className="max-w-lg text-4xl font-semibold leading-tight">
-              Cada miembro entra en la misma asociación con sus propias credenciales.
-            </h1>
-            <p className="max-w-md text-sm text-slate-300">
-              El administrador crea la asociación y después da de alta al resto
-              del equipo desde la gestión de usuarios.
-            </p>
-          </div>
-          <p className="text-xs text-slate-500">
-            © {new Date().getFullYear()} Kora
-          </p>
         </section>
 
         <section className="flex items-center justify-center px-6 py-12">
           <div className="w-full max-w-md space-y-8">
             <div className="space-y-2">
               <h2 className="text-3xl font-semibold text-slate-900">
-                Iniciar sesión
+                Bienvenido a Kora
               </h2>
               <p className="text-sm text-slate-500">
-                Usa tu correo o DNI, tu contraseña y el código de empresa de tu
-                asociación.
+                Ingresa tu DNI o correo, contraseña y el código de empresa.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Correo o DNI
+                  DNI o correo electrónico
                 </label>
                 <input
+                  name="identifier"
+                  type="text"
                   value={identifier}
                   onChange={(event) => setIdentifier(event.target.value)}
-                  placeholder="correo@asociacion.org"
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  placeholder="DNI o correo"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-slate-700">
+                <div className="flex items-center justify-between text-sm">
+                  <label className="font-medium text-slate-700">
                     Contraseña
                   </label>
                   <Link
                     href="/forgot-password"
-                    className="text-sm font-medium text-blue-600"
+                    className="font-medium text-blue-600 hover:text-blue-700"
                   >
-                    Recuperar acceso
+                    Olvidaste tu contraseña?
                   </Link>
                 </div>
+
                 <div className="relative">
                   <input
+                    name="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 pr-16 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword((value) => !value)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500"
+                    onClick={() => setShowPassword((previous) => !previous)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    aria-label={
+                      showPassword
+                        ? "Ocultar contraseña"
+                        : "Mostrar contraseña"
+                    }
                   >
-                    {showPassword ? "Ocultar" : "Ver"}
+                    <span className="material-symbols-outlined text-[18px]">
+                      {showPassword ? "visibility" : "visibility_off"}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -165,36 +211,27 @@ export default function LoginPage() {
                   Código de empresa
                 </label>
                 <input
+                  name="companyCode"
+                  type="text"
                   value={companyCode}
                   onChange={(event) => setCompanyCode(event.target.value)}
                   placeholder="KORA-0000-0000"
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
 
-              {pendingTwoFactor ? (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">
-                    Código de verificación
-                  </label>
-                  <input
-                    value={twoFactorCode}
-                    onChange={(event) =>
-                      setTwoFactorCode(event.target.value.replace(/\D/g, ""))
-                    }
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="123456"
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
-                  <p className="text-xs text-slate-500">
-                    Tu cuenta requiere validación en dos pasos.
-                  </p>
-                </div>
-              ) : null}
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={rememberSession}
+                  onChange={(event) => setRememberSession(event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                />
+                Mantener sesión iniciada
+              </label>
 
               {error ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                   {error}
                 </div>
               ) : null}
@@ -202,13 +239,9 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full rounded-2xl bg-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-70"
+                className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
               >
-                {submitting
-                  ? "Validando..."
-                  : pendingTwoFactor
-                    ? "Verificar y entrar"
-                    : "Entrar"}
+                {submitting ? "Validando..." : "Iniciar sesión"}
               </button>
             </form>
 
@@ -218,20 +251,85 @@ export default function LoginPage() {
                 setGuest();
                 router.push("/dashboard");
               }}
-              className="w-full rounded-2xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-600"
+              className="w-full rounded-xl border border-dashed border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:border-slate-300"
             >
-              Continuar como invitado
+              Iniciar sesión como invitado
             </button>
 
             <p className="text-center text-sm text-slate-500">
-              ¿No tienes una asociación creada?{" "}
-              <Link href="/register" className="font-semibold text-blue-600">
+              ¿No tienes una cuenta?{" "}
+              <Link
+                href="/register"
+                className="font-semibold text-blue-600 hover:text-blue-700"
+              >
                 Registrar administrador
               </Link>
             </p>
           </div>
         </section>
       </div>
+
+      {pendingTwoFactor ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-8">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-slate-900">
+                Verificación en dos pasos
+              </h3>
+              <p className="text-sm text-slate-500">
+                Introduce el código de tu app para continuar.
+              </p>
+            </div>
+
+            <form onSubmit={handleTwoFactorSubmit} className="mt-5 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Código de verificación
+                </label>
+                <input
+                  value={twoFactorCode}
+                  onChange={(event) => {
+                    setTwoFactorCode(event.target.value.replace(/\D/g, ""));
+                    setTwoFactorError(null);
+                  }}
+                  placeholder="123456"
+                  inputMode="numeric"
+                  maxLength={6}
+                  autoComplete="one-time-code"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
+
+              {twoFactorError ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {twoFactorError}
+                </div>
+              ) : null}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingTwoFactor(false);
+                    setTwoFactorCode("");
+                    setTwoFactorError(null);
+                  }}
+                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+                >
+                  {submitting ? "Verificando..." : "Verificar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
