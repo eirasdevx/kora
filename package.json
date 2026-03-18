@@ -6,15 +6,18 @@
     "dev": "next dev",
     "postinstall": "prisma generate",
     "build": "prisma generate && next build",
+    "migrate:deploy": "prisma migrate deploy",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.4.1",
     "clsx": "^2.1.1",
     "dexie": "^4.2.1",
     "next": "16.1.5",
     "nodemailer": "^6.9.14",
+    "pg": "^8.20.0",
     "prisma": "^7.4.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",

@@ -1,5 +1,3 @@
-"use client";
-
 const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
 const normalizeToken = (token: string) => token.replace(/\s+/g, "");

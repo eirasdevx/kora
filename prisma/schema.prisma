@@ -11,3 +11,113 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum AssociationUserRole {
+  Admin
+  Gestor
+  Lector
+}
+
+enum AssociationUserStatus {
+  Activo
+  Pendiente
+}
+
+model User {
+  id                String            @id @default(cuid())
+  firstName         String
+  lastName          String
+  email             String            @unique
+  documentNumber    String?           @unique
+  phone             String?
+  photoUrl          String?
+  passwordDigest    Json
+  language          String            @default("es")
+  timezone          String            @default("(GMT+01:00) Madrid")
+  twoFactorEnabled  Boolean           @default(false)
+  twoFactorSecret   String?
+  twoFactorVerifiedAt DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  memberships       AssociationUser[]
+  sessions          Session[]
+  securityEvents    SecurityEvent[]
+}
+
+model Association {
+  id                 String                    @id @default(cuid())
+  name               String
+  companyCode        String                    @unique
+  logoUrl            String?
+  taxId              String?
+  contactEmail       String?
+  phone              String?
+  locationName       String?
+  addressLine1       String?
+  membershipSettings Json?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  representatives    AssociationRepresentative[]
+  members            AssociationUser[]
+  activeSessions     Session[]                 @relation("ActiveAssociationSessions")
+}
+
+model AssociationRepresentative {
+  id            String      @id @default(cuid())
+  associationId String
+  roleTitle     String?
+  fullName      String
+  email         String?
+  phone         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  association   Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+}
+
+model AssociationUser {
+  id               String                @id @default(cuid())
+  associationId    String
+  userId           String
+  role             AssociationUserRole
+  status           AssociationUserStatus @default(Pendiente)
+  permissions      Json?
+  languageOverride String?
+  timezoneOverride String?
+  notifyInApp      Boolean               @default(true)
+  notifyEmail      Boolean               @default(true)
+  notifyBrowser    Boolean               @default(false)
+  lastAccessAt     DateTime?
+  deactivatedAt    DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  association      Association           @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  securityEvents   SecurityEvent[]
+
+  @@unique([associationId, userId])
+}
+
+model Session {
+  id                  String       @id @default(cuid())
+  tokenHash           String       @unique
+  userId              String
+  activeAssociationId String?
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  user                User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeAssociation   Association? @relation("ActiveAssociationSessions", fields: [activeAssociationId], references: [id], onDelete: SetNull)
+}
+
+model SecurityEvent {
+  id                String           @id @default(cuid())
+  associationUserId String?
+  userId            String?
+  description       String
+  userAgent         String?
+  ipAddress         String?
+  createdAt         DateTime         @default(now())
+  associationUser   AssociationUser? @relation(fields: [associationUserId], references: [id], onDelete: SetNull)
+  user              User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+}

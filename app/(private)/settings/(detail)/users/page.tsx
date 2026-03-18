@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import Modal from "@/components/Modal";
 import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
+import type { SessionBootstrapPayload } from "@/core/session/session-payload";
 import { useSessionStore } from "@/core/session/session.store";
 import {
   type UserAccount,
@@ -15,6 +16,10 @@ import {
   useUsersStore,
 } from "@/core/users/users.store";
 import { createPasswordDigest } from "@/core/security/passwords";
+import {
+  applySessionPayload,
+  parseApiResponse,
+} from "@/lib/client/session-client";
 
 const ROLE_OPTIONS: UserRole[] = ["Admin", "Gestor", "Lector"];
 const STATUS_OPTIONS: UserStatus[] = ["Activo", "Pendiente"];
@@ -422,22 +427,32 @@ export default function UsersSettingsPage() {
     if (isCreate) {
       try {
         const passwordDigest = await createPasswordDigest(password);
-        addUser({
-          ...payload,
-          passwordDigest,
+        const response = await fetch("/api/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...payload,
+            passwordDigest,
+          }),
         });
+
+        const session = await parseApiResponse<SessionBootstrapPayload>(response);
+        applySessionPayload(session);
+        const created =
+          session.users.find((user) => user.email.toLowerCase() === email) ??
+          null;
+        setSelectedId(created?.id ?? null);
       } catch (error) {
         console.error(error);
         setFormError(
-          "No se pudo proteger la contraseña. Actualiza el navegador e inténtalo de nuevo."
+          error instanceof Error
+            ? error.message
+            : "No se pudo crear el usuario."
         );
         return;
       }
-      const created =
-        useUsersStore
-          .getState()
-          .users.find((user) => user.email.toLowerCase() === email) ?? null;
-      setSelectedId(created?.id ?? null);
       setPanelMode("summary");
       setUserForm(createEmptyForm());
       setShowPassword(false);
@@ -449,23 +464,53 @@ export default function UsersSettingsPage() {
       if (hasPassword) {
         try {
           const passwordDigest = await createPasswordDigest(password);
-          updateUser(userForm.id, {
-            ...payload,
-            name,
-            passwordDigest,
+          const response = await fetch(`/api/users/${userForm.id}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              ...payload,
+              name,
+              passwordDigest,
+            }),
           });
+
+          const session = await parseApiResponse<SessionBootstrapPayload>(response);
+          applySessionPayload(session);
         } catch (error) {
           console.error(error);
           setFormError(
-            "No se pudo proteger la contraseña. Actualiza el navegador e inténtalo de nuevo."
+            error instanceof Error
+              ? error.message
+              : "No se pudo actualizar el usuario."
           );
           return;
         }
       } else {
-        updateUser(userForm.id, {
-          ...payload,
-          name,
-        });
+        try {
+          const response = await fetch(`/api/users/${userForm.id}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              ...payload,
+              name,
+            }),
+          });
+
+          const session = await parseApiResponse<SessionBootstrapPayload>(response);
+          applySessionPayload(session);
+        } catch (error) {
+          console.error(error);
+          setFormError(
+            error instanceof Error
+              ? error.message
+              : "No se pudo actualizar el usuario."
+          );
+          return;
+        }
       }
       setUserForm((prev) => ({ ...prev, password: "", passwordRepeat: "" }));
       setPanelMode("summary");
@@ -528,14 +573,30 @@ export default function UsersSettingsPage() {
 
   const confirmDeleteRequest = () => {
     if (!deleteRequestFinal) return;
-    removeUser(deleteRequestFinal.id);
-    setDeleteRequestFinal(null);
-    setSelectedId(null);
-    setUserForm(createEmptyForm());
-    setPanelMode("summary");
-    setFormError(null);
-    setShowPassword(false);
-    setShowRepeat(false);
+    void (async () => {
+      try {
+        const response = await fetch(`/api/users/${deleteRequestFinal.id}`, {
+          method: "DELETE",
+        });
+        const session = await parseApiResponse<SessionBootstrapPayload>(response);
+        applySessionPayload(session);
+        setSelectedId(null);
+        setUserForm(createEmptyForm());
+        setPanelMode("summary");
+        setFormError(null);
+        setShowPassword(false);
+        setShowRepeat(false);
+      } catch (error) {
+        console.error(error);
+        setFormError(
+          error instanceof Error
+            ? error.message
+            : "No se pudo eliminar el usuario."
+        );
+      } finally {
+        setDeleteRequestFinal(null);
+      }
+    })();
   };
 
 

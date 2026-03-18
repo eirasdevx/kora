@@ -1,11 +1,8 @@
 "use client";
 
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
-import {
-  type PasswordDigest,
-  createPasswordDigest,
-} from "@/core/security/passwords";
+import type { SessionBootstrapPayload } from "@/core/session/session-payload";
+import type { PasswordDigest } from "@/core/security/passwords";
 import {
   type AssociationAccountingSettings,
   getAssociationAccountingSettings,
@@ -70,16 +67,6 @@ export type AssociationEntry = {
   companyCode: string;
 };
 
-const sanitizeAdmin = (admin: AdminAccount | null): AdminAccount | null => {
-  if (!admin) return null;
-  if (admin.passwordDigest && admin.password) {
-    const rest = { ...admin };
-    delete rest.password;
-    return rest;
-  }
-  return admin;
-};
-
 const normalizeAssociationProfile = (
   association: AssociationProfile | null
 ): AssociationProfile | null => {
@@ -89,6 +76,22 @@ const normalizeAssociationProfile = (
     ...association,
     membershipSettings: getAssociationMembershipSettings(association),
     accountingSettings: getAssociationAccountingSettings(association),
+  };
+};
+
+const getAdminFromPayload = (
+  payload: SessionBootstrapPayload | null
+): AdminAccount | null => {
+  const adminUser = payload?.users.find((user) => user.role === "Admin");
+  if (!adminUser) {
+    return null;
+  }
+
+  return {
+    firstName: adminUser.firstName ?? "",
+    lastName: adminUser.lastName ?? "",
+    dni: adminUser.dni ?? "",
+    email: adminUser.email,
   };
 };
 
@@ -102,6 +105,7 @@ interface SessionState {
   activeUserId: string | null;
   hydrated: boolean;
   setHydrated: (hydrated: boolean) => void;
+  hydrateFromServer: (payload: SessionBootstrapPayload | null) => void;
   setAdmin: (admin: AdminAccount | null) => void;
   setAssociation: (association: AssociationProfile | null) => void;
   addAssociation: (association: AssociationProfile) => AssociationEntry;
@@ -118,9 +122,172 @@ interface SessionState {
   logout: () => void;
 }
 
-export const useSessionStore = create<SessionState>()(
-  persist(
-    (set) => ({
+export const useSessionStore = create<SessionState>((set) => ({
+  mode: null,
+  association: null,
+  associations: [],
+  activeAssociationId: null,
+  admin: null,
+  companyCode: null,
+  activeUserId: null,
+  hydrated: false,
+  setHydrated: (hydrated) => set({ hydrated }),
+  hydrateFromServer: (payload) =>
+    set(() => {
+      if (!payload) {
+        return {
+          mode: null,
+          association: null,
+          associations: [],
+          activeAssociationId: null,
+          admin: null,
+          companyCode: null,
+          activeUserId: null,
+          hydrated: true,
+        };
+      }
+
+      return {
+        mode: "authenticated",
+        association: normalizeAssociationProfile(payload.association),
+        associations: payload.associations.map((entry) => ({
+          id: entry.id,
+          companyCode: entry.companyCode,
+          profile: normalizeAssociationProfile(entry.profile)!,
+        })),
+        activeAssociationId: payload.activeAssociationId,
+        admin: getAdminFromPayload(payload),
+        companyCode: payload.companyCode,
+        activeUserId: payload.activeUserId,
+        hydrated: true,
+      };
+    }),
+  setAdmin: (admin) => set({ admin }),
+  setAssociation: (association) =>
+    set((state) => {
+      const normalizedAssociation = normalizeAssociationProfile(association);
+      if (!normalizedAssociation) {
+        return {
+          association: null,
+        };
+      }
+
+      return {
+        association: normalizedAssociation,
+        associations: state.associations.map((entry) =>
+          entry.id === state.activeAssociationId
+            ? { ...entry, profile: normalizedAssociation }
+            : entry
+        ),
+      };
+    }),
+  addAssociation: (association) => {
+    const entry = {
+      id: createAssociationId(),
+      profile: normalizeAssociationProfile(association)!,
+      companyCode: createCompanyCode(),
+    };
+
+    set((state) => ({
+      associations: [...state.associations, entry],
+      association: entry.profile,
+      activeAssociationId: entry.id,
+      companyCode: entry.companyCode,
+    }));
+
+    return entry;
+  },
+  setActiveAssociation: (id) =>
+    set((state) => {
+      const entry = state.associations.find((item) => item.id === id);
+      if (!entry) {
+        return {};
+      }
+
+      return {
+        activeAssociationId: entry.id,
+        association: entry.profile,
+        companyCode: entry.companyCode,
+      };
+    }),
+  ensureAssociations: () =>
+    set((state) => {
+      if (state.associations.length > 0 || !state.association) {
+        return {};
+      }
+
+      const entry = {
+        id: createAssociationId(),
+        profile: normalizeAssociationProfile(state.association)!,
+        companyCode: state.companyCode ?? createCompanyCode(),
+      };
+
+      return {
+        associations: [entry],
+        activeAssociationId: entry.id,
+        companyCode: entry.companyCode,
+      };
+    }),
+  removeAssociation: (id) =>
+    set((state) => {
+      const associations = state.associations.filter((entry) => entry.id !== id);
+
+      if (associations.length === 0) {
+        return {
+          associations: [],
+          association: null,
+          activeAssociationId: null,
+          companyCode: null,
+        };
+      }
+
+      const next = associations[0];
+      return {
+        associations,
+        association: next.profile,
+        activeAssociationId: next.id,
+        companyCode: next.companyCode,
+      };
+    }),
+  registerAdmin: ({ admin, association, companyCode }) =>
+    set(() => {
+      const normalizedAssociation = normalizeAssociationProfile(association);
+      const entry = {
+        id: createAssociationId(),
+        profile: normalizedAssociation!,
+        companyCode,
+      };
+
+      return {
+        admin,
+        association: normalizedAssociation,
+        associations: [entry],
+        activeAssociationId: entry.id,
+        companyCode,
+        mode: "authenticated",
+        activeUserId: null,
+        hydrated: true,
+      };
+    }),
+  setGuest: () =>
+    set({
+      mode: "guest",
+      hydrated: true,
+      association: null,
+      associations: [],
+      activeAssociationId: null,
+      admin: null,
+      companyCode: null,
+      activeUserId: null,
+    }),
+  setAuthenticated: (activeUserId = null) =>
+    set({
+      mode: "authenticated",
+      activeUserId,
+      hydrated: true,
+    }),
+  logout: () =>
+    set({
       mode: null,
       association: null,
       associations: [],
@@ -128,168 +295,6 @@ export const useSessionStore = create<SessionState>()(
       admin: null,
       companyCode: null,
       activeUserId: null,
-      hydrated: false,
-      setHydrated: (hydrated) => set({ hydrated }),
-      setAdmin: (admin) => set({ admin: sanitizeAdmin(admin) }),
-      setAssociation: (association) =>
-        set((state) => {
-          const normalizedAssociation =
-            normalizeAssociationProfile(association);
-          if (!association) {
-            return { association: null };
-          }
-          if (!state.activeAssociationId) {
-            return { association: normalizedAssociation };
-          }
-          const associations = state.associations.map((entry) =>
-            entry.id === state.activeAssociationId
-              ? { ...entry, profile: normalizedAssociation! }
-              : entry
-          );
-          return { association: normalizedAssociation, associations };
-        }),
-      addAssociation: (association) => {
-        const normalizedAssociation = normalizeAssociationProfile(association);
-        const entry = {
-          id: createAssociationId(),
-          profile: normalizedAssociation!,
-          companyCode: createCompanyCode(),
-        };
-        set((state) => ({
-          associations: [...state.associations, entry],
-          association: entry.profile,
-          companyCode: entry.companyCode,
-          activeAssociationId: entry.id,
-        }));
-        return entry;
-      },
-      setActiveAssociation: (id) =>
-        set((state) => {
-          const entry = state.associations.find((item) => item.id === id);
-          if (!entry) return {};
-          return {
-            activeAssociationId: id,
-            association: normalizeAssociationProfile(entry.profile),
-            companyCode: entry.companyCode,
-          };
-        }),
-      ensureAssociations: () =>
-        set((state) => {
-          const normalizedAssociation =
-            normalizeAssociationProfile(state.association);
-          const normalizedAssociations = state.associations.map((entry) => ({
-            ...entry,
-            profile: normalizeAssociationProfile(entry.profile)!,
-          }));
-
-          if (normalizedAssociations.length > 0) {
-            const activeAssociationId =
-              state.activeAssociationId ?? normalizedAssociations[0].id;
-            const activeEntry =
-              normalizedAssociations.find(
-                (entry) => entry.id === activeAssociationId
-              ) ?? normalizedAssociations[0];
-
-            return {
-              associations: normalizedAssociations,
-              activeAssociationId: activeEntry.id,
-              association: activeEntry.profile,
-              companyCode: activeEntry.companyCode,
-            };
-          }
-
-          if (!normalizedAssociation) return {};
-          const entry = {
-            id: createAssociationId(),
-            profile: normalizedAssociation,
-            companyCode: state.companyCode ?? createCompanyCode(),
-          };
-          return {
-            associations: [entry],
-            activeAssociationId: entry.id,
-            association: entry.profile,
-            companyCode: entry.companyCode,
-          };
-        }),
-      removeAssociation: (id) =>
-        set((state) => {
-          const remaining = state.associations.filter(
-            (entry) => entry.id !== id
-          );
-          if (remaining.length === 0) {
-            return {
-              associations: [],
-              activeAssociationId: null,
-              association: null,
-              companyCode: null,
-            };
-          }
-          if (state.activeAssociationId === id) {
-            const next = remaining[0];
-            return {
-              associations: remaining,
-              activeAssociationId: next.id,
-              association: next.profile,
-              companyCode: next.companyCode,
-            };
-          }
-          return { associations: remaining };
-        }),
-      registerAdmin: ({ admin, association, companyCode }) =>
-        set(() => {
-          const normalizedAssociation = normalizeAssociationProfile(association);
-          const entry = {
-            id: createAssociationId(),
-            profile: normalizedAssociation!,
-            companyCode,
-          };
-          return {
-            admin: sanitizeAdmin(admin),
-            association: normalizedAssociation,
-            associations: [entry],
-            activeAssociationId: entry.id,
-            companyCode,
-            mode: null,
-            activeUserId: null,
-          };
-        }),
-      setGuest: () => set({ mode: "guest", activeUserId: null }),
-      setAuthenticated: (activeUserId = null) =>
-        set({ mode: "authenticated", activeUserId }),
-      logout: () => set({ mode: null, activeUserId: null }),
+      hydrated: true,
     }),
-    {
-      name: "kora-session",
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        mode: state.mode,
-        association: state.association,
-        associations: state.associations,
-        activeAssociationId: state.activeAssociationId,
-        admin: sanitizeAdmin(state.admin),
-        companyCode: state.companyCode,
-        activeUserId: state.activeUserId,
-      }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHydrated(true);
-        state?.ensureAssociations();
-        if (state?.admin) {
-          state.setAdmin(state.admin);
-          if (state.admin.password && !state.admin.passwordDigest) {
-            const legacyAdmin = state.admin;
-            void (async () => {
-              try {
-                const passwordDigest = await createPasswordDigest(
-                  legacyAdmin.password ?? ""
-                );
-                state.setAdmin({ ...legacyAdmin, passwordDigest });
-              } catch (error) {
-                console.error(error);
-              }
-            })();
-          }
-        }
-      },
-    }
-  )
-);
+}));

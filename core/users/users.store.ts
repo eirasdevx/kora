@@ -1,13 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
-import { type AdminAccount } from "@/core/session/session.store";
-import {
-  type PasswordDigest,
-  createPasswordDigest,
-} from "@/core/security/passwords";
-import { useNotificationsStore } from "@/core/notifications/notifications.store";
+import type { PasswordDigest } from "@/core/security/passwords";
 
 export type UserRole = "Admin" | "Gestor" | "Lector";
 export type UserStatus = "Activo" | "Pendiente";
@@ -69,7 +63,11 @@ export type UserAccount = {
 interface UsersState {
   companyCode: string | null;
   users: UserAccount[];
-  ensureSeed: (companyCode: string | null, admin: AdminAccount | null) => void;
+  hydrateUsers: (payload: {
+    companyCode: string | null;
+    users: UserAccount[];
+  }) => void;
+  ensureSeed: (companyCode: string | null, admin: unknown) => void;
   addUser: (payload: {
     firstName: string;
     lastName: string;
@@ -121,21 +119,21 @@ export const createDefaultPreferences = (): UserPreferences => ({
 });
 
 const LANGUAGE_ALIASES: Record<string, string> = {
-  "es": "es",
+  es: "es",
   "es-419": "es-419",
   "español (españa)": "es",
   "espanol (espana)": "es",
   "español (latam)": "es-419",
   "espanol (latam)": "es-419",
-  "galego": "gl",
-  "gallego": "gl",
-  "euskara": "eu",
-  "euskera": "eu",
-  "català": "ca",
-  "catalan": "ca",
+  galego: "gl",
+  gallego: "gl",
+  euskara: "eu",
+  euskera: "eu",
+  català: "ca",
+  catalan: "ca",
   "catalán": "ca",
-  "valencià": "va",
-  "valenciano": "va",
+  valencià: "va",
+  valenciano: "va",
   "english (us)": "en",
   "inglés (us)": "en",
   "ingles (us)": "en",
@@ -143,267 +141,108 @@ const LANGUAGE_ALIASES: Record<string, string> = {
 
 export const normalizeLanguage = (value?: string): string => {
   if (!value) return "es";
-  const key = value.toLowerCase();
-  return LANGUAGE_ALIASES[key] ?? value;
-};
-
-const normalizeEnabled = (value?: string | boolean): boolean => {
-  if (value === true) return true;
-  if (value === "edit" || value === "read") return true;
-  return false;
-};
-
-type LegacyModules = Partial<{
-  accounting: string | boolean;
-  events: string | boolean;
-  contacts: string | boolean;
-  documents: string | boolean;
-  treasury: string | boolean;
-}>;
-
-const withDefaultPermissions = (
-  permissions?: UserPermissions
-): UserPermissions => {
-  const defaults = createDefaultPermissions();
-  const modules = (permissions?.modules ?? {}) as LegacyModules;
-  const resolveEnabled = (value: unknown, fallback: boolean) => {
-    if (value === null || value === undefined) return fallback;
-    return normalizeEnabled(value as string | boolean);
-  };
-
-  const edit = permissions?.actions?.edit ?? defaults.actions.edit;
-  return {
-    modules: {
-      accounting: resolveEnabled(
-        modules.accounting ?? modules.treasury,
-        defaults.modules.accounting
-      ),
-      events: resolveEnabled(modules.events, defaults.modules.events),
-      contacts: resolveEnabled(modules.contacts, defaults.modules.contacts),
-      documents: resolveEnabled(modules.documents, defaults.modules.documents),
-    },
-    actions: {
-      view: edit ? false : true,
-      edit,
-      delete: permissions?.actions?.delete ?? defaults.actions.delete,
-    },
-  };
+  return LANGUAGE_ALIASES[value.toLowerCase()] ?? value;
 };
 
 const normalizeUser = (user: UserAccount): UserAccount => {
-  const sanitized: UserAccount = {
-    ...user,
-    password: user.passwordDigest ? undefined : user.password,
-  };
-  const name = user.name?.trim() ?? "";
-  const composed =
-    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || name;
-  const parts = composed.split(" ").filter(Boolean);
-  const basePermissions = withDefaultPermissions(user.permissions);
+  const composedName =
+    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
+    user.name?.trim() ||
+    "Usuario";
+  const parts = composedName.split(" ").filter(Boolean);
+  const basePermissions = user.permissions ?? createDefaultPermissions();
   const basePreferences = createDefaultPreferences();
-  const preferences: UserPreferences = {
-    ...basePreferences,
-    ...(user.preferences ?? {}),
-    language: normalizeLanguage(user.preferences?.language ?? basePreferences.language),
-    notifications: {
-      ...basePreferences.notifications,
-      ...(user.preferences?.notifications ?? {}),
-    },
-  };
+
   const permissions =
     user.role === "Admin"
       ? {
-          ...basePermissions,
           modules: {
             accounting: true,
             events: true,
             contacts: true,
             documents: true,
           },
+          actions: {
+            view: false,
+            edit: true,
+            delete: true,
+          },
         }
       : basePermissions;
+
   return {
-    ...sanitized,
-    name: name || composed || "Usuario",
+    ...user,
+    name: composedName,
     firstName: user.firstName ?? parts[0] ?? "",
     lastName: user.lastName ?? parts.slice(1).join(" "),
     dni: user.dni ?? "",
     permissions,
-    preferences,
+    preferences: {
+      ...basePreferences,
+      ...(user.preferences ?? {}),
+      language: normalizeLanguage(
+        user.preferences?.language ?? basePreferences.language
+      ),
+      notifications: {
+        ...basePreferences.notifications,
+        ...(user.preferences?.notifications ?? {}),
+      },
+    },
+    password: user.passwordDigest ? undefined : user.password,
   };
 };
 
-const toAdminUser = (admin: AdminAccount): UserAccount =>
-  normalizeUser({
-    id: createUserId(),
-    firstName: admin.firstName ?? "",
-    lastName: admin.lastName ?? "",
-    name: `${admin.firstName} ${admin.lastName}`.trim() || "Administrador",
-    dni: admin.dni ?? "",
-    email: admin.email,
-    passwordDigest: admin.passwordDigest,
-    role: "Admin",
-    status: "Activo",
-    lastAccessAt: new Date().toISOString(),
-    permissions: createDefaultPermissions(),
-  });
-
-export const useUsersStore = create<UsersState>()(
-  persist(
-    (set, get) => ({
+export const useUsersStore = create<UsersState>((set) => ({
+  companyCode: null,
+  users: [],
+  hydrateUsers: ({ companyCode, users }) =>
+    set({
+      companyCode,
+      users: users.map(normalizeUser),
+    }),
+  ensureSeed: () => undefined,
+  addUser: ({
+    firstName,
+    lastName,
+    dni,
+    email,
+    passwordDigest,
+    role,
+    status,
+    permissions,
+    photoUrl,
+  }) =>
+    set((state) => ({
+      users: [
+        normalizeUser({
+          id: createUserId(),
+          firstName,
+          lastName,
+          dni,
+          email,
+          passwordDigest,
+          role,
+          status: status ?? "Pendiente",
+          photoUrl,
+          lastAccessAt: null,
+          permissions: permissions ?? createDefaultPermissions(),
+        }),
+        ...state.users,
+      ],
+    })),
+  updateUser: (id, updates) =>
+    set((state) => ({
+      users: state.users.map((user) =>
+        user.id === id ? normalizeUser({ ...user, ...updates }) : user
+      ),
+    })),
+  removeUser: (id) =>
+    set((state) => ({
+      users: state.users.filter((user) => user.id !== id),
+    })),
+  resetUsers: () =>
+    set({
       companyCode: null,
       users: [],
-      ensureSeed: (companyCode, admin) =>
-        set((state) => {
-          if (!companyCode || !admin) return state;
-          const adminUser = toAdminUser(admin);
-          const normalizedUsers = state.users.map(normalizeUser);
-
-          if (state.companyCode !== companyCode || normalizedUsers.length === 0) {
-            return {
-              companyCode,
-              users: [adminUser],
-            };
-          }
-
-          const exists = normalizedUsers.some(
-            (user) => user.email.toLowerCase() === admin.email.toLowerCase()
-          );
-
-          if (!exists) {
-            return {
-              companyCode,
-              users: [adminUser, ...normalizedUsers],
-            };
-          }
-
-          return {
-            companyCode: state.companyCode ?? companyCode,
-            users: normalizedUsers,
-          };
-        }),
-      addUser: ({
-        firstName,
-        lastName,
-        dni,
-        email,
-        passwordDigest,
-        role,
-        status,
-        permissions,
-        photoUrl,
-      }) => {
-        const displayName =
-          `${firstName} ${lastName}`.trim() || email || "Usuario";
-        set((state) => ({
-          users: [
-            normalizeUser({
-              id: createUserId(),
-              name: `${firstName} ${lastName}`.trim(),
-              firstName,
-              lastName,
-              dni,
-              email,
-              passwordDigest,
-              role,
-              status: status ?? "Pendiente",
-              lastAccessAt: null,
-              permissions: permissions ?? createDefaultPermissions(),
-              photoUrl,
-            }),
-            ...state.users.map(normalizeUser),
-          ],
-        }));
-        useNotificationsStore.getState().addNotification({
-          category: "members",
-          title: "Usuario creado",
-          description: `Se creó el usuario ${displayName}.`,
-          href: "/settings/users",
-          actionLabel: "Ver usuarios",
-          icon: "person_add",
-          tone: "bg-amber-50 text-amber-600",
-        });
-      },
-      updateUser: (id, updates) => {
-        const target = get().users.find((user) => user.id === id);
-        const displayName =
-          target?.name?.trim() ||
-          `${target?.firstName ?? ""} ${target?.lastName ?? ""}`.trim() ||
-          target?.email ||
-          "Usuario";
-        set((state) => ({
-          users: state.users.map((user) =>
-            user.id === id
-              ? normalizeUser({
-                  ...user,
-                  ...updates,
-                  password: updates.passwordDigest
-                    ? undefined
-                    : updates.password ?? user.password,
-                })
-              : user
-          ),
-        }));
-        useNotificationsStore.getState().addNotification({
-          category: "members",
-          title: "Usuario actualizado",
-          description: `Se actualizó el usuario ${displayName}.`,
-          href: "/settings/users",
-          actionLabel: "Ver usuarios",
-          icon: "manage_accounts",
-          tone: "bg-blue-50 text-blue-600",
-        });
-      },
-      removeUser: (id) => {
-        const target = get().users.find((user) => user.id === id);
-        const displayName =
-          target?.name?.trim() ||
-          `${target?.firstName ?? ""} ${target?.lastName ?? ""}`.trim() ||
-          target?.email ||
-          "Usuario";
-        set((state) => ({
-          users: state.users.filter((user) => user.id !== id),
-        }));
-        useNotificationsStore.getState().addNotification({
-          category: "members",
-          title: "Usuario eliminado",
-          description: `Se eliminó el usuario ${displayName}.`,
-          href: "/settings/users",
-          actionLabel: "Ver usuarios",
-          icon: "person_remove",
-          tone: "bg-rose-50 text-rose-600",
-        });
-      },
-      resetUsers: () => set({ users: [] }),
     }),
-    {
-      name: "kora-users",
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        companyCode: state.companyCode,
-        users: state.users.map((user) =>
-          user.passwordDigest ? { ...user, password: undefined } : user
-        ),
-      }),
-      onRehydrateStorage: () => (state) => {
-        if (!state) return;
-        const legacyUsers = state.users.filter(
-          (user) => user.password && !user.passwordDigest
-        );
-        if (legacyUsers.length === 0) return;
-        legacyUsers.forEach((user) => {
-          void (async () => {
-            try {
-              const passwordDigest = await createPasswordDigest(
-                user.password ?? ""
-              );
-              state.updateUser(user.id, { passwordDigest });
-            } catch (error) {
-              console.error(error);
-            }
-          })();
-        });
-      },
-    }
-  )
-);
+}));

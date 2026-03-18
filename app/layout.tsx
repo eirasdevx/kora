@@ -4,6 +4,7 @@ import { Inter, Sora } from "next/font/google";
 import AppearanceSync from "@/components/AppearanceSync";
 import LocaleSync from "@/components/LocaleSync";
 import PwaRegister from "@/components/PwaRegister";
+import SessionBootstrap from "@/components/SessionBootstrap";
 
 const bodyFont = Inter({
   subsets: ["latin"],
@@ -59,6 +60,7 @@ export default function RootLayout({
         />
       </head>
       <body>
+        <SessionBootstrap />
         <AppearanceSync />
         <LocaleSync />
         <PwaRegister />

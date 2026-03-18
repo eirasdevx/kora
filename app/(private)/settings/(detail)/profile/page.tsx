@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import PageHeader from "@/components/shared/PageHeader";
+import type { SessionBootstrapPayload } from "@/core/session/session-payload";
 import { useSessionStore } from "@/core/session/session.store";
 import {
   LOCALE_DATE_FORMATS,
@@ -23,6 +24,10 @@ import {
   useUsersStore,
 } from "@/core/users/users.store";
 import { createPasswordDigest } from "@/core/security/passwords";
+import {
+  applySessionPayload,
+  parseApiResponse,
+} from "@/lib/client/session-client";
 
 
 type Copy = {
@@ -590,7 +595,7 @@ function UserProfileCard({
   dateLocale: string;
   onPreferencesChange: Dispatch<SetStateAction<UserPreferences>>;
   onResetPreferences: () => void;
-  onSave: (updates: Partial<UserAccount>) => void;
+  onSave: (updates: Partial<UserAccount>) => void | Promise<void>;
 }) {
   const [form, setForm] = useState<UserProfileFormState>(
     getUserFormState(user)
@@ -727,19 +732,28 @@ function UserProfileCard({
       }
     }
 
-    onSave(updates);
-    setLastSavedAt(Date.now());
-    setForm((prev) => ({
-      ...prev,
-      firstName,
-      lastName,
-      phone,
-      photoUrl,
-      dni,
-      email,
-      password: "",
-      passwordRepeat: "",
-    }));
+      try {
+        await onSave(updates);
+        setLastSavedAt(Date.now());
+        setForm((prev) => ({
+          ...prev,
+          firstName,
+          lastName,
+          phone,
+          photoUrl,
+          dni,
+          email,
+          password: "",
+          passwordRepeat: "",
+        }));
+      } catch (error) {
+        console.error(error);
+        setFormError(
+          error instanceof Error
+            ? error.message
+            : "No se pudo actualizar el perfil."
+        );
+      }
   };
 
   const handleReset = () => {
@@ -1157,9 +1171,28 @@ export default function ProfileSettingsPage() {
         onResetPreferences={() =>
           setPreferences(resolvePreferences(activeUser?.preferences))
         }
-        onSave={(updates) => {
+        onSave={async (updates) => {
           if (!activeUser) return;
-          updateUser(activeUser.id, updates);
+
+          const response = await fetch("/api/account/profile", {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              firstName: updates.firstName,
+              lastName: updates.lastName,
+              phone: updates.phone,
+              photoUrl: updates.photoUrl,
+              dni: updates.dni,
+              email: updates.email,
+              passwordDigest: updates.passwordDigest,
+              preferences: updates.preferences,
+            }),
+          });
+
+          const session = await parseApiResponse<SessionBootstrapPayload>(response);
+          applySessionPayload(session);
         }}
       />
     </div>

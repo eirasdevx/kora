@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/Modal";
 import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
+import type { SessionBootstrapPayload } from "@/core/session/session-payload";
 import {
   createEmptyMembershipPlan,
   getAssociationMembershipSettings,
@@ -20,6 +21,11 @@ import {
   useSessionStore,
 } from "@/core/session/session.store";
 import { useUsersStore } from "@/core/users/users.store";
+import {
+  applySessionPayload,
+  clearClientSession,
+  parseApiResponse,
+} from "@/lib/client/session-client";
 
 type MembershipPlanFormState = {
   id: string;
@@ -173,9 +179,6 @@ export default function AssociationProfilePage() {
   const association = useSessionStore((s) => s.association);
   const companyCode = useSessionStore((s) => s.companyCode);
   const activeAssociationId = useSessionStore((s) => s.activeAssociationId);
-  const setAssociation = useSessionStore((s) => s.setAssociation);
-  const removeAssociation = useSessionStore((s) => s.removeAssociation);
-  const logout = useSessionStore((s) => s.logout);
   const activeUserId = useSessionStore((s) => s.activeUserId);
   const users = useUsersStore((s) => s.users);
   const activeUser = users.find((user) => user.id === activeUserId) ?? null;
@@ -802,18 +805,35 @@ export default function AssociationProfilePage() {
                   phone: rep.phone || undefined,
                 }));
 
-              setAssociation({
-                name: normalize(form.name),
-                logoUrl: form.logoUrl || undefined,
-                taxId: normalize(form.taxId) || undefined,
-                phone: normalize(form.phone) || undefined,
-                contactEmail: normalize(form.contactEmail) || undefined,
-                location: normalize(form.location) || undefined,
-                address: normalize(form.address) || undefined,
-                membershipSettings: membershipPreview.settings,
-                representatives: representatives.length ? representatives : undefined,
-              });
-              setLastSavedAt(Date.now());
+              void (async () => {
+                try {
+                  const response = await fetch("/api/association", {
+                    method: "PATCH",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      name: normalize(form.name),
+                      logoUrl: form.logoUrl || undefined,
+                      taxId: normalize(form.taxId) || undefined,
+                      phone: normalize(form.phone) || undefined,
+                      contactEmail: normalize(form.contactEmail) || undefined,
+                      location: normalize(form.location) || undefined,
+                      address: normalize(form.address) || undefined,
+                      membershipSettings: membershipPreview.settings,
+                      representatives:
+                        representatives.length > 0 ? representatives : undefined,
+                    }),
+                  });
+
+                  const session =
+                    await parseApiResponse<SessionBootstrapPayload>(response);
+                  applySessionPayload(session);
+                  setLastSavedAt(Date.now());
+                } catch (error) {
+                  console.error(error);
+                }
+              })();
             }}
             disabled={!hasChanges || !normalize(form.name)}
             className="rounded-2xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow disabled:cursor-not-allowed disabled:opacity-40"
@@ -867,12 +887,20 @@ export default function AssociationProfilePage() {
           </button>
           <button
             onClick={() => {
-              if (activeAssociationId) {
-                removeAssociation(activeAssociationId);
-              }
-              logout();
-              router.replace("/login");
-              setConfirmDeleteFinal(false);
+              void (async () => {
+                try {
+                  const response = await fetch("/api/association", {
+                    method: "DELETE",
+                  });
+                  await parseApiResponse<{ success: true }>(response);
+                  clearClientSession();
+                  router.replace("/login");
+                } catch (error) {
+                  console.error(error);
+                } finally {
+                  setConfirmDeleteFinal(false);
+                }
+              })();
             }}
             className="rounded-lg bg-red-700 px-4 py-2 text-white"
           >
