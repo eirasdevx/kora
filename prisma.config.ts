@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig } from "prisma/config";
+import { getConfiguredDatabaseUrl } from "./lib/database-url";
 
 const envFiles = [
   ".env",
@@ -58,6 +59,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: getConfiguredDatabaseUrl(),
   },
 });

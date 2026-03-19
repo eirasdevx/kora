@@ -26,7 +26,8 @@ const stripWrappingQuotes = (value) => {
 };
 
 const readDatabaseUrl = () => {
-  let databaseUrl = process.env.DATABASE_URL;
+  let localDatabaseUrl = process.env.LOCAL_DATABASE_URL;
+  let hostedDatabaseUrl = process.env.DATABASE_URL;
 
   for (const fileName of envFiles) {
     const filePath = path.join(rootDir, fileName);
@@ -50,16 +51,20 @@ const readDatabaseUrl = () => {
       }
 
       const key = trimmed.slice(0, separatorIndex).trim();
-      if (key !== "DATABASE_URL") {
-        continue;
+      const rawValue = trimmed.slice(separatorIndex + 1).trim();
+      const normalizedValue = stripWrappingQuotes(rawValue);
+
+      if (key === "LOCAL_DATABASE_URL") {
+        localDatabaseUrl = normalizedValue;
       }
 
-      const rawValue = trimmed.slice(separatorIndex + 1).trim();
-      databaseUrl = stripWrappingQuotes(rawValue);
+      if (key === "DATABASE_URL") {
+        hostedDatabaseUrl = normalizedValue;
+      }
     }
   }
 
-  return databaseUrl;
+  return process.env.VERCEL ? hostedDatabaseUrl ?? localDatabaseUrl : localDatabaseUrl ?? hostedDatabaseUrl;
 };
 
 const spawnCommand = (command, args, extraOptions = {}) => {

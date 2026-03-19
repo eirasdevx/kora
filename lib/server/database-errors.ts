@@ -1,3 +1,5 @@
+import { getConfiguredDatabaseUrl } from "@/lib/database-url";
+
 type PublicDatabaseError = {
   message: string;
   status: number;
@@ -25,7 +27,7 @@ export function getPublicDatabaseError(
   }
 
   if (message.includes("Can't reach database server at")) {
-    if (looksLikeSupabaseDirectUrl(process.env.DATABASE_URL)) {
+    if (looksLikeSupabaseDirectUrl(getConfiguredDatabaseUrl())) {
       return {
         message:
           "Tu entorno local no está alcanzando la conexión directa de Supabase. En Supabase > Connect copia la cadena 'Session pooler' (puerto 5432) y úsala como DATABASE_URL en .env.local.",
