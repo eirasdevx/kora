@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { PasswordDigest } from "@/core/security/passwords";
+import { getPublicDatabaseError } from "@/lib/server/database-errors";
 import { registerAssociationAdmin } from "@/lib/server/session-service";
 
 type RegisterPayload = {
@@ -69,14 +70,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(session);
   } catch (error) {
+    console.error(error);
+    const publicDatabaseError = getPublicDatabaseError(error);
+
     return NextResponse.json(
       {
         error:
-          error instanceof Error
+          publicDatabaseError?.message ??
+          (error instanceof Error
             ? error.message
-            : "No se pudo completar el registro.",
+            : "No se pudo completar el registro."),
       },
-      { status: 400 }
+      { status: publicDatabaseError?.status ?? 400 }
     );
   }
 }
