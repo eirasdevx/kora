@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { PasswordDigest } from "@/core/security/passwords";
-import type { UserPermissions, UserRole, UserStatus } from "@/core/users/users.store";
+import type {
+  UserPermissions,
+  UserRole,
+  UserStatus,
+} from "@/core/users/users.store";
+import { getPublicDatabaseError } from "@/lib/server/database-errors";
 import {
   deleteAssociationMember,
   updateAssociationMember,
@@ -30,10 +35,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     payload = (await request.json()) as UpdateUserPayload;
   } catch {
-    return NextResponse.json(
-      { error: "Solicitud inválida." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 });
   }
 
   if (
@@ -67,14 +69,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json(session);
   } catch (error) {
+    console.error(error);
+    const publicDatabaseError = getPublicDatabaseError(error);
+
     return NextResponse.json(
       {
         error:
-          error instanceof Error
+          publicDatabaseError?.message ??
+          (error instanceof Error
             ? error.message
-            : "No se pudo actualizar el usuario.",
+            : "No se pudo actualizar el usuario."),
       },
-      { status: 400 }
+      { status: publicDatabaseError?.status ?? 400 }
     );
   }
 }
@@ -86,14 +92,18 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     const session = await deleteAssociationMember(id);
     return NextResponse.json(session);
   } catch (error) {
+    console.error(error);
+    const publicDatabaseError = getPublicDatabaseError(error);
+
     return NextResponse.json(
       {
         error:
-          error instanceof Error
+          publicDatabaseError?.message ??
+          (error instanceof Error
             ? error.message
-            : "No se pudo eliminar el usuario.",
+            : "No se pudo eliminar el usuario."),
       },
-      { status: 400 }
+      { status: publicDatabaseError?.status ?? 400 }
     );
   }
 }

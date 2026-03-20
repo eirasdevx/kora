@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteCurrentAssociation, updateCurrentAssociation } from "@/lib/server/session-service";
+import { getPublicDatabaseError } from "@/lib/server/database-errors";
+import {
+  deleteCurrentAssociation,
+  updateCurrentAssociation,
+} from "@/lib/server/session-service";
 
 type AssociationPayload = {
   name?: string;
@@ -25,31 +29,35 @@ export async function PATCH(request: NextRequest) {
   try {
     payload = (await request.json()) as AssociationPayload;
   } catch {
-    return NextResponse.json(
-      { error: "Solicitud inválida." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 });
   }
 
   if (!payload.name) {
     return NextResponse.json(
-      { error: "El nombre de la asociación es obligatorio." },
+      { error: "El nombre de la asociacion es obligatorio." },
       { status: 400 }
     );
   }
 
   try {
-    const session = await updateCurrentAssociation(payload as Required<Pick<AssociationPayload, "name">> & AssociationPayload);
+    const session = await updateCurrentAssociation(
+      payload as Required<Pick<AssociationPayload, "name">> & AssociationPayload
+    );
+
     return NextResponse.json(session);
   } catch (error) {
+    console.error(error);
+    const publicDatabaseError = getPublicDatabaseError(error);
+
     return NextResponse.json(
       {
         error:
-          error instanceof Error
+          publicDatabaseError?.message ??
+          (error instanceof Error
             ? error.message
-            : "No se pudo actualizar la asociación.",
+            : "No se pudo actualizar la asociacion."),
       },
-      { status: 400 }
+      { status: publicDatabaseError?.status ?? 400 }
     );
   }
 }
@@ -59,14 +67,18 @@ export async function DELETE() {
     await deleteCurrentAssociation();
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error(error);
+    const publicDatabaseError = getPublicDatabaseError(error);
+
     return NextResponse.json(
       {
         error:
-          error instanceof Error
+          publicDatabaseError?.message ??
+          (error instanceof Error
             ? error.message
-            : "No se pudo eliminar la asociación.",
+            : "No se pudo eliminar la asociacion."),
       },
-      { status: 400 }
+      { status: publicDatabaseError?.status ?? 400 }
     );
   }
 }

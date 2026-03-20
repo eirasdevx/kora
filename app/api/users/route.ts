@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { PasswordDigest } from "@/core/security/passwords";
-import type { UserPermissions, UserRole, UserStatus } from "@/core/users/users.store";
+import type {
+  UserPermissions,
+  UserRole,
+  UserStatus,
+} from "@/core/users/users.store";
+import { getPublicDatabaseError } from "@/lib/server/database-errors";
 import { createAssociationMember } from "@/lib/server/session-service";
 
 type CreateUserPayload = {
@@ -21,10 +26,7 @@ export async function POST(request: NextRequest) {
   try {
     payload = (await request.json()) as CreateUserPayload;
   } catch {
-    return NextResponse.json(
-      { error: "Solicitud inválida." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 });
   }
 
   if (
@@ -57,14 +59,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(session);
   } catch (error) {
+    console.error(error);
+    const publicDatabaseError = getPublicDatabaseError(error);
+
     return NextResponse.json(
       {
         error:
-          error instanceof Error
+          publicDatabaseError?.message ??
+          (error instanceof Error
             ? error.message
-            : "No se pudo crear el usuario.",
+            : "No se pudo crear el usuario."),
       },
-      { status: 400 }
+      { status: publicDatabaseError?.status ?? 400 }
     );
   }
 }
