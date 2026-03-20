@@ -255,6 +255,90 @@ function EyeIcon({ open }: { open: boolean }) {
   );
 }
 
+type PageNotice = {
+  tone: "success" | "warning";
+  message: string;
+};
+
+async function sendNewUserInviteEmail(input: {
+  associationName: string;
+  companyCode: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+}) {
+  const loginUrl =
+    typeof window !== "undefined"
+      ? new URL("/login", window.location.origin).toString()
+      : "/login";
+
+  try {
+    const response = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        useCurrentAssociation: true,
+        recipients: [
+          {
+            email: input.email,
+            firstName: input.firstName,
+            lastName: input.lastName,
+          },
+        ],
+        subject: `Te han invitado a ${input.associationName} en Kora`,
+        htmlMessage: `
+          <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
+            <h2>Invitacion a ${input.associationName}</h2>
+            <p>Hola ${input.firstName || input.email},</p>
+            <p>Tu asociacion te ha dado acceso a Kora como nuevo usuario.</p>
+            <div style="margin: 16px 0; padding: 16px; border: 1px solid #dbeafe; border-radius: 12px; background: #f8fbff;">
+              <p style="margin: 0 0 8px;"><strong>Asociacion:</strong> ${input.associationName}</p>
+              <p style="margin: 0 0 8px;"><strong>Codigo de asociacion:</strong> ${input.companyCode}</p>
+              <p style="margin: 0 0 8px;"><strong>Usuario:</strong> ${input.email}</p>
+              <p style="margin: 0;"><strong>Contrasena temporal:</strong> ${input.password}</p>
+            </div>
+            <p>Puedes iniciar sesion desde aqui:</p>
+            <p><a href="${loginUrl}" style="color: #2563eb; font-weight: 600;">${loginUrl}</a></p>
+            <p>Te recomendamos cambiar la contrasena despues del primer acceso.</p>
+          </div>
+        `,
+      }),
+    });
+
+    const payload = (await response.json().catch(() => null)) as
+      | {
+          success?: boolean;
+          errors?: Array<{ message?: string }>;
+        }
+      | null;
+
+    if (!response.ok || !payload?.success) {
+      return {
+        tone: "warning" as const,
+        message:
+          payload?.errors?.[0]?.message
+            ? `Usuario creado, pero no se pudo enviar la invitacion: ${payload.errors[0].message}`
+            : "Usuario creado, pero no se pudo enviar el correo de invitacion.",
+      };
+    }
+
+    return {
+      tone: "success" as const,
+      message: `Usuario creado y correo de invitacion enviado a ${input.email}.`,
+    };
+  } catch (error) {
+    console.error(error);
+    return {
+      tone: "warning" as const,
+      message:
+        "Usuario creado, pero hubo un error al enviar el correo de invitacion.",
+    };
+  }
+}
+
 export default function UsersSettingsPage() {
   const router = useRouter();
   const mode = useSessionStore((s) => s.mode);
@@ -265,9 +349,6 @@ export default function UsersSettingsPage() {
 
   const users = useUsersStore((s) => s.users);
   const ensureSeed = useUsersStore((s) => s.ensureSeed);
-  const addUser = useUsersStore((s) => s.addUser);
-  const updateUser = useUsersStore((s) => s.updateUser);
-  const removeUser = useUsersStore((s) => s.removeUser);
   const activeUser = users.find((user) => user.id === activeUserId);
   const isAdmin = activeUser?.role === "Admin";
   const canEditSidebar = isAdmin;
@@ -281,6 +362,7 @@ export default function UsersSettingsPage() {
   const [panelMode, setPanelMode] = useState<"summary" | "create" | "edit">(
     "summary"
   );
+  const [pageNotice, setPageNotice] = useState<PageNotice | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [userForm, setUserForm] = useState<UserFormState>(createEmptyForm());
   const editorOpen = panelMode === "create" || panelMode === "edit";
@@ -372,6 +454,7 @@ export default function UsersSettingsPage() {
   ) => {
     event.preventDefault();
     setFormError(null);
+    setPageNotice(null);
 
     const isCreate = panelMode === "create";
     const firstName = userForm.firstName.trim();
@@ -444,6 +527,16 @@ export default function UsersSettingsPage() {
           session.users.find((user) => user.email.toLowerCase() === email) ??
           null;
         setSelectedId(created?.id ?? null);
+
+        const inviteResult = await sendNewUserInviteEmail({
+          associationName: session.association.name,
+          companyCode: session.companyCode,
+          firstName,
+          lastName,
+          email,
+          password,
+        });
+        setPageNotice(inviteResult);
       } catch (error) {
         console.error(error);
         setFormError(
@@ -661,6 +754,7 @@ export default function UsersSettingsPage() {
             <button
               type="button"
               onClick={() => {
+                setPageNotice(null);
                 setFormError(null);
                 setUserForm(createEmptyForm());
                 setShowPassword(false);
@@ -678,6 +772,18 @@ export default function UsersSettingsPage() {
           ) : null
         }
       />
+
+      {pageNotice ? (
+        <div
+          className={`rounded-2xl border px-4 py-3 text-sm shadow-sm ${
+            pageNotice.tone === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-amber-200 bg-amber-50 text-amber-700"
+          }`}
+        >
+          {pageNotice.message}
+        </div>
+      ) : null}
       <div className="hidden">
       <PageTopbar>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -702,6 +808,7 @@ export default function UsersSettingsPage() {
               <button
                 type="button"
                 onClick={() => {
+                  setPageNotice(null);
                   setFormError(null);
                   setUserForm(createEmptyForm());
                   setShowPassword(false);

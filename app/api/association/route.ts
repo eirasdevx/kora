@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { AssociationMessagingSettings } from "@/core/messaging/settings";
 import { getPublicDatabaseError } from "@/lib/server/database-errors";
 import {
   deleteCurrentAssociation,
@@ -14,6 +15,7 @@ type AssociationPayload = {
   location?: string;
   address?: string;
   membershipSettings?: unknown;
+  messagingSettings?: Partial<AssociationMessagingSettings>;
   representatives?: Array<{
     id: string;
     role: string;
@@ -32,17 +34,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 });
   }
 
-  if (!payload.name) {
-    return NextResponse.json(
-      { error: "El nombre de la asociacion es obligatorio." },
-      { status: 400 }
-    );
-  }
-
   try {
-    const session = await updateCurrentAssociation(
-      payload as Required<Pick<AssociationPayload, "name">> & AssociationPayload
-    );
+    const session = await updateCurrentAssociation(payload);
 
     return NextResponse.json(session);
   } catch (error) {

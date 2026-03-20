@@ -43,8 +43,19 @@ export default function ForgotPasswordPage() {
   }, [loadSettings]);
 
   const senderReady = useMemo(
-    () => Boolean(settings.emailAddress && settings.emailAppPassword),
-    [settings.emailAddress, settings.emailAppPassword]
+    () =>
+      Boolean(
+        settings.emailAddress &&
+          (association
+            ? settings.hasEmailAppPassword || settings.emailAppPassword
+            : settings.emailAppPassword)
+      ),
+    [
+      association,
+      settings.emailAddress,
+      settings.hasEmailAppPassword,
+      settings.emailAppPassword,
+    ]
   );
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -99,9 +110,19 @@ export default function ForgotPasswordPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          associationName: senderName,
-          associationEmail: settings.emailAddress,
-          associationAppPassword: settings.emailAppPassword,
+          ...(association
+            ? {
+                useCurrentAssociation: true,
+              }
+            : {
+                associationName: senderName,
+                associationEmail: settings.emailAddress,
+                associationAppPassword: settings.emailAppPassword,
+                emailProvider: settings.emailProvider,
+                smtpHost: settings.smtpHost,
+                smtpPort: settings.smtpPort,
+                smtpSecure: settings.smtpSecure,
+              }),
           recipients: [normalizedEmail],
           subject: "Clave temporal para acceder a Kora",
           htmlMessage: `
@@ -114,10 +135,6 @@ export default function ForgotPasswordPage() {
               <p style="margin-top: 12px;">Si no solicitaste este cambio, ignora este correo.</p>
             </div>
           `,
-          emailProvider: settings.emailProvider,
-          smtpHost: settings.smtpHost,
-          smtpPort: settings.smtpPort,
-          smtpSecure: settings.smtpSecure,
         }),
       });
 

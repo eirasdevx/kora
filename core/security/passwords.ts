@@ -1,5 +1,3 @@
-"use client";
-
 export type PasswordDigest = {
   version: 1;
   algorithm: "PBKDF2";

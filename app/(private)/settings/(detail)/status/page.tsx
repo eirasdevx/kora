@@ -94,7 +94,7 @@ export default function SystemStatusPage() {
     settingsHydrated &&
       settings.senderName &&
       settings.emailAddress &&
-      settings.emailAppPassword
+      (settings.hasEmailAppPassword || settings.emailAppPassword)
   );
   const unreadNotifications = notifications.filter((item) => !item.read).length;
   const pendingTransactions = transactions.filter(
@@ -229,7 +229,7 @@ export default function SystemStatusPage() {
         ? messagingReady
           ? settings.emailAddress
           : "Configura remitente, correo y credencial SMTP."
-        : "Comprobando credenciales guardadas.",
+        : "Comprobando ajustes de mensajería.",
       state: settingsHydrated
         ? messagingReady
           ? "ok"
@@ -268,7 +268,7 @@ export default function SystemStatusPage() {
         ? messagingReady
           ? "El canal de correo tiene configuración suficiente para campañas."
           : "La configuración de mensajería sigue incompleta."
-        : "Comprobando ajustes locales de mensajería.",
+        : "Comprobando ajustes de mensajería.",
     },
     {
       title: "Seguridad del equipo",

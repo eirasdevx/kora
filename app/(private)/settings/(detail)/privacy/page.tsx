@@ -77,7 +77,7 @@ export default function PrivacyPage() {
     hydrated &&
       settings.senderName &&
       settings.emailAddress &&
-      settings.emailAppPassword
+      (settings.hasEmailAppPassword || settings.emailAppPassword)
   );
 
   const summaryCards = [
@@ -247,10 +247,9 @@ export default function PrivacyPage() {
               inventario y otros registros funcionales.
             </p>
             <p>
-              Las credenciales sensibles de mensajería se guardan en
-              almacenamiento local cifrado con AES-GCM, utilizando una clave
-              local del navegador. Este mecanismo reduce la exposición del
-              secreto en texto claro dentro del entorno de uso habitual.
+              Las credenciales sensibles de mensajería se vinculan a la
+              asociación activa para que cada entidad envíe con su propio
+              remitente y no reutilice el de otra asociación.
             </p>
             <p>
               No existe cesión automática a terceros por defecto. Solo se
@@ -305,7 +304,7 @@ export default function PrivacyPage() {
                   ? messagingReady
                     ? `Se usará ${settings.emailAddress} cuando la asociación envíe campañas.`
                     : "No hay un remitente completo configurado para envíos externos."
-                  : "Comprobando ajustes locales de mensajería."}
+                  : "Comprobando ajustes de mensajería de la asociación."}
               </p>
             </div>
             <div className="rounded-2xl border border-gray-200 bg-white p-4">

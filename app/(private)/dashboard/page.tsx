@@ -246,10 +246,13 @@ export default function DashboardPage() {
     association?.name?.trim() || "Panel Integral 360°";
   const senderName = settings.senderName || association?.name || "";
   const senderEmail = settings.emailAddress || association?.contactEmail || "";
-  const senderPassword = settings.emailAppPassword || "";
   const safeRange = Math.min(6, Math.max(3, monthsRange));
   const isGuest = mode === "guest";
-  const messagingReady = Boolean(senderName && senderEmail && senderPassword);
+  const messagingReady = Boolean(
+    senderName &&
+      senderEmail &&
+      (settings.hasEmailAppPassword || settings.emailAppPassword)
+  );
   const recentTemplates = useMemo(() => {
     const sorted = [...templates].sort((a, b) =>
       b.updatedAt.localeCompare(a.updatedAt)

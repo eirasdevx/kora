@@ -10,6 +10,11 @@ import {
   setSessionCookie,
 } from "@/lib/auth";
 import {
+  type AssociationMessagingSettings,
+  mergeAssociationMessagingSettings,
+  toPublicAssociationMessagingSettings,
+} from "@/core/messaging/settings";
+import {
   type PasswordDigest,
   verifyPassword,
 } from "@/core/security/passwords";
@@ -24,10 +29,6 @@ import type {
   UserRole,
   UserStatus,
 } from "@/core/users/users.store";
-
-type SessionMembershipRecord = Awaited<
-  ReturnType<typeof prisma.associationUser.findFirst>
->;
 
 export type ClientMetadata = {
   ipAddress?: string | null;
@@ -62,12 +63,6 @@ const ADMIN_PERMISSIONS: UserPermissions = {
     edit: true,
     delete: true,
   },
-};
-
-const DEFAULT_NOTIFICATIONS = {
-  updates: true,
-  email: true,
-  browser: false,
 };
 
 const DEFAULT_LANGUAGE = "es";
@@ -151,6 +146,7 @@ const mapAssociationProfile = (association: {
   locationName: string | null;
   addressLine1: string | null;
   membershipSettings: unknown;
+  messagingSettings: unknown;
   representatives: Array<{
     id: string;
     roleTitle: string | null;
@@ -169,6 +165,13 @@ const mapAssociationProfile = (association: {
   membershipSettings: getAssociationMembershipSettings({
     membershipSettings: association.membershipSettings,
   }),
+  messagingSettings: toPublicAssociationMessagingSettings(
+    association.messagingSettings,
+    {
+      senderName: association.name,
+      emailAddress: association.contactEmail ?? undefined,
+    }
+  ),
   representatives:
     association.representatives.length > 0
       ? association.representatives.map((representative) => ({
@@ -930,7 +933,7 @@ export async function deleteAssociationMember(targetUserId: string) {
 }
 
 export async function updateCurrentAssociation(input: {
-  name: string;
+  name?: string;
   logoUrl?: string;
   taxId?: string;
   phone?: string;
@@ -938,6 +941,7 @@ export async function updateCurrentAssociation(input: {
   location?: string;
   address?: string;
   membershipSettings?: unknown;
+  messagingSettings?: Partial<AssociationMessagingSettings>;
   representatives?: Array<{
     id: string;
     role: string;
@@ -951,31 +955,67 @@ export async function updateCurrentAssociation(input: {
     throw new Error("No tienes permisos para editar la asociación.");
   }
 
+  if (input.name !== undefined && !input.name.trim()) {
+    throw new Error("El nombre de la asociación es obligatorio.");
+  }
+
+  const data: Record<string, unknown> = {};
+
+  if (input.name !== undefined) {
+    data.name = input.name.trim();
+  }
+  if (input.logoUrl !== undefined) {
+    data.logoUrl = normalizeOptional(input.logoUrl);
+  }
+  if (input.taxId !== undefined) {
+    data.taxId = normalizeOptional(input.taxId);
+  }
+  if (input.phone !== undefined) {
+    data.phone = normalizeOptional(input.phone);
+  }
+  if (input.contactEmail !== undefined) {
+    data.contactEmail = normalizeOptional(input.contactEmail);
+  }
+  if (input.location !== undefined) {
+    data.locationName = normalizeOptional(input.location);
+  }
+  if (input.address !== undefined) {
+    data.addressLine1 = normalizeOptional(input.address);
+  }
+  if (input.membershipSettings !== undefined) {
+    data.membershipSettings = input.membershipSettings;
+  }
+  if (input.messagingSettings !== undefined) {
+    data.messagingSettings = mergeAssociationMessagingSettings(
+      context.membership.association.messagingSettings,
+      input.messagingSettings
+    );
+  }
+  if (input.representatives !== undefined) {
+    data.representatives = {
+      deleteMany: {},
+      create: input.representatives.map((representative) => ({
+        id: representative.id,
+        roleTitle: representative.role.trim() || null,
+        fullName: representative.name.trim(),
+        email: normalizeOptional(representative.email),
+        phone: normalizeOptional(representative.phone),
+      })),
+    };
+  }
+
+  if (Object.keys(data).length === 0) {
+    return buildSessionBootstrap(
+      context.session.userId,
+      context.membership.associationId
+    );
+  }
+
   await prisma.association.update({
     where: {
       id: context.membership.associationId,
     },
-    data: {
-      name: input.name.trim(),
-      logoUrl: normalizeOptional(input.logoUrl),
-      taxId: normalizeOptional(input.taxId),
-      phone: normalizeOptional(input.phone),
-      contactEmail: normalizeOptional(input.contactEmail),
-      locationName: normalizeOptional(input.location),
-      addressLine1: normalizeOptional(input.address),
-      membershipSettings: input.membershipSettings ?? undefined,
-      representatives: {
-        deleteMany: {},
-        create:
-          input.representatives?.map((representative) => ({
-            id: representative.id,
-            roleTitle: representative.role.trim() || null,
-            fullName: representative.name.trim(),
-            email: normalizeOptional(representative.email),
-            phone: normalizeOptional(representative.phone),
-          })) ?? [],
-      },
-    },
+    data: data as Parameters<typeof prisma.association.update>[0]["data"],
   });
 
   return buildSessionBootstrap(

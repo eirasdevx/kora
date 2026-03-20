@@ -55,6 +55,7 @@ model Association {
   locationName       String?
   addressLine1       String?
   membershipSettings Json?
+  messagingSettings  Json?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
   representatives    AssociationRepresentative[]

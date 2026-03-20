@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import type { SessionBootstrapPayload } from "@/core/session/session-payload";
+import type { PublicAssociationMessagingSettings } from "@/core/messaging/settings";
 import type { PasswordDigest } from "@/core/security/passwords";
 import {
   type AssociationAccountingSettings,
@@ -59,6 +60,7 @@ export type AssociationProfile = {
   representatives?: AssociationRepresentative[];
   membershipSettings?: AssociationMembershipSettings;
   accountingSettings?: AssociationAccountingSettings;
+  messagingSettings?: PublicAssociationMessagingSettings;
 };
 
 export type AssociationEntry = {

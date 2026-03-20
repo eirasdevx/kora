@@ -127,7 +127,6 @@ export default function MessagingBulkPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [associationName, setAssociationName] = useState("");
   const [associationEmail, setAssociationEmail] = useState("");
-  const [associationAppPassword, setAssociationAppPassword] = useState("");
   const [subject, setSubject] = useState("");
   const [htmlMessage, setHtmlMessage] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
@@ -170,12 +169,10 @@ export default function MessagingBulkPage() {
     setAssociationEmail(
       settings.emailAddress || association?.contactEmail || ""
     );
-    setAssociationAppPassword(settings.emailAppPassword || "");
   }, [
     hydrated,
     settings.senderName,
     settings.emailAddress,
-    settings.emailAppPassword,
     association,
   ]);
 
@@ -241,6 +238,11 @@ export default function MessagingBulkPage() {
           settings.emailProvider as Exclude<EmailProvider, "custom">
         ];
   const customSecurityLabel = settings.smtpSecure ? "SSL/TLS" : "STARTTLS";
+  const messagingReady = Boolean(
+    associationName &&
+      associationEmail &&
+      (settings.hasEmailAppPassword || settings.emailAppPassword)
+  );
 
   const toggleRecipient = (id: string) => {
     setSelectedIds((prev) => {
@@ -266,8 +268,10 @@ export default function MessagingBulkPage() {
       setSendError("Selecciona una plantilla.");
       return;
     }
-    if (!associationName || !associationEmail || !associationAppPassword) {
-      setSendError("Completa el correo y la contraseña SMTP.");
+    if (!messagingReady) {
+      setSendError(
+        "Configura el remitente SMTP de esta asociación antes de enviar."
+      );
       return;
     }
     if (!subject || !htmlMessage) {
@@ -288,13 +292,7 @@ export default function MessagingBulkPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          associationName,
-          associationEmail,
-          associationAppPassword,
-          emailProvider: settings.emailProvider,
-          smtpHost: settings.smtpHost,
-          smtpPort: settings.smtpPort,
-          smtpSecure: settings.smtpSecure,
+          useCurrentAssociation: true,
           recipients: selectedRecipients,
           subject,
           htmlMessage,
@@ -318,7 +316,9 @@ export default function MessagingBulkPage() {
         );
       }
     } catch {
-      setSendError("No se pudo enviar el correo. Revisa los datos.");
+      setSendError(
+        "No se pudo enviar el correo. Revisa la configuración SMTP de esta asociación."
+      );
     } finally {
       setSending(false);
     }

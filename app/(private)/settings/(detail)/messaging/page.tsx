@@ -247,7 +247,9 @@ export default function MessagingSettingsPage() {
               className="mt-2 w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm"
             />
             <p className="mt-2 text-xs text-gray-400">
-              Se guarda cifrada en el navegador y no se expone en la interfaz.
+              {settings.hasEmailAppPassword && !settings.emailAppPassword
+                ? "Ya hay una contraseña SMTP guardada para esta asociación. Déjalo vacío si no quieres cambiarla."
+                : "Se guardará para la asociación activa y se usará en sus envíos automáticos."}
             </p>
           </div>
           {settings.emailProvider === "custom" ? (

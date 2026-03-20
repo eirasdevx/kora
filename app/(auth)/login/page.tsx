@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { SessionBootstrapPayload } from "@/core/session/session-payload";
 import { useSessionStore } from "@/core/session/session.store";
 import {
@@ -10,8 +10,23 @@ import {
   parseApiResponse,
 } from "@/lib/client/session-client";
 
-export default function LoginPage() {
+type LoginCredentials = {
+  identifier: string;
+  password: string;
+  companyCode: string;
+};
+
+const normalizeLoginCredentials = (
+  credentials: Partial<LoginCredentials>
+): LoginCredentials => ({
+  identifier: credentials.identifier?.trim() ?? "",
+  password: credentials.password ?? "",
+  companyCode: credentials.companyCode?.trim().toUpperCase() ?? "",
+});
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const mode = useSessionStore((state) => state.mode);
   const hydrated = useSessionStore((state) => state.hydrated);
   const setGuest = useSessionStore((state) => state.setGuest);
@@ -35,8 +50,33 @@ export default function LoginPage() {
     router.replace("/dashboard");
   }, [hydrated, mode, router]);
 
-  const submitLogin = async (verificationCode?: string) => {
+  useEffect(() => {
+    const rememberedIdentifier = searchParams.get("identifier")?.trim();
+    const rememberedCompanyCode = searchParams.get("companyCode")?.trim();
+
+    if (rememberedIdentifier) {
+      setIdentifier((previous) => previous || rememberedIdentifier);
+    }
+
+    if (rememberedCompanyCode) {
+      setCompanyCode((previous) => previous || rememberedCompanyCode);
+    }
+  }, [searchParams]);
+
+  const submitLogin = async (
+    credentials: LoginCredentials,
+    verificationCode?: string
+  ) => {
     if (submitting) {
+      return;
+    }
+
+    if (
+      !credentials.identifier ||
+      !credentials.password ||
+      !credentials.companyCode
+    ) {
+      setError("Completa usuario, contraseña y código de empresa.");
       return;
     }
 
@@ -51,9 +91,9 @@ export default function LoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          identifier,
-          password,
-          companyCode,
+          identifier: credentials.identifier,
+          password: credentials.password,
+          companyCode: credentials.companyCode,
           twoFactorCode: verificationCode,
         }),
       });
@@ -71,7 +111,7 @@ export default function LoginPage() {
       const message =
         requestError instanceof Error
           ? requestError.message
-          : "No se pudo iniciar sesión.";
+          : "No se pudo iniciar sesion.";
 
       if (pendingTwoFactor || verificationCode) {
         setTwoFactorError(message);
@@ -85,7 +125,19 @@ export default function LoginPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await submitLogin();
+
+    const formData = new FormData(event.currentTarget);
+    const credentials = normalizeLoginCredentials({
+      identifier: String(formData.get("identifier") ?? ""),
+      password: String(formData.get("password") ?? ""),
+      companyCode: String(formData.get("companyCode") ?? ""),
+    });
+
+    setIdentifier(credentials.identifier);
+    setPassword(credentials.password);
+    setCompanyCode(credentials.companyCode);
+
+    await submitLogin(credentials);
   };
 
   const handleTwoFactorSubmit = async (
@@ -94,11 +146,18 @@ export default function LoginPage() {
     event.preventDefault();
 
     if (!twoFactorCode.trim()) {
-      setTwoFactorError("Introduce el código de verificación.");
+      setTwoFactorError("Introduce el codigo de verificacion.");
       return;
     }
 
-    await submitLogin(twoFactorCode);
+    await submitLogin(
+      normalizeLoginCredentials({
+        identifier,
+        password,
+        companyCode,
+      }),
+      twoFactorCode
+    );
   };
 
   return (
@@ -126,11 +185,11 @@ export default function LoginPage() {
 
             <div className="max-w-md space-y-6">
               <h1 className="text-4xl font-semibold leading-tight">
-                Gestiona tu asociación con elegancia.
+                Gestiona tu asociacion con elegancia.
               </h1>
               <p className="text-base text-white/80">
-                Centraliza finanzas, recursos, eventos y mensajería en una sola
-                plataforma intuitiva diseñada para el crecimiento comunitario.
+                Centraliza finanzas, recursos, eventos y mensajeria en una sola
+                plataforma intuitiva disenada para el crecimiento comunitario.
               </p>
             </div>
 
@@ -148,14 +207,14 @@ export default function LoginPage() {
                 Bienvenido a Kora
               </h2>
               <p className="text-sm text-slate-500">
-                Ingresa tu DNI o correo, contraseña y el código de empresa.
+                Ingresa tu DNI o correo, contrasena y el codigo de empresa.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  DNI o correo electrónico
+                  DNI o correo electronico
                 </label>
                 <input
                   name="identifier"
@@ -163,21 +222,30 @@ export default function LoginPage() {
                   value={identifier}
                   onChange={(event) => setIdentifier(event.target.value)}
                   placeholder="DNI o correo"
+                  autoComplete="username"
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between gap-3 text-sm">
                   <label className="font-medium text-slate-700">
-                    Contraseña
+                    Contrasena
                   </label>
-                  <Link
-                    href="/forgot-password"
-                    className="font-medium text-blue-600 hover:text-blue-700"
-                  >
-                    Olvidaste tu contraseña?
-                  </Link>
+                  <div className="flex flex-wrap items-center justify-end gap-3">
+                    <Link
+                      href="/forgot-password"
+                      className="font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      Olvidaste tu contrasena?
+                    </Link>
+                    <Link
+                      href="/remember-company-code"
+                      className="font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      Recordar codigos
+                    </Link>
+                  </div>
                 </div>
 
                 <div className="relative">
@@ -186,7 +254,8 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="••••••••"
+                    placeholder="********"
+                    autoComplete="current-password"
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
                   <button
@@ -195,8 +264,8 @@ export default function LoginPage() {
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     aria-label={
                       showPassword
-                        ? "Ocultar contraseña"
-                        : "Mostrar contraseña"
+                        ? "Ocultar contrasena"
+                        : "Mostrar contrasena"
                     }
                   >
                     <span className="material-symbols-outlined text-[18px]">
@@ -208,14 +277,17 @@ export default function LoginPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Código de empresa
+                  Codigo de empresa
                 </label>
                 <input
                   name="companyCode"
                   type="text"
                   value={companyCode}
-                  onChange={(event) => setCompanyCode(event.target.value)}
+                  onChange={(event) =>
+                    setCompanyCode(event.target.value.toUpperCase())
+                  }
                   placeholder="KORA-0000-0000"
+                  autoCapitalize="characters"
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
@@ -227,7 +299,7 @@ export default function LoginPage() {
                   onChange={(event) => setRememberSession(event.target.checked)}
                   className="h-4 w-4 rounded border-slate-300 text-blue-600"
                 />
-                Mantener sesión iniciada
+                Mantener sesion iniciada
               </label>
 
               {error ? (
@@ -241,7 +313,7 @@ export default function LoginPage() {
                 disabled={submitting}
                 className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
               >
-                {submitting ? "Validando..." : "Iniciar sesión"}
+                {submitting ? "Validando..." : "Iniciar sesion"}
               </button>
             </form>
 
@@ -253,7 +325,7 @@ export default function LoginPage() {
               }}
               className="w-full rounded-xl border border-dashed border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:border-slate-300"
             >
-              Iniciar sesión como invitado
+              Iniciar sesion como invitado
             </button>
 
             <p className="text-center text-sm text-slate-500">
@@ -274,17 +346,17 @@ export default function LoginPage() {
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <div className="space-y-1">
               <h3 className="text-lg font-semibold text-slate-900">
-                Verificación en dos pasos
+                Verificacion en dos pasos
               </h3>
               <p className="text-sm text-slate-500">
-                Introduce el código de tu app para continuar.
+                Introduce el codigo de tu app para continuar.
               </p>
             </div>
 
             <form onSubmit={handleTwoFactorSubmit} className="mt-5 space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Código de verificación
+                  Codigo de verificacion
                 </label>
                 <input
                   value={twoFactorCode}
@@ -331,5 +403,13 @@ export default function LoginPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }
