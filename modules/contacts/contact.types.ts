@@ -16,6 +16,7 @@ export interface ContactPrivacyPermissions {
 
 export interface Contact {
   id: string;
+  associationId?: string;
   kind: ContactKind;
   firstName: string;
   lastName: string;

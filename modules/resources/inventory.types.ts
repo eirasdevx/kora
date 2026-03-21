@@ -6,6 +6,7 @@ export type InventoryStatus =
 
 export type InventoryItem = {
   id: string;
+  associationId?: string;
   name: string;
   category: string;
   quantity: number;

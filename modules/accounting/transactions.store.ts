@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { Transaction } from "./transaction.types";
 import { db } from "@/core/storage/kora.db";
+import {
+  getActiveAssociationId,
+  getAssociationScopedRecords,
+  withActiveAssociation,
+} from "@/core/storage/association-scope";
 import { useSessionStore } from "@/core/session/session.store";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
 import { ensureTransactionAccountingCode } from "@/modules/accounting/accounting-codes";
@@ -31,12 +36,16 @@ export const useTransactionsStore = create<TransactionsState>(
     loadTransactions: async () => {
       if (!isAuthenticated()) return;
       const all = await db.transactions.toArray();
+      const { scopedRecords, migratedRecords } = getAssociationScopedRecords(
+        all,
+        getActiveAssociationId()
+      );
       const association = useSessionStore.getState().association;
-      const normalizedTransactions = all.map((transaction) =>
+      const normalizedTransactions = scopedRecords.map((transaction) =>
         ensureTransactionAccountingCode(transaction, association)
       );
       const shouldBackfill = normalizedTransactions.some((transaction, index) => {
-        const source = all[index];
+        const source = scopedRecords[index];
         return (
           transaction.accountingAccountKey !== source.accountingAccountKey ||
           transaction.accountCode !== source.accountCode ||
@@ -44,7 +53,7 @@ export const useTransactionsStore = create<TransactionsState>(
         );
       });
 
-      if (shouldBackfill) {
+      if (shouldBackfill || migratedRecords.length > 0) {
         await db.transactions.bulkPut(normalizedTransactions);
       }
 
@@ -55,7 +64,10 @@ export const useTransactionsStore = create<TransactionsState>(
 
     addTransaction: async (tx) => {
       const association = useSessionStore.getState().association;
-      const normalizedTx = ensureTransactionAccountingCode(tx, association);
+      const normalizedTx = ensureTransactionAccountingCode(
+        withActiveAssociation(tx),
+        association
+      );
       if (!isAuthenticated()) {
         set((state) => ({
           transactions: [...state.transactions, normalizedTx],
@@ -94,7 +106,10 @@ export const useTransactionsStore = create<TransactionsState>(
 
     updateTransaction: async (tx) => {
       const association = useSessionStore.getState().association;
-      const normalizedTx = ensureTransactionAccountingCode(tx, association);
+      const normalizedTx = ensureTransactionAccountingCode(
+        withActiveAssociation(tx),
+        association
+      );
       if (!isAuthenticated()) {
         set((state) => ({
           transactions: state.transactions.map((t) =>

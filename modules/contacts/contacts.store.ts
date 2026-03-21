@@ -7,6 +7,11 @@ import {
 import { normalizeContactPrivacyPermissions } from "./contact-privacy";
 import { Contact, ContactKind, ContactType } from "./contact.types";
 import { db } from "@/core/storage/kora.db";
+import {
+  getActiveAssociationId,
+  getAssociationScopedRecords,
+  withActiveAssociation,
+} from "@/core/storage/association-scope";
 import { useSessionStore } from "@/core/session/session.store";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
 import {
@@ -50,7 +55,12 @@ const hasMembershipTransaction = async (contactId: string) => {
   if (!isAuthenticated()) return false;
 
   const persisted = await db.transactions.toArray();
-  return persisted.some(
+  const { scopedRecords } = getAssociationScopedRecords(
+    persisted,
+    getActiveAssociationId()
+  );
+
+  return scopedRecords.some(
     (tx) =>
       tx.category === "membership" &&
       (tx.contactId === contactId || tx.contactIds?.includes(contactId))
@@ -124,7 +134,11 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
   loadContacts: async () => {
     if (!isAuthenticated()) return;
     const all = await db.contacts.toArray();
-    const normalized = all.map((c) => {
+    const { scopedRecords, migratedRecords } = getAssociationScopedRecords(
+      all,
+      getActiveAssociationId()
+    );
+    const normalized = scopedRecords.map((c) => {
       const fullName = c.fullName ?? `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim();
       const nameParts = fullName.split(" ").filter(Boolean);
       const kind: ContactKind = c.kind === "entity" ? "entity" : "person";
@@ -185,7 +199,7 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
       );
     });
 
-    if (shouldBackfill) {
+    if (shouldBackfill || migratedRecords.length > 0) {
       await db.contacts.bulkPut(hydratedContacts);
     }
 
@@ -214,6 +228,7 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
     const baseContact = {
       ...contact,
       kind,
+      associationId: contact.associationId,
       fullName,
       birthDate: kind === "person" ? contact.birthDate ?? undefined : undefined,
       types,
@@ -231,7 +246,10 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
       createdAt: contact.createdAt ?? new Date().toISOString(),
       deactivatedAt: contact.deactivatedAt ?? undefined,
     };
-    const normalized = ensureContactAccountingCode(baseContact, get().contacts);
+    const normalized = ensureContactAccountingCode(
+      withActiveAssociation(baseContact),
+      get().contacts
+    );
     const wasMember = previousContact?.types.includes("member") ?? false;
     const isMember = normalized.types.includes("member");
     const shouldCreatePendingMembership = isMember && !wasMember;

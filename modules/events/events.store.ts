@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { Event } from "./event.types";
 import { db } from "@/core/storage/kora.db";
+import {
+  getActiveAssociationId,
+  getAssociationScopedRecords,
+  withActiveAssociation,
+} from "@/core/storage/association-scope";
 import { useSessionStore } from "@/core/session/session.store";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
 
@@ -21,20 +26,30 @@ export const useEventsStore = create<EventsState>((set, get) => ({
   loadEvents: async () => {
     if (!isAuthenticated()) return;
     const all = await db.events.toArray();
-    set({ events: all });
+    const { scopedRecords, migratedRecords } = getAssociationScopedRecords(
+      all,
+      getActiveAssociationId()
+    );
+
+    if (migratedRecords.length > 0) {
+      await db.events.bulkPut(scopedRecords);
+    }
+
+    set({ events: scopedRecords });
   },
 
   addOrUpdateEvent: async (event) => {
-    const exists = get().events.some((item) => item.id === event.id);
+    const normalizedEvent = withActiveAssociation(event);
+    const exists = get().events.some((item) => item.id === normalizedEvent.id);
     if (!isAuthenticated()) {
       set((state) => {
-        const exists = state.events.some((e) => e.id === event.id);
+        const exists = state.events.some((e) => e.id === normalizedEvent.id);
         return {
           events: exists
             ? state.events.map((e) =>
-                e.id === event.id ? event : e
+                e.id === normalizedEvent.id ? normalizedEvent : e
               )
-            : [...state.events, event],
+            : [...state.events, normalizedEvent],
         };
       });
       useNotificationsStore.getState().addNotification({
@@ -52,15 +67,15 @@ export const useEventsStore = create<EventsState>((set, get) => ({
       });
       return;
     }
-    await db.events.put(event);
+    await db.events.put(normalizedEvent);
     set((state) => {
-      const exists = state.events.some((e) => e.id === event.id);
+      const exists = state.events.some((e) => e.id === normalizedEvent.id);
       return {
         events: exists
           ? state.events.map((e) =>
-              e.id === event.id ? event : e
+              e.id === normalizedEvent.id ? normalizedEvent : e
             )
-          : [...state.events, event],
+          : [...state.events, normalizedEvent],
       };
     });
     useNotificationsStore.getState().addNotification({

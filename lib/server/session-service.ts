@@ -932,6 +932,119 @@ export async function deleteAssociationMember(targetUserId: string) {
   );
 }
 
+export async function createAssociationForCurrentUser(input: {
+  name: string;
+  logoUrl?: string;
+  taxId?: string;
+  phone?: string;
+  contactEmail?: string;
+  location?: string;
+  address?: string;
+}) {
+  const context = await getCurrentSessionContext();
+  if (!context) {
+    throw new Error("No hay una sesión activa.");
+  }
+
+  if (!input.name.trim()) {
+    throw new Error("El nombre de la asociación es obligatorio.");
+  }
+
+  const companyCode = await generateUniqueCompanyCode();
+
+  const result = await prisma.$transaction(async (tx) => {
+    const association = await tx.association.create({
+      data: {
+        name: input.name.trim(),
+        companyCode,
+        logoUrl: normalizeOptional(input.logoUrl),
+        taxId: normalizeOptional(input.taxId),
+        phone: normalizeOptional(input.phone),
+        contactEmail: normalizeOptional(input.contactEmail),
+        locationName: normalizeOptional(input.location),
+        addressLine1: normalizeOptional(input.address),
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await tx.associationUser.create({
+      data: {
+        associationId: association.id,
+        userId: context.session.userId,
+        role: "Admin",
+        status: "Activo",
+        permissions: ADMIN_PERMISSIONS,
+      },
+    });
+
+    await tx.session.update({
+      where: {
+        id: context.session.id,
+      },
+      data: {
+        activeAssociationId: association.id,
+      },
+    });
+
+    return association;
+  });
+
+  return buildSessionBootstrap(context.session.userId, result.id);
+}
+
+export async function switchCurrentAssociation(associationId: string) {
+  const context = await getCurrentSessionContext();
+  if (!context) {
+    throw new Error("No hay una sesión activa.");
+  }
+
+  const normalizedAssociationId = associationId.trim();
+  if (!normalizedAssociationId) {
+    throw new Error("La asociación es obligatoria.");
+  }
+
+  const membership = await prisma.associationUser.findFirst({
+    where: {
+      associationId: normalizedAssociationId,
+      userId: context.session.userId,
+      deactivatedAt: null,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!membership) {
+    throw new Error("No tienes acceso a esa asociación.");
+  }
+
+  await prisma.$transaction([
+    prisma.session.update({
+      where: {
+        id: context.session.id,
+      },
+      data: {
+        activeAssociationId: normalizedAssociationId,
+      },
+    }),
+    prisma.associationUser.update({
+      where: {
+        id: membership.id,
+      },
+      data: {
+        lastAccessAt: new Date(),
+      },
+    }),
+  ]);
+
+  return buildSessionBootstrap(
+    context.session.userId,
+    normalizedAssociationId
+  );
+}
+
 export async function updateCurrentAssociation(input: {
   name?: string;
   logoUrl?: string;

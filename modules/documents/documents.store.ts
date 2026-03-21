@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { db } from "@/core/storage/kora.db";
 import { DocumentItem } from "./document.types";
+import {
+  getActiveAssociationId,
+  getAssociationScopedRecords,
+  withActiveAssociation,
+} from "@/core/storage/association-scope";
 import { useSessionStore } from "@/core/session/session.store";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
 
@@ -22,20 +27,30 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
   loadDocuments: async () => {
     if (!isAuthenticated()) return;
     const all = await db.documents.toArray();
-    set({ documents: all });
+    const { scopedRecords, migratedRecords } = getAssociationScopedRecords(
+      all,
+      getActiveAssociationId()
+    );
+
+    if (migratedRecords.length > 0) {
+      await db.documents.bulkPut(scopedRecords);
+    }
+
+    set({ documents: scopedRecords });
   },
 
   upsertDocument: async (doc) => {
-    const exists = get().documents.some((item) => item.id === doc.id);
+    const scopedDoc = withActiveAssociation(doc);
+    const exists = get().documents.some((item) => item.id === scopedDoc.id);
     if (!isAuthenticated()) {
       set((state) => {
-        const exists = state.documents.some((item) => item.id === doc.id);
+        const exists = state.documents.some((item) => item.id === scopedDoc.id);
         return {
           documents: exists
             ? state.documents.map((item) =>
-                item.id === doc.id ? doc : item
+                item.id === scopedDoc.id ? scopedDoc : item
               )
-            : [doc, ...state.documents],
+            : [scopedDoc, ...state.documents],
         };
       });
       useNotificationsStore.getState().addNotification({
@@ -51,15 +66,15 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       });
       return;
     }
-    await db.documents.put(doc);
+    await db.documents.put(scopedDoc);
     set((state) => {
-      const exists = state.documents.some((item) => item.id === doc.id);
+      const exists = state.documents.some((item) => item.id === scopedDoc.id);
       return {
         documents: exists
           ? state.documents.map((item) =>
-              item.id === doc.id ? doc : item
+              item.id === scopedDoc.id ? scopedDoc : item
             )
-          : [doc, ...state.documents],
+          : [scopedDoc, ...state.documents],
       };
     });
     useNotificationsStore.getState().addNotification({
@@ -77,22 +92,23 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
 
   upsertDocuments: async (docs) => {
     if (docs.length === 0) return;
+    const scopedDocs = docs.map((doc) => withActiveAssociation(doc));
     if (!isAuthenticated()) {
       set((state) => {
         const map = new Map(
           state.documents.map((item) => [item.id, item])
         );
-        docs.forEach((item) => {
+        scopedDocs.forEach((item) => {
           map.set(item.id, item);
         });
         return { documents: Array.from(map.values()) };
       });
       return;
     }
-    await db.documents.bulkPut(docs);
+    await db.documents.bulkPut(scopedDocs);
     set((state) => {
       const map = new Map(state.documents.map((item) => [item.id, item]));
-      docs.forEach((item) => {
+      scopedDocs.forEach((item) => {
         map.set(item.id, item);
       });
       return { documents: Array.from(map.values()) };

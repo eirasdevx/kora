@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { db } from "@/core/storage/kora.db";
 import { useSessionStore } from "@/core/session/session.store";
+import {
+  getActiveAssociationId,
+  getAssociationScopedRecords,
+  withActiveAssociation,
+} from "@/core/storage/association-scope";
 import { InventoryItem, InventoryStatus } from "./inventory.types";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
 
@@ -53,12 +58,22 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (!isAuthenticated()) return;
 
     const all = await db.inventory.toArray();
-    set({ items: all.map((item) => normalizeItem(item)) });
+    const { scopedRecords, migratedRecords } = getAssociationScopedRecords(
+      all,
+      getActiveAssociationId()
+    );
+    const normalizedItems = scopedRecords.map((item) => normalizeItem(item));
+
+    if (migratedRecords.length > 0) {
+      await db.inventory.bulkPut(normalizedItems);
+    }
+
+    set({ items: normalizedItems });
   },
 
   upsertItem: async (item) => {
     const exists = get().items.some((entry) => entry.id === item.id);
-    const normalized = normalizeItem(item);
+    const normalized = normalizeItem(withActiveAssociation(item));
     if (!isAuthenticated()) {
       set((state) => {
         const exists = state.items.some((entry) => entry.id === item.id);
@@ -164,7 +179,13 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       return;
     }
 
-    await db.inventory.clear();
+    const all = await db.inventory.toArray();
+    const { scopedRecords } = getAssociationScopedRecords(
+      all,
+      getActiveAssociationId()
+    );
+
+    await db.inventory.bulkDelete(scopedRecords.map((item) => item.id));
     set({ items: [] });
     useNotificationsStore.getState().addNotification({
       category: "system",

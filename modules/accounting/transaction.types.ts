@@ -11,6 +11,7 @@ export type TransactionCategory =
 
 export interface Transaction {
   id: string;
+  associationId?: string;
 
   type: TransactionType;          // ingreso | gasto
   amount: number;                 // siempre positivo

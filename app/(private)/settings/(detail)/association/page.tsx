@@ -25,6 +25,7 @@ import {
   applySessionPayload,
   clearClientSession,
   parseApiResponse,
+  reloadAssociationScopedStores,
 } from "@/lib/client/session-client";
 
 type MembershipPlanFormState = {
@@ -50,6 +51,24 @@ type ProfileFormState = {
   membershipPlans: MembershipPlanFormState[];
   defaultMembershipPlanId: string;
   representatives: AssociationRepresentative[];
+};
+
+type AssociationFormState = {
+  name: string;
+  taxId: string;
+  contactEmail: string;
+  phone: string;
+  location: string;
+  address: string;
+};
+
+const EMPTY_ASSOCIATION_FORM: AssociationFormState = {
+  name: "",
+  taxId: "",
+  contactEmail: "",
+  phone: "",
+  location: "",
+  address: "",
 };
 
 const MONTHS = [
@@ -176,7 +195,9 @@ export default function AssociationProfilePage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const hydrated = useSessionStore((s) => s.hydrated);
+  const mode = useSessionStore((s) => s.mode);
   const association = useSessionStore((s) => s.association);
+  const associations = useSessionStore((s) => s.associations);
   const companyCode = useSessionStore((s) => s.companyCode);
   const activeAssociationId = useSessionStore((s) => s.activeAssociationId);
   const activeUserId = useSessionStore((s) => s.activeUserId);
@@ -188,6 +209,18 @@ export default function AssociationProfilePage() {
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeleteFinal, setConfirmDeleteFinal] = useState(false);
+  const [switchingAssociation, setSwitchingAssociation] = useState(false);
+  const [associationActionError, setAssociationActionError] = useState<
+    string | null
+  >(null);
+  const [associationModalOpen, setAssociationModalOpen] = useState(false);
+  const [associationFormError, setAssociationFormError] = useState<
+    string | null
+  >(null);
+  const [creatingAssociation, setCreatingAssociation] = useState(false);
+  const [associationForm, setAssociationForm] = useState<AssociationFormState>(
+    EMPTY_ASSOCIATION_FORM
+  );
 
   useEffect(() => {
     setForm(initialForm);
@@ -204,6 +237,108 @@ export default function AssociationProfilePage() {
   }, [form]);
 
   const hasChanges = serializeForm(form) !== serializeForm(initialForm);
+  const canManageAssociationContext = mode === "authenticated";
+
+  const resetAssociationForm = () => {
+    setAssociationForm(EMPTY_ASSOCIATION_FORM);
+    setAssociationFormError(null);
+  };
+
+  const handleSwitchAssociation = async (nextAssociationId: string) => {
+    if (
+      mode !== "authenticated" ||
+      switchingAssociation ||
+      !nextAssociationId ||
+      nextAssociationId === activeAssociationId
+    ) {
+      return;
+    }
+
+    setSwitchingAssociation(true);
+    setAssociationActionError(null);
+
+    try {
+      const response = await fetch("/api/association", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "switch",
+          associationId: nextAssociationId,
+        }),
+      });
+
+      const session = await parseApiResponse<SessionBootstrapPayload>(response);
+      applySessionPayload(session);
+      await reloadAssociationScopedStores();
+      setLastSavedAt(null);
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      setAssociationActionError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo cambiar de asociacion."
+      );
+    } finally {
+      setSwitchingAssociation(false);
+    }
+  };
+
+  const handleCreateAssociation = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    if (mode !== "authenticated" || creatingAssociation) {
+      return;
+    }
+
+    if (!associationForm.name.trim()) {
+      setAssociationFormError("El nombre de la asociacion es obligatorio.");
+      return;
+    }
+
+    setCreatingAssociation(true);
+    setAssociationActionError(null);
+    setAssociationFormError(null);
+
+    try {
+      const response = await fetch("/api/association", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "create",
+          name: associationForm.name,
+          taxId: associationForm.taxId,
+          contactEmail: associationForm.contactEmail,
+          phone: associationForm.phone,
+          location: associationForm.location,
+          address: associationForm.address,
+        }),
+      });
+
+      const session = await parseApiResponse<SessionBootstrapPayload>(response);
+      applySessionPayload(session);
+      await reloadAssociationScopedStores();
+      setAssociationModalOpen(false);
+      resetAssociationForm();
+      setLastSavedAt(null);
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      setAssociationFormError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo crear la asociacion."
+      );
+    } finally {
+      setCreatingAssociation(false);
+    }
+  };
 
   if (!hydrated) {
     return <div className="min-h-screen bg-background-light" aria-busy="true" />;
@@ -212,6 +347,62 @@ export default function AssociationProfilePage() {
   if (!canEditAssociation) {
     return (
       <div className="space-y-8">
+        {canManageAssociationContext ? (
+          <section className="grid gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Asociacion activa
+              </h2>
+              <p className="mt-2 text-sm text-gray-500">
+                Cambia de asociacion desde configuracion cuando tu cuenta tenga
+                acceso a varias.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <label className="text-sm font-semibold text-gray-700">
+                  Asociacion actual
+                </label>
+                <select
+                  value={activeAssociationId ?? ""}
+                  onChange={(event) =>
+                    void handleSwitchAssociation(event.target.value)
+                  }
+                  disabled={switchingAssociation || associations.length <= 1}
+                  className={control}
+                >
+                  {associations.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.profile.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-gray-500">
+                  Codigo activo: {companyCode ?? "No disponible"}
+                </p>
+                {associationActionError ? (
+                  <p className="mt-2 text-sm text-rose-600">
+                    {associationActionError}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAssociationModalOpen(true);
+                    setAssociationActionError(null);
+                    setAssociationFormError(null);
+                  }}
+                  className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+                >
+                  Nueva asociacion
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
         <SettingsPageHeader
           section="Perfil de la asociación"
           title="Perfil de la asociación"
@@ -220,6 +411,152 @@ export default function AssociationProfilePage() {
         <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-500">
           No tienes permisos para modificar la configuración de la empresa.
         </div>
+        <Modal
+          isOpen={associationModalOpen}
+          onClose={() => {
+            if (creatingAssociation) {
+              return;
+            }
+            setAssociationModalOpen(false);
+            resetAssociationForm();
+          }}
+          title="Nueva asociacion"
+        >
+          <form onSubmit={handleCreateAssociation} className="space-y-4">
+            <p className="text-sm text-slate-500">
+              Crea otra asociacion con esta misma cuenta. Tu usuario quedara
+              vinculado y la nueva asociacion pasara a ser la activa.
+            </p>
+
+            {associationFormError ? (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {associationFormError}
+              </div>
+            ) : null}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                Nombre de la asociacion
+              </label>
+              <input
+                value={associationForm.name}
+                onChange={(event) =>
+                  setAssociationForm((prev) => ({
+                    ...prev,
+                    name: event.target.value,
+                  }))
+                }
+                className={control}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  NIF / CIF
+                </label>
+                <input
+                  value={associationForm.taxId}
+                  onChange={(event) =>
+                    setAssociationForm((prev) => ({
+                      ...prev,
+                      taxId: event.target.value,
+                    }))
+                  }
+                  className={control}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Correo de contacto
+                </label>
+                <input
+                  type="email"
+                  value={associationForm.contactEmail}
+                  onChange={(event) =>
+                    setAssociationForm((prev) => ({
+                      ...prev,
+                      contactEmail: event.target.value,
+                    }))
+                  }
+                  className={control}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Telefono
+                </label>
+                <input
+                  value={associationForm.phone}
+                  onChange={(event) =>
+                    setAssociationForm((prev) => ({
+                      ...prev,
+                      phone: event.target.value,
+                    }))
+                  }
+                  className={control}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Ciudad / Provincia
+                </label>
+                <input
+                  value={associationForm.location}
+                  onChange={(event) =>
+                    setAssociationForm((prev) => ({
+                      ...prev,
+                      location: event.target.value,
+                    }))
+                  }
+                  className={control}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                Direccion
+              </label>
+              <input
+                value={associationForm.address}
+                onChange={(event) =>
+                  setAssociationForm((prev) => ({
+                    ...prev,
+                    address: event.target.value,
+                  }))
+                }
+                className={control}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (creatingAssociation) {
+                    return;
+                  }
+                  setAssociationModalOpen(false);
+                  resetAssociationForm();
+                }}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={creatingAssociation}
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {creatingAssociation ? "Creando..." : "Crear asociacion"}
+              </button>
+            </div>
+          </form>
+        </Modal>
       </div>
     );
   }
@@ -240,6 +577,62 @@ export default function AssociationProfilePage() {
           </button>
         }
       />
+      {canManageAssociationContext ? (
+        <section className="grid gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Asociacion activa
+            </h2>
+            <p className="mt-2 text-sm text-gray-500">
+              Cambia el contexto activo o crea una nueva asociacion desde esta
+              seccion de configuracion.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <label className="text-sm font-semibold text-gray-700">
+                Asociacion actual
+              </label>
+              <select
+                value={activeAssociationId ?? ""}
+                onChange={(event) =>
+                  void handleSwitchAssociation(event.target.value)
+                }
+                disabled={switchingAssociation || associations.length <= 1}
+                className={control}
+              >
+                {associations.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.profile.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-gray-500">
+                Codigo activo: {companyCode ?? "No disponible"}
+              </p>
+              {associationActionError ? (
+                <p className="mt-2 text-sm text-rose-600">
+                  {associationActionError}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setAssociationModalOpen(true);
+                  setAssociationActionError(null);
+                  setAssociationFormError(null);
+                }}
+                className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+              >
+                Nueva asociacion
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
       <section className="grid gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Información general</h2>
@@ -842,6 +1235,153 @@ export default function AssociationProfilePage() {
           </button>
         </div>
       </div>
+
+      <Modal
+        isOpen={associationModalOpen}
+        onClose={() => {
+          if (creatingAssociation) {
+            return;
+          }
+          setAssociationModalOpen(false);
+          resetAssociationForm();
+        }}
+        title="Nueva asociacion"
+      >
+        <form onSubmit={handleCreateAssociation} className="space-y-4">
+          <p className="text-sm text-slate-500">
+            Crea otra asociacion con esta misma cuenta. Tu usuario quedara
+            vinculado y la nueva asociacion pasara a ser la activa.
+          </p>
+
+          {associationFormError ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {associationFormError}
+            </div>
+          ) : null}
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">
+              Nombre de la asociacion
+            </label>
+            <input
+              value={associationForm.name}
+              onChange={(event) =>
+                setAssociationForm((prev) => ({
+                  ...prev,
+                  name: event.target.value,
+                }))
+              }
+              className={control}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                NIF / CIF
+              </label>
+              <input
+                value={associationForm.taxId}
+                onChange={(event) =>
+                  setAssociationForm((prev) => ({
+                    ...prev,
+                    taxId: event.target.value,
+                  }))
+                }
+                className={control}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                Correo de contacto
+              </label>
+              <input
+                type="email"
+                value={associationForm.contactEmail}
+                onChange={(event) =>
+                  setAssociationForm((prev) => ({
+                    ...prev,
+                    contactEmail: event.target.value,
+                  }))
+                }
+                className={control}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                Telefono
+              </label>
+              <input
+                value={associationForm.phone}
+                onChange={(event) =>
+                  setAssociationForm((prev) => ({
+                    ...prev,
+                    phone: event.target.value,
+                  }))
+                }
+                className={control}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                Ciudad / Provincia
+              </label>
+              <input
+                value={associationForm.location}
+                onChange={(event) =>
+                  setAssociationForm((prev) => ({
+                    ...prev,
+                    location: event.target.value,
+                  }))
+                }
+                className={control}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">
+              Direccion
+            </label>
+            <input
+              value={associationForm.address}
+              onChange={(event) =>
+                setAssociationForm((prev) => ({
+                  ...prev,
+                  address: event.target.value,
+                }))
+              }
+              className={control}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (creatingAssociation) {
+                  return;
+                }
+                setAssociationModalOpen(false);
+                resetAssociationForm();
+              }}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={creatingAssociation}
+              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {creatingAssociation ? "Creando..." : "Crear asociacion"}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal
         isOpen={confirmDelete}

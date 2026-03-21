@@ -25,6 +25,7 @@ export type DocumentVersion = {
 
 export type DocumentItem = {
   id: string;
+  associationId?: string;
   name: string;
   category: DocumentCategory;
   security: DocumentSecurity;

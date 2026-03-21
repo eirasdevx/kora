@@ -51,6 +51,16 @@ export class KoraDB extends Dexie {
       volunteerActivities: "id, contactId, date, createdAt",
       inventory: "id, name, category, createdAt, status",
     });
+
+    this.version(7).stores({
+      contacts: "id, associationId, fullName, createdAt",
+      events: "id, associationId, title, startDate, createdAt",
+      transactions: "id, associationId, concept, date, createdAt",
+      documents:
+        "id, associationId, name, createdAt, updatedAt, type, category, security",
+      volunteerActivities: "id, associationId, contactId, date, createdAt",
+      inventory: "id, associationId, name, category, createdAt, status",
+    });
   }
 }
 

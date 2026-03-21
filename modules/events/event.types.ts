@@ -2,6 +2,7 @@ export type EventStatus = "draft" | "published";
 
 export interface Event {
   id: string;
+  associationId?: string;
   title: string;
   description?: string;
   category?: string;

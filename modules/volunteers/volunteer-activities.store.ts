@@ -3,6 +3,11 @@
 import { create } from "zustand";
 import { db } from "@/core/storage/kora.db";
 import { useSessionStore } from "@/core/session/session.store";
+import {
+  getActiveAssociationId,
+  getAssociationScopedRecords,
+  withActiveAssociation,
+} from "@/core/storage/association-scope";
 import { VolunteerActivity } from "./volunteer-activity.types";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
 
@@ -25,13 +30,23 @@ export const useVolunteerActivitiesStore =
     loadActivities: async () => {
       if (!isAuthenticated()) return;
       const all = await db.volunteerActivities.toArray();
-      set({ activities: all });
+      const { scopedRecords, migratedRecords } = getAssociationScopedRecords(
+        all,
+        getActiveAssociationId()
+      );
+
+      if (migratedRecords.length > 0) {
+        await db.volunteerActivities.bulkPut(scopedRecords);
+      }
+
+      set({ activities: scopedRecords });
     },
 
     addActivity: async (activity) => {
+      const scopedActivity = withActiveAssociation(activity);
       if (!isAuthenticated()) {
         set((state) => ({
-          activities: [activity, ...state.activities],
+          activities: [scopedActivity, ...state.activities],
         }));
         useNotificationsStore.getState().addNotification({
           category: "system",
@@ -46,9 +61,9 @@ export const useVolunteerActivitiesStore =
         });
         return;
       }
-      await db.volunteerActivities.put(activity);
+      await db.volunteerActivities.put(scopedActivity);
       set((state) => ({
-        activities: [activity, ...state.activities],
+        activities: [scopedActivity, ...state.activities],
       }));
       useNotificationsStore.getState().addNotification({
         category: "system",
@@ -64,10 +79,11 @@ export const useVolunteerActivitiesStore =
     },
 
     updateActivity: async (activity) => {
+      const scopedActivity = withActiveAssociation(activity);
       if (!isAuthenticated()) {
         set((state) => ({
           activities: state.activities.map((item) =>
-            item.id === activity.id ? activity : item
+            item.id === scopedActivity.id ? scopedActivity : item
           ),
         }));
         useNotificationsStore.getState().addNotification({
@@ -83,10 +99,10 @@ export const useVolunteerActivitiesStore =
         });
         return;
       }
-      await db.volunteerActivities.put(activity);
+      await db.volunteerActivities.put(scopedActivity);
       set((state) => ({
         activities: state.activities.map((item) =>
-          item.id === activity.id ? activity : item
+          item.id === scopedActivity.id ? scopedActivity : item
         ),
       }));
       useNotificationsStore.getState().addNotification({

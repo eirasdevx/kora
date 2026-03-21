@@ -29,7 +29,6 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const router = useRouter();
 
   const mode = useSessionStore((state) => state.mode);
-  const association = useSessionStore((state) => state.association);
   const activeUserId = useSessionStore((state) => state.activeUserId);
   const users = useUsersStore((state) => state.users);
 
@@ -60,11 +59,17 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       moduleKey: "documents",
     },
     { label: "Eventos", href: "/events", icon: "event", moduleKey: "events" },
-    { label: "Mensajería", href: "/messaging", icon: "mail" },
+    { label: "Mensajeria", href: "/messaging", icon: "mail" },
   ];
 
   const visibleItems = mainItems.filter((item) => {
-    if (!item.moduleKey || mode === "guest" || !activeUser || isAdmin || !moduleAccess) {
+    if (
+      !item.moduleKey ||
+      mode === "guest" ||
+      !activeUser ||
+      isAdmin ||
+      !moduleAccess
+    ) {
       return true;
     }
 
@@ -139,7 +144,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                 Kora
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Gestión de asociaciones
+                Gestion de asociaciones
               </p>
             </div>
             {onClose ? (
@@ -154,17 +159,6 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               </button>
             ) : null}
           </div>
-
-          {association?.name ? (
-            <div className="mt-4 rounded-2xl bg-slate-50 px-3 py-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                Asociación activa
-              </p>
-              <p className="mt-2 text-sm font-semibold text-slate-800">
-                {association.name}
-              </p>
-            </div>
-          ) : null}
         </div>
 
         <nav className="flex-1 px-4 py-4">
@@ -189,7 +183,6 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               </li>
             ))}
           </ul>
-
         </nav>
 
         <div className="border-t px-6 py-4">
@@ -206,7 +199,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             <span className="material-symbols-outlined text-[20px]">
               settings
             </span>
-            Configuración
+            Configuracion
           </Link>
 
           {mode === "authenticated" ? (
@@ -243,7 +236,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             disabled={closingSession}
             className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
           >
-            {closingSession ? "Cerrando..." : "Cerrar sesión"}
+            {closingSession ? "Cerrando..." : "Cerrar sesion"}
           </button>
         </div>
       </aside>
