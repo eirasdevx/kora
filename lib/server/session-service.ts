@@ -507,11 +507,19 @@ async function createSecurityEvent(
   });
 }
 
-async function updateLastAccess(associationUserId: string) {
+async function registerSuccessfulAccess(input: {
+  associationUserId: string;
+  status: UserStatus;
+}) {
   await prisma.associationUser.update({
-    where: { id: associationUserId },
+    where: { id: input.associationUserId },
     data: {
       lastAccessAt: new Date(),
+      ...(input.status !== "Activo"
+        ? {
+            status: "Activo" as const,
+          }
+        : {}),
     },
   });
 }
@@ -655,7 +663,10 @@ export async function authenticateAssociationUser(input: {
   }
 
   await createSession(membership.userId, membership.associationId);
-  await updateLastAccess(membership.id);
+  await registerSuccessfulAccess({
+    associationUserId: membership.id,
+    status: membership.status,
+  });
   await createSecurityEvent(
     membership.id,
     membership.userId,
