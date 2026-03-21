@@ -190,26 +190,25 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             ))}
           </ul>
 
-          <div className="mt-4 border-t pt-4">
-            <Link
-              href="/settings"
-              onClick={closeSidebar}
-              className={cx(
-                "flex items-center gap-3 rounded-xl px-4 py-3 font-medium transition",
-                isActive("/settings")
-                  ? "bg-primary/10 text-primary"
-                  : "text-slate-700 hover:bg-slate-50"
-              )}
-            >
-              <span className="material-symbols-outlined text-[20px]">
-                settings
-              </span>
-              Configuración
-            </Link>
-          </div>
         </nav>
 
         <div className="border-t px-6 py-4">
+          <Link
+            href="/settings"
+            onClick={closeSidebar}
+            className={cx(
+              "mb-3 flex items-center gap-3 rounded-xl px-2 py-3 font-medium transition",
+              isActive("/settings")
+                ? "bg-primary/10 text-primary"
+                : "text-slate-700 hover:bg-slate-50"
+            )}
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              settings
+            </span>
+            Configuración
+          </Link>
+
           {mode === "authenticated" ? (
             <button
               type="button"
