@@ -104,17 +104,18 @@ function formatPrice(value: number | undefined, locale: string) {
     currency: "EUR",
   }).format(value);
 }
+
 function formatYesNo(value?: boolean) {
   if (value === undefined) return "-";
-  return value ? "Si" : "No";
+  return value ? "Sí" : "No";
 }
 
 function buildEventExportData(event: Event, locale: string) {
   const meetingType =
-    event.locationType === "online" ? "En linea" : "Presencial";
+    event.locationType === "online" ? "En línea" : "Presencial";
   const location =
     event.locationType === "online"
-      ? "En linea"
+      ? "En línea"
       : event.location || "-";
 
   return {
@@ -150,14 +151,12 @@ function buildEventExportData(event: Event, locale: string) {
 
 export default function EventsPage() {
   const { formatLocale } = useLocale();
-  /* -------- stores -------- */
   const { events, loadEvents } = useEventsStore();
 
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
 
-  /* -------- vista -------- */
   const [view, setView] = useState<EventsView>("month");
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -171,20 +170,16 @@ export default function EventsPage() {
     { label: "Día", value: "day" },
   ];
 
-  /* -------- selección -------- */
   const [selectedEventId, setSelectedEventId] =
     useState<string | null>(null);
 
   const selectedEvent = useMemo<Event | null>(() => {
     if (!selectedEventId) return null;
-    return (
-      events.find((e) => e.id === selectedEventId) ?? null
-    );
+    return events.find((e) => e.id === selectedEventId) ?? null;
   }, [events, selectedEventId]);
 
   const router = useRouter();
 
-  /* -------- fechas -------- */
   const [monthDate, setMonthDate] = useState(() => {
     const d = new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
@@ -195,7 +190,6 @@ export default function EventsPage() {
   );
   const [dayDate] = useState(() => new Date());
 
-  /* -------- filtros -------- */
   const categoryOptions = useMemo(() => {
     const unique = new Set<string>();
     events.forEach((event) => {
@@ -244,27 +238,27 @@ export default function EventsPage() {
           data.createdAt,
         ];
       }),
-    [filteredEvents]
+    [filteredEvents, formatLocale]
   );
 
   const exportRowsPdf = useMemo(
     () =>
       filteredEvents.flatMap((event) => {
         const data = buildEventExportData(event, formatLocale);
-          return [
-            ["Evento", data.title],
-            ["Categoría", data.category],
-            ["Descripción", data.description],
-            ["Estado", data.status],
-            ["Fecha inicio", data.startDate],
-            ["Hora inicio", data.startTime],
-            ["Fecha fin", data.endDate],
+        return [
+          ["Evento", data.title],
+          ["Categoría", data.category],
+          ["Descripción", data.description],
+          ["Estado", data.status],
+          ["Fecha inicio", data.startDate],
+          ["Hora inicio", data.startTime],
+          ["Fecha fin", data.endDate],
           ["Hora fin", data.endTime],
-          ["Tipo de reunion", data.meetingType],
+          ["Tipo de reunión", data.meetingType],
           ["Lugar", data.location],
           ["Precio de entrada", data.price],
-          ["Capacidad maxima", data.capacity],
-          ["Fecha cierre inscripcion", data.registrationDeadline],
+          ["Capacidad máxima", data.capacity],
+          ["Fecha de cierre de inscripción", data.registrationDeadline],
           ["Lista de espera", data.waitlist],
           ["Participantes", data.participants],
           ["Organizadores", data.organizers],
@@ -272,25 +266,25 @@ export default function EventsPage() {
           ["", ""],
         ];
       }),
-    [filteredEvents]
+    [filteredEvents, formatLocale]
   );
 
   const handleExportXlsx = () => {
     const rows = [
-        [
-          "Título",
-          "Categoría",
-          "Descripción",
-          "Estado",
-          "Fecha inicio",
-          "Hora inicio",
-          "Fecha fin",
+      [
+        "Título",
+        "Categoría",
+        "Descripción",
+        "Estado",
+        "Fecha inicio",
+        "Hora inicio",
+        "Fecha fin",
         "Hora fin",
-        "Tipo de reunion",
+        "Tipo de reunión",
         "Lugar",
         "Precio de entrada",
-        "Capacidad maxima",
-        "Fecha cierre inscripcion",
+        "Capacidad máxima",
+        "Fecha de cierre de inscripción",
         "Lista de espera",
         "Participantes",
         "Organizadores",
@@ -314,13 +308,8 @@ export default function EventsPage() {
     );
   };
 
-  /* =======================
-     Render
-  ======================= */
-
   return (
     <div className="flex gap-6">
-      {/* Columna principal */}
       <div className="flex-1 space-y-6">
         <ModuleTopbar
           module={EVENTS_MODULE_TITLE}
@@ -413,14 +402,13 @@ export default function EventsPage() {
           </div>
         </div>
 
-
         {filtersOpen && (
           <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                  <label className="text-xs font-semibold uppercase text-gray-400">
-                    Categoría
-                  </label>
+                <label className="text-xs font-semibold uppercase text-gray-400">
+                  Categoría
+                </label>
                 <select
                   value={categoryFilter}
                   onChange={(event) => setCategoryFilter(event.target.value)}
@@ -480,7 +468,6 @@ export default function EventsPage() {
           </div>
         )}
 
-        {/* MES */}
         {view === "month" && (
           <MonthlyCalendar
             year={monthDate.year}
@@ -505,7 +492,6 @@ export default function EventsPage() {
           />
         )}
 
-        {/* SEMANA */}
         {view === "week" && (
           <WeeklyCalendar
             weekStart={weekStart}
@@ -521,7 +507,6 @@ export default function EventsPage() {
           />
         )}
 
-        {/* DÍA */}
         {view === "day" && (
           <DayAgenda
             date={dayDate}
@@ -531,7 +516,6 @@ export default function EventsPage() {
         )}
       </div>
 
-      {/* Panel derecho */}
       {selectedEvent && (
         <EventDetailsPanel
           key={selectedEvent.id}
@@ -545,8 +529,3 @@ export default function EventsPage() {
     </div>
   );
 }
-
-
-
-
-

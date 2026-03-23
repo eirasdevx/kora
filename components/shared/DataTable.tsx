@@ -66,7 +66,7 @@ export default function DataTable({
                 key={column.key}
                 className={cx(
                   tableHeadCellStyles,
-                  ALIGN_CLASS[column.align ?? "left"],
+                  ALIGN_CLASS[column.align ? "left"],
                   column.className
                 )}
               >

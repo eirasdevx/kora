@@ -60,7 +60,22 @@ model Association {
   updatedAt          DateTime                  @updatedAt
   representatives    AssociationRepresentative[]
   members            AssociationUser[]
+  dataRecords        AssociationDataRecord[]
   activeSessions     Session[]                 @relation("ActiveAssociationSessions")
+}
+
+model AssociationDataRecord {
+  id            String      @id @default(cuid())
+  associationId String
+  module        String
+  recordId      String
+  payload       Json
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  association   Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+
+  @@unique([associationId, module, recordId])
+  @@index([associationId, module, updatedAt])
 }
 
 model AssociationRepresentative {

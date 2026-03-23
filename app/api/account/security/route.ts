@@ -19,12 +19,12 @@ export async function PATCH(request: NextRequest) {
   try {
     payload = (await request.json()) as SecurityPayload;
   } catch {
-    return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
 
   if (!payload.currentPassword) {
     return NextResponse.json(
-      { error: "La contrasena actual es obligatoria." },
+      { error: "La contraseña actual es obligatoria." },
       { status: 400 }
     );
   }

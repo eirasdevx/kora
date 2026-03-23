@@ -291,18 +291,18 @@ async function sendNewUserInviteEmail(input: {
         subject: `Te han invitado a ${input.associationName} en Kora`,
         htmlMessage: `
           <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
-            <h2>Invitacion a ${input.associationName}</h2>
+            <h2>Invitación a ${input.associationName}</h2>
             <p>Hola ${input.firstName || input.email},</p>
-            <p>Tu asociacion te ha dado acceso a Kora como nuevo usuario.</p>
+            <p>Tu asociación te ha dado acceso a Kora como nuevo usuario.</p>
             <div style="margin: 16px 0; padding: 16px; border: 1px solid #dbeafe; border-radius: 12px; background: #f8fbff;">
-              <p style="margin: 0 0 8px;"><strong>Asociacion:</strong> ${input.associationName}</p>
-              <p style="margin: 0 0 8px;"><strong>Codigo de asociacion:</strong> ${input.companyCode}</p>
+              <p style="margin: 0 0 8px;"><strong>Asociaci?n:</strong> ${input.associationName}</p>
+              <p style="margin: 0 0 8px;"><strong>Código de asociación:</strong> ${input.companyCode}</p>
               <p style="margin: 0 0 8px;"><strong>Usuario:</strong> ${input.email}</p>
-              <p style="margin: 0;"><strong>Contrasena temporal:</strong> ${input.password}</p>
+              <p style="margin: 0;"><strong>Contraseña temporal:</strong> ${input.password}</p>
             </div>
-            <p>Puedes iniciar sesion desde aqui:</p>
+            <p>Puedes iniciar sesión desde aquí:</p>
             <p><a href="${loginUrl}" style="color: #2563eb; font-weight: 600;">${loginUrl}</a></p>
-            <p>Te recomendamos cambiar la contrasena despues del primer acceso.</p>
+            <p>Te recomendamos cambiar la contraseña después del primer acceso.</p>
           </div>
         `,
       }),
@@ -320,21 +320,21 @@ async function sendNewUserInviteEmail(input: {
         tone: "warning" as const,
         message:
           payload?.errors?.[0]?.message
-            ? `Usuario creado, pero no se pudo enviar la invitacion: ${payload.errors[0].message}`
-            : "Usuario creado, pero no se pudo enviar el correo de invitacion.",
+            ? `Usuario creado, pero no se pudo enviar la invitación: ${payload.errors[0].message}`
+            : "Usuario creado, pero no se pudo enviar el correo de invitación.",
       };
     }
 
     return {
       tone: "success" as const,
-      message: `Usuario creado y correo de invitacion enviado a ${input.email}.`,
+      message: `Usuario creado y correo de invitación enviado a ${input.email}.`,
     };
   } catch (error) {
     console.error(error);
     return {
       tone: "warning" as const,
       message:
-        "Usuario creado, pero hubo un error al enviar el correo de invitacion.",
+        "Usuario creado, pero hubo un error al enviar el correo de invitación.",
     };
   }
 }
@@ -713,7 +713,7 @@ export default function UsersSettingsPage() {
                   Usuarios y Permisos
                 </h1>
                 <p className="text-sm text-gray-500">
-                  Esta seccion solo esta disponible en cuentas autenticadas.
+                  Esta secci?n solo est? disponible en cuentas autenticadas.
                 </p>
               </div>
               <button

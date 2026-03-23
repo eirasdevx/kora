@@ -61,7 +61,7 @@ const readKeyFromDb = async () => {
       const tx = db.transaction(KEY_STORE_NAME, "readonly");
       const store = tx.objectStore(KEY_STORE_NAME);
       const request = store.get(KEY_ID);
-      request.onsuccess = () => resolve((request.result as CryptoKey) ?? null);
+      request.onsuccess = () => resolve((request.result as CryptoKey) ? null);
       request.onerror = () => reject(request.error);
     });
     return key;

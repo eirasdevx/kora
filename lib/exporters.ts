@@ -257,7 +257,7 @@ export function downloadPdf(
     value.padEnd(width, " ").slice(0, width);
 
   const wrapCell = (value: string, width: number) => {
-    const safe = (value ?? "").replace(/\r?\n/g, " ");
+    const safe = (value ? "").replace(/\r?\n/g, " ");
     if (safe.length === 0) return [""];
     const lines: string[] = [];
     for (let i = 0; i < safe.length; i += width) {
@@ -276,14 +276,14 @@ export function downloadPdf(
   const dataLines: string[] = [];
   rows.forEach((row) => {
     const wrapped = columns.map((col, idx) =>
-      wrapCell(row[idx] ?? "", col.width)
+      wrapCell(row[idx] ? "", col.width)
     );
     const rowLines = Math.max(...wrapped.map((lines) => lines.length), 1);
     for (let lineIdx = 0; lineIdx < rowLines; lineIdx += 1) {
       dataLines.push(
         columns
           .map((col, idx) =>
-            formatCell(wrapped[idx][lineIdx] ?? "", col.width)
+            formatCell(wrapped[idx][lineIdx] ? "", col.width)
           )
           .join(" | ")
       );

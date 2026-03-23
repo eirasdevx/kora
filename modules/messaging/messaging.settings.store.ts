@@ -52,22 +52,22 @@ const buildSettingsFromAssociation = (
   }
 
   const source = association.messagingSettings;
-  const emailAppPassword = storedSecret?.emailAppPassword?.trim() ?? "";
+  const emailAppPassword = storedSecret?.emailAppPassword?.trim() ? "";
 
   return {
     senderName: source?.senderName || association.name || "",
     emailAddress: source?.emailAddress || association.contactEmail || "",
     emailProvider:
-      source?.emailProvider ?? DEFAULT_ASSOCIATION_MESSAGING_SETTINGS.emailProvider,
-    smtpHost: source?.smtpHost ?? DEFAULT_ASSOCIATION_MESSAGING_SETTINGS.smtpHost,
-    smtpPort: source?.smtpPort ?? DEFAULT_ASSOCIATION_MESSAGING_SETTINGS.smtpPort,
+      source?.emailProvider ? DEFAULT_ASSOCIATION_MESSAGING_SETTINGS.emailProvider,
+    smtpHost: source?.smtpHost ? DEFAULT_ASSOCIATION_MESSAGING_SETTINGS.smtpHost,
+    smtpPort: source?.smtpPort ? DEFAULT_ASSOCIATION_MESSAGING_SETTINGS.smtpPort,
     smtpSecure:
-      source?.smtpSecure ?? DEFAULT_ASSOCIATION_MESSAGING_SETTINGS.smtpSecure,
+      source?.smtpSecure ? DEFAULT_ASSOCIATION_MESSAGING_SETTINGS.smtpSecure,
     whatsappNumber:
-      source?.whatsappNumber ??
+      source?.whatsappNumber ?
       DEFAULT_ASSOCIATION_MESSAGING_SETTINGS.whatsappNumber,
     smsNumber:
-      source?.smsNumber ?? DEFAULT_ASSOCIATION_MESSAGING_SETTINGS.smsNumber,
+      source?.smsNumber ? DEFAULT_ASSOCIATION_MESSAGING_SETTINGS.smsNumber,
     hasEmailAppPassword:
       Boolean(emailAppPassword) || Boolean(source?.hasEmailAppPassword),
     emailAppPassword,

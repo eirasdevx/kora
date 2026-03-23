@@ -15,6 +15,11 @@ import {
 import { useSessionStore } from "@/core/session/session.store";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
 import {
+  deleteAssociationModuleRecord,
+  listAssociationModuleRecords,
+  upsertAssociationModuleRecord,
+} from "@/lib/client/association-data-client";
+import {
   createMembershipTransaction,
   getContactDisplayName,
 } from "@/modules/accounting/membership-fees";
@@ -24,6 +29,7 @@ import {
   hydrateContactsWithAccountingCodes,
 } from "@/modules/accounting/accounting-codes";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
+import type { Transaction } from "@/modules/accounting/transaction.types";
 
 interface ContactsState {
   contacts: Contact[];
@@ -54,17 +60,29 @@ const hasMembershipTransaction = async (contactId: string) => {
   if (inMemory) return true;
   if (!isAuthenticated()) return false;
 
-  const persisted = await db.transactions.toArray();
-  const { scopedRecords } = getAssociationScopedRecords(
-    persisted,
-    getActiveAssociationId()
-  );
+  try {
+    const persisted =
+      await listAssociationModuleRecords<Transaction>("transactions");
 
-  return scopedRecords.some(
-    (tx) =>
-      tx.category === "membership" &&
-      (tx.contactId === contactId || tx.contactIds?.includes(contactId))
-  );
+    return persisted.some(
+      (tx) =>
+        tx.category === "membership" &&
+        (tx.contactId === contactId || tx.contactIds?.includes(contactId))
+    );
+  } catch (error) {
+    console.error(error);
+    const persisted = await db.transactions.toArray();
+    const { scopedRecords } = getAssociationScopedRecords(
+      persisted,
+      getActiveAssociationId()
+    );
+
+    return scopedRecords.some(
+      (tx) =>
+        tx.category === "membership" &&
+        (tx.contactId === contactId || tx.contactIds?.includes(contactId))
+    );
+  }
 };
 
 const registerPendingMembershipTransaction = async (contact: Contact) => {
@@ -83,6 +101,10 @@ const registerPendingMembershipTransaction = async (contact: Contact) => {
   );
 
   if (isAuthenticated()) {
+    await upsertAssociationModuleRecord<Transaction>(
+      "transactions",
+      transaction
+    );
     await db.transactions.put(transaction);
   }
 
@@ -133,13 +155,73 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
   // Cargar todos los contactos desde IndexedDB
   loadContacts: async () => {
     if (!isAuthenticated()) return;
+    const hydratePersistedContacts = async (sourceContacts: Contact[]) => {
+      const normalized = sourceContacts.map((c) => {
+        const fullName =
+          c.fullName ? `${c.firstName ? ""} ${c.lastName ? ""}`.trim();
+        const nameParts = fullName.split(" ").filter(Boolean);
+        const kind: ContactKind = c.kind === "entity" ? "entity" : "person";
+        const allowedTypes =
+          kind === "entity"
+            ? ["provider", "collaborator", "sponsor", "other"]
+            : ["member", "provider", "collaborator", "sponsor", "other"];
+        const rawTypes = parseContactTypes(
+          (c as { types?: unknown }).types
+        );
+        const types = rawTypes.filter((t) =>
+          allowedTypes.includes(t as ContactType)
+        );
+        const createdAt = c.createdAt ? new Date().toISOString();
+        const membershipPlanId = types.includes("member")
+          ? c.membershipPlanId ? getDefaultMembershipPlanId()
+          : undefined;
+        const privacyPermissions = normalizeContactPrivacyPermissions(
+          c.privacyPermissions
+        );
+        const consentDocumentIds = parseStringList(
+          (c as { consentDocumentIds?: unknown }).consentDocumentIds
+        );
+        return {
+          ...c,
+          kind,
+          birthDate: kind === "person" ? c.birthDate ? undefined : undefined,
+          firstName: c.firstName ? nameParts[0] ? "",
+          lastName: c.lastName ? nameParts.slice(1).join(" "),
+          dni: c.dni ? "",
+          fullName,
+          types,
+          membershipPlanId,
+          privacyPermissions,
+          privacyUpdatedAt: c.privacyUpdatedAt ? undefined,
+          consentDocumentIds: consentDocumentIds.length
+            ? consentDocumentIds
+            : undefined,
+          createdAt,
+          deactivatedAt: c.deactivatedAt ? undefined,
+        };
+      });
+      const hydratedContacts = hydrateContactsWithAccountingCodes(
+        normalized as Contact[]
+      );
+      set({ contacts: hydratedContacts });
+    };
+
+    try {
+      const contacts =
+        await listAssociationModuleRecords<Contact>("contacts");
+      await hydratePersistedContacts(contacts);
+      return;
+    } catch (error) {
+      console.error(error);
+    }
+
     const all = await db.contacts.toArray();
     const { scopedRecords, migratedRecords } = getAssociationScopedRecords(
       all,
       getActiveAssociationId()
     );
     const normalized = scopedRecords.map((c) => {
-      const fullName = c.fullName ?? `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim();
+      const fullName = c.fullName ? `${c.firstName ? ""} ${c.lastName ? ""}`.trim();
       const nameParts = fullName.split(" ").filter(Boolean);
       const kind: ContactKind = c.kind === "entity" ? "entity" : "person";
       const allowedTypes =
@@ -152,9 +234,9 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
       const types = rawTypes.filter((t) =>
         allowedTypes.includes(t as ContactType)
       );
-      const createdAt = c.createdAt ?? new Date().toISOString();
+      const createdAt = c.createdAt ? new Date().toISOString();
       const membershipPlanId = types.includes("member")
-        ? c.membershipPlanId ?? getDefaultMembershipPlanId()
+        ? c.membershipPlanId ? getDefaultMembershipPlanId()
         : undefined;
       const privacyPermissions = normalizeContactPrivacyPermissions(
         c.privacyPermissions
@@ -165,20 +247,20 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
       return {
         ...c,
         kind,
-        birthDate: kind === "person" ? c.birthDate ?? undefined : undefined,
-        firstName: c.firstName ?? nameParts[0] ?? "",
-        lastName: c.lastName ?? nameParts.slice(1).join(" "),
-        dni: c.dni ?? "",
+        birthDate: kind === "person" ? c.birthDate ? undefined : undefined,
+        firstName: c.firstName ? nameParts[0] ? "",
+        lastName: c.lastName ? nameParts.slice(1).join(" "),
+        dni: c.dni ? "",
         fullName,
         types,
         membershipPlanId,
         privacyPermissions,
-        privacyUpdatedAt: c.privacyUpdatedAt ?? undefined,
+        privacyUpdatedAt: c.privacyUpdatedAt ? undefined,
         consentDocumentIds: consentDocumentIds.length
           ? consentDocumentIds
           : undefined,
         createdAt,
-        deactivatedAt: c.deactivatedAt ?? undefined,
+        deactivatedAt: c.deactivatedAt ? undefined,
       };
     });
     const hydratedContacts = hydrateContactsWithAccountingCodes(normalized as Contact[]);
@@ -194,8 +276,8 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
           source.privacyPermissions?.communications ||
         contact.privacyPermissions?.services !==
           source.privacyPermissions?.services ||
-        (contact.consentDocumentIds ?? []).join(",") !==
-          (source.consentDocumentIds ?? []).join(",")
+        (contact.consentDocumentIds ? []).join(",") !==
+          (source.consentDocumentIds ? []).join(",")
       );
     });
 
@@ -211,8 +293,8 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
     const previousContact = get().contacts.find((c) => c.id === contact.id);
     const exists = Boolean(previousContact);
     const fullName =
-      contact.fullName ??
-      `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
+      contact.fullName ?
+      `${contact.firstName ? ""} ${contact.lastName ? ""}`.trim();
     const displayName = fullName || contact.email || "contacto";
     const kind: ContactKind = contact.kind === "entity" ? "entity" : "person";
     const allowedTypes =
@@ -230,27 +312,27 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
       kind,
       associationId: contact.associationId,
       fullName,
-      birthDate: kind === "person" ? contact.birthDate ?? undefined : undefined,
+      birthDate: kind === "person" ? contact.birthDate ? undefined : undefined,
       types,
       membershipPlanId: types.includes("member")
-        ? contact.membershipPlanId ?? getDefaultMembershipPlanId()
+        ? contact.membershipPlanId ? getDefaultMembershipPlanId()
         : undefined,
       privacyPermissions: normalizeContactPrivacyPermissions(
-        contact.privacyPermissions ?? previousContact?.privacyPermissions
+        contact.privacyPermissions ? previousContact?.privacyPermissions
       ),
       privacyUpdatedAt:
-        contact.privacyUpdatedAt ?? previousContact?.privacyUpdatedAt,
+        contact.privacyUpdatedAt ? previousContact?.privacyUpdatedAt,
       consentDocumentIds: parseStringList(
-        contact.consentDocumentIds ?? previousContact?.consentDocumentIds
+        contact.consentDocumentIds ? previousContact?.consentDocumentIds
       ),
-      createdAt: contact.createdAt ?? new Date().toISOString(),
-      deactivatedAt: contact.deactivatedAt ?? undefined,
+      createdAt: contact.createdAt ? new Date().toISOString(),
+      deactivatedAt: contact.deactivatedAt ? undefined,
     };
     const normalized = ensureContactAccountingCode(
       withActiveAssociation(baseContact),
       get().contacts
     );
-    const wasMember = previousContact?.types.includes("member") ?? false;
+    const wasMember = previousContact?.types.includes("member") ? false;
     const isMember = normalized.types.includes("member");
     const shouldCreatePendingMembership = isMember && !wasMember;
 
@@ -282,6 +364,7 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
       return;
     }
 
+    await upsertAssociationModuleRecord<Contact>("contacts", normalized);
     await db.contacts.put(normalized);
 
     set((state) => {
@@ -332,6 +415,7 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
       });
       return;
     }
+    await deleteAssociationModuleRecord("contacts", id);
     await db.contacts.delete(id);
 
     set((state) => ({

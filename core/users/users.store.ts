@@ -141,16 +141,16 @@ const LANGUAGE_ALIASES: Record<string, string> = {
 
 export const normalizeLanguage = (value?: string): string => {
   if (!value) return "es";
-  return LANGUAGE_ALIASES[value.toLowerCase()] ?? value;
+  return LANGUAGE_ALIASES[value.toLowerCase()] ? value;
 };
 
 const normalizeUser = (user: UserAccount): UserAccount => {
   const composedName =
-    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
+    `${user.firstName ? ""} ${user.lastName ? ""}`.trim() ||
     user.name?.trim() ||
     "Usuario";
   const parts = composedName.split(" ").filter(Boolean);
-  const basePermissions = user.permissions ?? createDefaultPermissions();
+  const basePermissions = user.permissions ? createDefaultPermissions();
   const basePreferences = createDefaultPreferences();
 
   const permissions =
@@ -173,19 +173,19 @@ const normalizeUser = (user: UserAccount): UserAccount => {
   return {
     ...user,
     name: composedName,
-    firstName: user.firstName ?? parts[0] ?? "",
-    lastName: user.lastName ?? parts.slice(1).join(" "),
-    dni: user.dni ?? "",
+    firstName: user.firstName ? parts[0] ? "",
+    lastName: user.lastName ? parts.slice(1).join(" "),
+    dni: user.dni ? "",
     permissions,
     preferences: {
       ...basePreferences,
-      ...(user.preferences ?? {}),
+      ...(user.preferences ? {}),
       language: normalizeLanguage(
-        user.preferences?.language ?? basePreferences.language
+        user.preferences?.language ? basePreferences.language
       ),
       notifications: {
         ...basePreferences.notifications,
-        ...(user.preferences?.notifications ?? {}),
+        ...(user.preferences?.notifications ? {}),
       },
     },
     password: user.passwordDigest ? undefined : user.password,
@@ -222,10 +222,10 @@ export const useUsersStore = create<UsersState>((set) => ({
           email,
           passwordDigest,
           role,
-          status: status ?? "Pendiente",
+          status: status ? "Pendiente",
           photoUrl,
           lastAccessAt: null,
-          permissions: permissions ?? createDefaultPermissions(),
+          permissions: permissions ? createDefaultPermissions(),
         }),
         ...state.users,
       ],

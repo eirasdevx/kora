@@ -71,7 +71,7 @@ export function resolveAccountingAccount(
 ) {
   const account = getAccountingAccountByKey(
     settings,
-    transaction.accountingAccountKey ??
+    transaction.accountingAccountKey ?
       getTransactionAccountingAccountKey(transaction.category, transaction.type)
   );
 
@@ -127,7 +127,7 @@ export function buildLedgerGroups(
     const debit = transaction.type === "expense" ? transaction.amount : 0;
     const credit = transaction.type === "income" ? transaction.amount : 0;
 
-    const existing = groups.get(account.key) ?? {
+    const existing = groups.get(account.key) ? {
       account,
       debitTotal: 0,
       creditTotal: 0,
@@ -169,7 +169,7 @@ export function buildAccountSummaries(
     const account = resolveAccountingAccount(transaction, settings);
     const debit = transaction.type === "expense" ? transaction.amount : 0;
     const credit = transaction.type === "income" ? transaction.amount : 0;
-    const existing = summaries.get(account.key) ?? {
+    const existing = summaries.get(account.key) ? {
       account,
       movementCount: 0,
       debitTotal: 0,
@@ -188,7 +188,7 @@ export function buildAccountSummaries(
 
   return getAccountingCatalog(settings).map(
     (account) =>
-      summaries.get(account.key) ?? {
+      summaries.get(account.key) ? {
         account,
         movementCount: 0,
         debitTotal: 0,

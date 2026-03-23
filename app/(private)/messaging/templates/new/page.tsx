@@ -55,10 +55,10 @@ function TemplateEditor({
     html: string;
   }) => void;
 }) {
-  const [title, setTitle] = useState(activeTemplate?.title ?? "");
+  const [title, setTitle] = useState(activeTemplate?.title ? "");
   const [channel] = useState<MessagingChannel>("email");
-  const [subject, setSubject] = useState(activeTemplate?.subject ?? "");
-  const [html, setHtml] = useState(activeTemplate?.html ?? "");
+  const [subject, setSubject] = useState(activeTemplate?.subject ? "");
+  const [html, setHtml] = useState(activeTemplate?.html ? "");
   const [error, setError] = useState<string | null>(null);
 
   const previewHtml = useMemo(() => applyPreviewVariables(html), [html]);
@@ -267,7 +267,7 @@ export default function NewTemplatePage() {
 
   return (
     <TemplateEditor
-      key={activeTemplate?.id ?? "new-template"}
+      key={activeTemplate?.id ? "new-template"}
       activeTemplate={activeTemplate}
       onSave={({ title, channel, subject, html }) => {
         if (activeTemplate) {

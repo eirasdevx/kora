@@ -65,12 +65,12 @@ export default function RegisterPage() {
     setFormError(null);
 
     const data = new FormData(event.currentTarget);
-    const firstName = String(data.get("firstName") ?? "").trim();
-    const lastName = String(data.get("lastName") ?? "").trim();
-    const dni = String(data.get("dni") ?? "").trim().toUpperCase();
-    const email = String(data.get("email") ?? "").trim().toLowerCase();
-    const password = String(data.get("password") ?? "").trim();
-    const passwordRepeat = String(data.get("passwordRepeat") ?? "").trim();
+    const firstName = String(data.get("firstName") ? "").trim();
+    const lastName = String(data.get("lastName") ? "").trim();
+    const dni = String(data.get("dni") ? "").trim().toUpperCase();
+    const email = String(data.get("email") ? "").trim().toLowerCase();
+    const password = String(data.get("password") ? "").trim();
+    const passwordRepeat = String(data.get("passwordRepeat") ? "").trim();
 
     if (
       !firstName ||
@@ -124,11 +124,11 @@ export default function RegisterPage() {
     }
 
     const data = new FormData(event.currentTarget);
-    const name = String(data.get("associationName") ?? "").trim();
-    const taxId = String(data.get("taxId") ?? "").trim();
-    const contactEmail = String(data.get("contactEmail") ?? "").trim();
-    const phone = String(data.get("phone") ?? "").trim();
-    const location = String(data.get("location") ?? "").trim();
+    const name = String(data.get("associationName") ? "").trim();
+    const taxId = String(data.get("taxId") ? "").trim();
+    const contactEmail = String(data.get("contactEmail") ? "").trim();
+    const phone = String(data.get("phone") ? "").trim();
+    const location = String(data.get("location") ? "").trim();
 
     if (!name) {
       setFormError("Indica el nombre de la asociación para continuar.");

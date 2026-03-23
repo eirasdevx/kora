@@ -279,7 +279,7 @@ export default function AssociationProfilePage() {
       setAssociationActionError(
         error instanceof Error
           ? error.message
-          : "No se pudo cambiar de asociacion."
+          : "No se pudo cambiar de asociación."
       );
     } finally {
       setSwitchingAssociation(false);
@@ -296,7 +296,7 @@ export default function AssociationProfilePage() {
     }
 
     if (!associationForm.name.trim()) {
-      setAssociationFormError("El nombre de la asociacion es obligatorio.");
+      setAssociationFormError("El nombre de la asociación es obligatorio.");
       return;
     }
 
@@ -333,7 +333,7 @@ export default function AssociationProfilePage() {
       setAssociationFormError(
         error instanceof Error
           ? error.message
-          : "No se pudo crear la asociacion."
+          : "No se pudo crear la asociación."
       );
     } finally {
       setCreatingAssociation(false);
@@ -351,17 +351,17 @@ export default function AssociationProfilePage() {
           <section className="grid gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
-                Asociacion activa
+                Asociación activa
               </h2>
               <p className="mt-2 text-sm text-gray-500">
-                Cambia de asociacion desde configuracion cuando tu cuenta tenga
+                Cambia de asociación desde configuración cuando tu cuenta tenga
                 acceso a varias.
               </p>
             </div>
             <div className="space-y-4">
               <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                 <label className="text-sm font-semibold text-gray-700">
-                  Asociacion actual
+                  Asociación actual
                 </label>
                 <select
                   value={activeAssociationId ?? ""}
@@ -378,7 +378,7 @@ export default function AssociationProfilePage() {
                   ))}
                 </select>
                 <p className="mt-2 text-xs text-gray-500">
-                  Codigo activo: {companyCode ?? "No disponible"}
+                  Código activo: {companyCode ?? "No disponible"}
                 </p>
                 {associationActionError ? (
                   <p className="mt-2 text-sm text-rose-600">
@@ -397,7 +397,7 @@ export default function AssociationProfilePage() {
                   }}
                   className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
                 >
-                  Nueva asociacion
+                  Nueva asociación
                 </button>
               </div>
             </div>
@@ -420,12 +420,12 @@ export default function AssociationProfilePage() {
             setAssociationModalOpen(false);
             resetAssociationForm();
           }}
-          title="Nueva asociacion"
+          title="Nueva asociación"
         >
           <form onSubmit={handleCreateAssociation} className="space-y-4">
             <p className="text-sm text-slate-500">
-              Crea otra asociacion con esta misma cuenta. Tu usuario quedara
-              vinculado y la nueva asociacion pasara a ser la activa.
+              Crea otra asociación con esta misma cuenta. Tu usuario quedará
+              vinculado y la nueva asociación pasará a ser la activa.
             </p>
 
             {associationFormError ? (
@@ -436,7 +436,7 @@ export default function AssociationProfilePage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">
-                Nombre de la asociacion
+                Nombre de la asociación
               </label>
               <input
                 value={associationForm.name}
@@ -487,7 +487,7 @@ export default function AssociationProfilePage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Telefono
+                  Teléfono
                 </label>
                 <input
                   value={associationForm.phone}
@@ -519,7 +519,7 @@ export default function AssociationProfilePage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">
-                Direccion
+                Dirección
               </label>
               <input
                 value={associationForm.address}
@@ -552,7 +552,7 @@ export default function AssociationProfilePage() {
                 disabled={creatingAssociation}
                 className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {creatingAssociation ? "Creando..." : "Crear asociacion"}
+                {creatingAssociation ? "Creando..." : "Crear asociación"}
               </button>
             </div>
           </form>
@@ -581,17 +581,17 @@ export default function AssociationProfilePage() {
         <section className="grid gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
-              Asociacion activa
+              Asociación activa
             </h2>
             <p className="mt-2 text-sm text-gray-500">
-              Cambia el contexto activo o crea una nueva asociacion desde esta
-              seccion de configuracion.
+              Cambia el contexto activo o crea una nueva asociación desde esta
+              sección de configuración.
             </p>
           </div>
           <div className="space-y-4">
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
               <label className="text-sm font-semibold text-gray-700">
-                Asociacion actual
+                Asociación actual
               </label>
               <select
                 value={activeAssociationId ?? ""}
@@ -608,7 +608,7 @@ export default function AssociationProfilePage() {
                 ))}
               </select>
               <p className="mt-2 text-xs text-gray-500">
-                Codigo activo: {companyCode ?? "No disponible"}
+                Código activo: {companyCode ?? "No disponible"}
               </p>
               {associationActionError ? (
                 <p className="mt-2 text-sm text-rose-600">
@@ -627,7 +627,7 @@ export default function AssociationProfilePage() {
                 }}
                 className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
               >
-                Nueva asociacion
+                Nueva asociación
               </button>
             </div>
           </div>
@@ -1245,12 +1245,12 @@ export default function AssociationProfilePage() {
           setAssociationModalOpen(false);
           resetAssociationForm();
         }}
-        title="Nueva asociacion"
+        title="Nueva asociación"
       >
         <form onSubmit={handleCreateAssociation} className="space-y-4">
           <p className="text-sm text-slate-500">
-            Crea otra asociacion con esta misma cuenta. Tu usuario quedara
-            vinculado y la nueva asociacion pasara a ser la activa.
+            Crea otra asociación con esta misma cuenta. Tu usuario quedará
+            vinculado y la nueva asociación pasará a ser la activa.
           </p>
 
           {associationFormError ? (
@@ -1261,7 +1261,7 @@ export default function AssociationProfilePage() {
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">
-              Nombre de la asociacion
+              Nombre de la asociación
             </label>
             <input
               value={associationForm.name}
@@ -1312,7 +1312,7 @@ export default function AssociationProfilePage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">
-                Telefono
+                Teléfono
               </label>
               <input
                 value={associationForm.phone}
@@ -1344,7 +1344,7 @@ export default function AssociationProfilePage() {
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">
-              Direccion
+              Dirección
             </label>
             <input
               value={associationForm.address}
@@ -1377,7 +1377,7 @@ export default function AssociationProfilePage() {
               disabled={creatingAssociation}
               className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {creatingAssociation ? "Creando..." : "Crear asociacion"}
+                {creatingAssociation ? "Creando..." : "Crear asociación"}
             </button>
           </div>
         </form>

@@ -59,7 +59,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       moduleKey: "documents",
     },
     { label: "Eventos", href: "/events", icon: "event", moduleKey: "events" },
-    { label: "Mensajeria", href: "/messaging", icon: "mail" },
+    { label: "Mensajería", href: "/messaging", icon: "mail" },
   ];
 
   const visibleItems = mainItems.filter((item) => {
@@ -144,7 +144,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                 Kora
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Gestion de asociaciones
+                Gestión de asociaciones
               </p>
             </div>
             {onClose ? (
@@ -199,7 +199,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             <span className="material-symbols-outlined text-[20px]">
               settings
             </span>
-            Configuracion
+            Configuración
           </Link>
 
           {mode === "authenticated" ? (
@@ -236,7 +236,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             disabled={closingSession}
             className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
           >
-            {closingSession ? "Cerrando..." : "Cerrar sesion"}
+            {closingSession ? "Cerrando..." : "Cerrar sesión"}
           </button>
         </div>
       </aside>

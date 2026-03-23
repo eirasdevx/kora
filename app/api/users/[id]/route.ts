@@ -75,12 +75,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json(
       {
         error:
-          publicDatabaseError?.message ??
+          publicDatabaseError?.message ?
           (error instanceof Error
             ? error.message
             : "No se pudo actualizar el usuario."),
       },
-      { status: publicDatabaseError?.status ?? 400 }
+      { status: publicDatabaseError?.status ? 400 }
     );
   }
 }
@@ -98,12 +98,12 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     return NextResponse.json(
       {
         error:
-          publicDatabaseError?.message ??
+          publicDatabaseError?.message ?
           (error instanceof Error
             ? error.message
             : "No se pudo eliminar el usuario."),
       },
-      { status: publicDatabaseError?.status ?? 400 }
+      { status: publicDatabaseError?.status ? 400 }
     );
   }
 }

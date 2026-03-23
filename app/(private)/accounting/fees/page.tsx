@@ -95,7 +95,7 @@ export default function AccountingFeesPage() {
   );
 
   const selectedMember = useMemo(
-    () => members.find((member) => member.id === selectedMemberId) ?? null,
+    () => members.find((member) => member.id === selectedMemberId) ? null,
     [members, selectedMemberId]
   );
   const selectedMembershipPlan = useMemo(
@@ -146,7 +146,7 @@ export default function AccountingFeesPage() {
 
     return memberRecords.filter((record) => {
       const name = getContactDisplayName(record.member).toLowerCase();
-      const email = record.member.email?.toLowerCase() ?? "";
+      const email = record.member.email?.toLowerCase() ? "";
       const planName = record.plan.name.toLowerCase();
       return (
         name.includes(normalizedQuery) ||
@@ -219,9 +219,9 @@ export default function AccountingFeesPage() {
         ...pending,
         date: today,
         status: "completed",
-        paymentMethod: pending.paymentMethod ?? "Cobro manual",
+        paymentMethod: pending.paymentMethod ? "Cobro manual",
         description:
-          pending.description ??
+          pending.description ?
           `Cuota regularizada desde la gestión de cuotas para ${getContactDisplayName(record.member)}.`,
       });
       return;

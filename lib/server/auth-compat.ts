@@ -155,20 +155,20 @@ export const mapAssociationPayload = (association: {
 }) => ({
   id: association.id,
   name: association.name,
-  logoUrl: association.logoUrl ?? undefined,
-  taxId: association.taxId ?? undefined,
-  contactEmail: association.contactEmail ?? undefined,
-  phone: association.phone ?? undefined,
+  logoUrl: association.logoUrl ? undefined,
+  taxId: association.taxId ? undefined,
+  contactEmail: association.contactEmail ? undefined,
+  phone: association.phone ? undefined,
   location: buildLocation(association),
   address: buildAddress(association),
   representatives:
     association.representatives?.map((representative) => ({
       id: representative.id,
-      role: representative.roleTitle ?? "",
+      role: representative.roleTitle ? "",
       name: representative.fullName,
-      email: representative.email ?? undefined,
-      phone: representative.phone ?? undefined,
-    })) ?? undefined,
+      email: representative.email ? undefined,
+      phone: representative.phone ? undefined,
+    })) ? undefined,
 });
 
 export const normalizeLegacyPermissions = (
@@ -180,18 +180,18 @@ export const normalizeLegacyPermissions = (
   }
 
   const candidate = permissions as Partial<LegacyPermissions> | undefined;
-  const modules: Partial<LegacyPermissions["modules"]> = candidate?.modules ?? {};
-  const actions: Partial<LegacyPermissions["actions"]> = candidate?.actions ?? {};
-  const edit = Boolean(actions.edit ?? DEFAULT_PERMISSIONS.actions.edit);
-  const del = Boolean(actions.delete ?? DEFAULT_PERMISSIONS.actions.delete);
+  const modules: Partial<LegacyPermissions["modules"]> = candidate?.modules ? {};
+  const actions: Partial<LegacyPermissions["actions"]> = candidate?.actions ? {};
+  const edit = Boolean(actions.edit ? DEFAULT_PERMISSIONS.actions.edit);
+  const del = Boolean(actions.delete ? DEFAULT_PERMISSIONS.actions.delete);
 
   return {
     modules: {
-      accounting: Boolean(modules.accounting ?? DEFAULT_PERMISSIONS.modules.accounting),
-      events: Boolean(modules.events ?? DEFAULT_PERMISSIONS.modules.events),
-      contacts: Boolean(modules.contacts ?? DEFAULT_PERMISSIONS.modules.contacts),
-      documents: Boolean(modules.documents ?? DEFAULT_PERMISSIONS.modules.documents),
-      messaging: Boolean(modules.messaging ?? DEFAULT_PERMISSIONS.modules.messaging),
+      accounting: Boolean(modules.accounting ? DEFAULT_PERMISSIONS.modules.accounting),
+      events: Boolean(modules.events ? DEFAULT_PERMISSIONS.modules.events),
+      contacts: Boolean(modules.contacts ? DEFAULT_PERMISSIONS.modules.contacts),
+      documents: Boolean(modules.documents ? DEFAULT_PERMISSIONS.modules.documents),
+      messaging: Boolean(modules.messaging ? DEFAULT_PERMISSIONS.modules.messaging),
     },
     actions: {
       view: !edit,
@@ -295,7 +295,7 @@ export const mapAssociationUserPayload = (associationUser: {
   id: associationUser.user.id,
   firstName: associationUser.user.firstName,
   lastName: associationUser.user.lastName,
-  dni: associationUser.user.documentNumber ?? "",
+  dni: associationUser.user.documentNumber ? "",
   email: associationUser.user.email,
   role: associationUser.role,
   status: associationUser.status,
@@ -307,8 +307,8 @@ export const mapAssociationUserPayload = (associationUser: {
     associationUser.permissions
   ),
   preferences: {
-    language: associationUser.languageOverride ?? associationUser.user.language,
-    timezone: associationUser.timezoneOverride ?? associationUser.user.timezone,
+    language: associationUser.languageOverride ? associationUser.user.language,
+    timezone: associationUser.timezoneOverride ? associationUser.user.timezone,
     notifications: {
       updates: associationUser.notifyInApp,
       email: associationUser.notifyEmail,
@@ -317,12 +317,12 @@ export const mapAssociationUserPayload = (associationUser: {
     twoFactorEnabled: associationUser.user.twoFactorEnabled,
     twoFactorVerifiedAt: associationUser.user.twoFactorVerifiedAt?.toISOString(),
   } satisfies LegacyPreferences,
-  photoUrl: associationUser.user.photoUrl ?? undefined,
+  photoUrl: associationUser.user.photoUrl ? undefined,
   securityActivity: associationUser.securityEvents?.map((event) => ({
     id: event.id,
     action: event.description,
-    device: event.userAgent ?? "",
-    location: event.ipAddress ?? "",
+    device: event.userAgent ? "",
+    location: event.ipAddress ? "",
     timestamp: event.createdAt.toISOString(),
   })),
 });

@@ -363,8 +363,8 @@ export default function TransactionsTable({ transactions }: Props) {
       if (!matchesDateRange(tx.date, dateFrom, dateTo)) return false;
 
       if (!query) return true;
-      const concept = tx.concept?.toLowerCase() ?? "";
-      const description = tx.description?.toLowerCase() ?? "";
+      const concept = tx.concept?.toLowerCase() ? "";
+      const description = tx.description?.toLowerCase() ? "";
       const statusLabel = TransactionStatusLabels[tx.status].toLowerCase();
       return (
         concept.includes(query) ||
@@ -413,7 +413,7 @@ export default function TransactionsTable({ transactions }: Props) {
       concepto: tx.concept,
       estado: TransactionStatusLabels[tx.status],
       importe: formatAmount(tx.amount, tx.type, formatLocale),
-      notas: tx.description ?? "",
+      notas: tx.description ? "",
     }));
   }, [filteredTransactions, formatLocale]);
 

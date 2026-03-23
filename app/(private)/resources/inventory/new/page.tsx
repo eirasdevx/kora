@@ -365,7 +365,7 @@ export default function InventoryNewPage() {
                   accept="image/png,image/jpeg"
                   className="hidden"
                   onChange={(event) =>
-                    handleFileChange(event.target.files?.[0] ?? null)
+                    handleFileChange(event.target.files?.[0] ? null)
                   }
                 />
                 {form.photoUrl ? (
@@ -376,7 +376,7 @@ export default function InventoryNewPage() {
                       className="h-24 w-24 rounded-2xl object-cover"
                     />
                     <span className="text-xs text-gray-500">
-                      {photoName ?? "Imagen cargada"}
+                      {photoName ? "Imagen cargada"}
                     </span>
                     <span className="text-xs font-semibold text-primary">
                       Cambiar foto

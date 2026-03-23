@@ -86,7 +86,7 @@ const PRIVACY_PERMISSION_ITEMS: Array<{
     key: "services",
     label: "S",
     title: "Servicios",
-    subtitle: "Gestion de datos para acceso a servicios y actividades.",
+    subtitle: "Gestión de datos para acceso a servicios y actividades.",
     icon: "workspace_premium",
   },
 ];
@@ -357,7 +357,7 @@ export default function MemberDetailPageView() {
     : new Date().getFullYear();
   const years = Math.max(0, new Date().getFullYear() - memberSinceYear);
   const nextChargeDate = getNextMembershipChargeDate(feePlan);
-  const currentBalanceLabel = pendingAmount > 0 ? "Pendiente" : "Al dia";
+  const currentBalanceLabel = pendingAmount > 0 ? "Pendiente" : "Al día";
   const hasUnsavedPermissionChanges = !areContactPrivacyPermissionsEqual(
     permissionDraft,
     storedPermissions
@@ -558,7 +558,7 @@ export default function MemberDetailPageView() {
             </span>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
-                Asociacion
+                Asociación
               </p>
               <p className="text-lg font-semibold">
                 {association?.name || "Kora"}
@@ -631,7 +631,7 @@ export default function MemberDetailPageView() {
 
           <SectionBlock
             title="Historial de Pagos Recientes"
-            subtitle="Ultimos movimientos de cuota"
+            subtitle="Últimos movimientos de cuota"
             actions={
               <Link href="/finance" className="text-xs font-semibold text-primary">
                 Ver todo
@@ -643,11 +643,11 @@ export default function MemberDetailPageView() {
                 <thead className={tableHeadStyles}>
                   <tr>
                     <th className={tableHeadCellStyles}>Fecha</th>
-                    <th className={tableHeadCellStyles}>Categoria</th>
+                    <th className={tableHeadCellStyles}>Categoría</th>
                     <th className={tableHeadCellStyles}>Importe</th>
                     <th className={tableHeadCellStyles}>Estado</th>
                     <th className={`${tableHeadCellStyles} text-right`}>
-                      Accion
+                      Acción
                     </th>
                   </tr>
                 </thead>
@@ -727,7 +727,7 @@ export default function MemberDetailPageView() {
           <div className="space-y-4">
             <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                Ultima revision
+                Última revisión
               </p>
               <p className="mt-2 text-sm font-semibold text-gray-900">
                 {formatDateTime(member.privacyUpdatedAt, formatLocale)}

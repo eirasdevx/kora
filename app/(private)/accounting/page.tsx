@@ -110,7 +110,7 @@ export default function AccountingPage() {
     if (!journalRows.length) return;
 
     const rows = [
-      ["Fecha", "Concepto", "Categoria", "Cuenta", "Debe", "Haber", "Saldo"],
+      ["Fecha", "Concepto", "Categoría", "Cuenta", "Debe", "Haber", "Saldo"],
       ...journalRows.map((row) => [
         formatDate(row.date, formatLocale),
         row.concept,
@@ -155,7 +155,7 @@ export default function AccountingPage() {
     if (!ledgerFlatRows.length) return;
 
     const rows = [
-      ["Cuenta", "Fecha", "Concepto", "Categoria", "Debe", "Haber", "Saldo cuenta"],
+      ["Cuenta", "Fecha", "Concepto", "Categoría", "Debe", "Haber", "Saldo cuenta"],
       ...ledgerFlatRows.map((row) => [
         `${row.accountCode} · ${row.accountLabel}`,
         formatDate(row.date, formatLocale),
@@ -250,7 +250,7 @@ export default function AccountingPage() {
 
       <SectionBlock
         title="Libros contables"
-        subtitle="Descarga el libro diario y el libro mayor con los codigos configurados para esta asociación."
+        subtitle="Descarga el libro diario y el libro mayor con los códigos configurados para esta asociación."
       >
         <div className="grid gap-4 xl:grid-cols-2">
           <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">

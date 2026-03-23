@@ -225,7 +225,7 @@ export default function AccountingAccountsPage() {
       <PageHeader
         eyebrow="Elementos contables"
         title="Elementos contables"
-        subtitle="Gestiona el catalogo operativo de cuentas y personaliza el codigo de cada elemento."
+        subtitle="Gestiona el catálogo operativo de cuentas y personaliza el código de cada elemento."
         backHref="/accounting"
         backLabel="Volver a Contabilidad"
         actions={
@@ -234,7 +234,7 @@ export default function AccountingAccountsPage() {
             onClick={() => document.getElementById("accounting-accounts-save")?.click()}
             className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow"
           >
-            Guardar codigos
+            Guardar códigos
           </button>
         }
       />
@@ -246,18 +246,18 @@ export default function AccountingAccountsPage() {
           </p>
           <p className="mt-3 text-3xl font-semibold text-gray-900">{catalog.length}</p>
           <p className="mt-1 text-sm text-gray-500">
-            Cuentas base del catalogo contable.
+            Cuentas base del catálogo contable.
           </p>
         </div>
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-            Codigos editados
+            Códigos editados
           </p>
           <p className="mt-3 text-3xl font-semibold text-gray-900">
             {editedAccountsCount}
           </p>
           <p className="mt-1 text-sm text-gray-500">
-            Diferencias frente al catalogo por defecto.
+            Diferencias frente al catálogo por defecto.
           </p>
         </div>
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -266,15 +266,15 @@ export default function AccountingAccountsPage() {
           </p>
           <p className="mt-3 text-lg font-semibold text-gray-900">
             {hasValidationErrors
-              ? "Revisa codigos vacios o duplicados"
+              ? "Revisa códigos vacíos o duplicados"
               : hasChanges
                 ? "Cambios pendientes"
                 : lastSavedAt
-                  ? "Catalogo guardado"
+                  ? "Catálogo guardado"
                   : "Sin cambios"}
           </p>
           <p className="mt-1 text-sm text-gray-500">
-            Los libros y resumenes usaran estos codigos.
+            Los libros y resúmenes usarán estos códigos.
           </p>
         </div>
       </section>
@@ -283,9 +283,9 @@ export default function AccountingAccountsPage() {
         <div className="border-b border-slate-100 p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Catalogo editable</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Catálogo editable</h2>
               <p className="mt-1 text-sm text-gray-500">
-                Vista tabular del catalogo contable con edicion por fila.
+                Vista tabular del catálogo contable con edición por fila.
               </p>
             </div>
             <button
@@ -296,7 +296,7 @@ export default function AccountingAccountsPage() {
               }}
               className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
             >
-              Restaurar catalogo base
+              Restaurar catálogo base
             </button>
           </div>
         </div>
@@ -380,7 +380,7 @@ export default function AccountingAccountsPage() {
 
           {hasValidationErrors ? (
             <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              Cada codigo debe estar informado y ser unico dentro del catalogo.
+              Cada código debe estar informado y ser único dentro del catálogo.
             </div>
           ) : null}
         </div>
@@ -403,7 +403,7 @@ export default function AccountingAccountsPage() {
                     }
                     className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400 transition hover:text-gray-600"
                   >
-                    Codigo contable
+                    Código contable
                     <span className="material-symbols-outlined text-[16px]">
                       {codeSortDirection === "asc" ? "north" : "south"}
                     </span>
@@ -468,7 +468,7 @@ export default function AccountingAccountsPage() {
                         </div>
                         <div className="text-xs text-gray-500">
                           {summary?.lastEntryDate
-                            ? `Ultimo ${formatDate(summary.lastEntryDate, formatLocale)}`
+                            ? `Último ${formatDate(summary.lastEntryDate, formatLocale)}`
                             : "Ninguna"}
                         </div>
                       </td>
@@ -510,19 +510,19 @@ export default function AccountingAccountsPage() {
                             </div>
                             {isEmpty ? (
                               <p className="text-xs font-semibold text-rose-600">
-                                El codigo no puede quedar vacio.
+                                El código no puede quedar vacío.
                               </p>
                             ) : null}
                             {isDuplicate ? (
                               <p className="text-xs font-semibold text-rose-600">
-                                Este codigo ya esta asignado a otra cuenta.
+                                Este código ya está asignado a otra cuenta.
                               </p>
                             ) : null}
                           </div>
                         ) : (
                           <div>
                             <p className="font-semibold text-gray-900">
-                              {currentCode || "Sin codigo"}
+                              {currentCode || "Sin código"}
                             </p>
                             <p className="text-xs text-gray-500">
                               {currentCode === defaultCode
@@ -543,7 +543,7 @@ export default function AccountingAccountsPage() {
                           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50"
                           aria-label={
                             isEditing
-                              ? `Cerrar edicion de ${account.label}`
+                              ? `Cerrar edición de ${account.label}`
                               : `Editar ${account.label}`
                           }
                         >
@@ -600,7 +600,7 @@ export default function AccountingAccountsPage() {
       <div className="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white px-6 py-4 shadow-sm md:flex-row md:items-center md:justify-between">
         <div className="text-sm text-gray-500">
           {hasValidationErrors
-            ? "Corrige los codigos duplicados o vacios antes de guardar"
+            ? "Corrige los códigos duplicados o vacíos antes de guardar"
             : hasChanges
               ? "Hay cambios pendientes de guardar"
               : lastSavedAt
@@ -639,7 +639,7 @@ export default function AccountingAccountsPage() {
             disabled={!association || !hasChanges || hasValidationErrors}
             className="rounded-2xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Guardar codigos
+            Guardar códigos
           </button>
         </div>
       </div>

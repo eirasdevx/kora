@@ -68,7 +68,7 @@ const membersTableRowStyles = "border-b border-slate-100 last:border-b-0";
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
   if (composed) return composed;
-  return contact.fullName ?? "Sin nombre";
+  return contact.fullName ? "Sin nombre";
 }
 
 function getInitials(contact: Contact) {
@@ -245,7 +245,7 @@ export default function MembersPage() {
 
   const filteredMembers = membersWithDetails.filter((item) => {
     const name = getDisplayName(item.member).toLowerCase();
-    const email = item.member.email?.toLowerCase() ?? "";
+    const email = item.member.email?.toLowerCase() ? "";
     const idLabel = formatMemberId(item.member.id).toLowerCase();
     const matchesQuery =
       !query.trim() ||

@@ -111,7 +111,7 @@ function LoginPageContent() {
       const message =
         requestError instanceof Error
           ? requestError.message
-          : "No se pudo iniciar sesion.";
+          : "No se pudo iniciar sesión.";
 
       if (pendingTwoFactor || verificationCode) {
         setTwoFactorError(message);
@@ -146,7 +146,7 @@ function LoginPageContent() {
     event.preventDefault();
 
     if (!twoFactorCode.trim()) {
-      setTwoFactorError("Introduce el codigo de verificacion.");
+      setTwoFactorError("Introduce el código de verificación.");
       return;
     }
 
@@ -185,11 +185,11 @@ function LoginPageContent() {
 
             <div className="max-w-md space-y-6">
               <h1 className="text-4xl font-semibold leading-tight">
-                Gestiona tu asociacion con elegancia.
+                Gestiona tu asociación con elegancia.
               </h1>
               <p className="text-base text-white/80">
-                Centraliza finanzas, recursos, eventos y mensajeria en una sola
-                plataforma intuitiva disenada para el crecimiento comunitario.
+                Centraliza finanzas, recursos, eventos y mensajería en una sola
+                plataforma intuitiva diseñada para el crecimiento comunitario.
               </p>
             </div>
 
@@ -207,14 +207,14 @@ function LoginPageContent() {
                 Bienvenido a Kora
               </h2>
               <p className="text-sm text-slate-500">
-                Ingresa tu DNI o correo, contrasena y el codigo de empresa.
+                Ingresa tu DNI o correo, contraseña y el código de empresa.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  DNI o correo electronico
+                  DNI o correo electrónico
                 </label>
                 <input
                   name="identifier"
@@ -230,20 +230,20 @@ function LoginPageContent() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <label className="font-medium text-slate-700">
-                    Contrasena
+                    Contraseña
                   </label>
                   <div className="flex flex-wrap items-center justify-end gap-3">
                     <Link
                       href="/forgot-password"
                       className="font-medium text-blue-600 hover:text-blue-700"
                     >
-                      Olvidaste tu contrasena?
+                      ¿Olvidaste tu contraseña?
                     </Link>
                     <Link
                       href="/remember-company-code"
                       className="font-medium text-blue-600 hover:text-blue-700"
                     >
-                      Recordar codigos
+                      Recordar códigos
                     </Link>
                   </div>
                 </div>
@@ -264,8 +264,8 @@ function LoginPageContent() {
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     aria-label={
                       showPassword
-                        ? "Ocultar contrasena"
-                        : "Mostrar contrasena"
+                        ? "Ocultar contraseña"
+                        : "Mostrar contraseña"
                     }
                   >
                     <span className="material-symbols-outlined text-[18px]">
@@ -277,7 +277,7 @@ function LoginPageContent() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Codigo de empresa
+                  Código de empresa
                 </label>
                 <input
                   name="companyCode"
@@ -299,7 +299,7 @@ function LoginPageContent() {
                   onChange={(event) => setRememberSession(event.target.checked)}
                   className="h-4 w-4 rounded border-slate-300 text-blue-600"
                 />
-                Mantener sesion iniciada
+                Mantener sesión iniciada
               </label>
 
               {error ? (
@@ -313,7 +313,7 @@ function LoginPageContent() {
                 disabled={submitting}
                 className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
               >
-                {submitting ? "Validando..." : "Iniciar sesion"}
+                {submitting ? "Validando..." : "Iniciar sesión"}
               </button>
             </form>
 
@@ -325,7 +325,7 @@ function LoginPageContent() {
               }}
               className="w-full rounded-xl border border-dashed border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:border-slate-300"
             >
-              Iniciar sesion como invitado
+              Iniciar sesión como invitado
             </button>
 
             <p className="text-center text-sm text-slate-500">
@@ -346,17 +346,17 @@ function LoginPageContent() {
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <div className="space-y-1">
               <h3 className="text-lg font-semibold text-slate-900">
-                Verificacion en dos pasos
+                Verificación en dos pasos
               </h3>
               <p className="text-sm text-slate-500">
-                Introduce el codigo de tu app para continuar.
+                Introduce el código de tu app para continuar.
               </p>
             </div>
 
             <form onSubmit={handleTwoFactorSubmit} className="mt-5 space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Codigo de verificacion
+                  Código de verificación
                 </label>
                 <input
                   value={twoFactorCode}

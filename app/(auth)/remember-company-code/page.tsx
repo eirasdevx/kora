@@ -83,10 +83,10 @@ export default function RememberCompanyCodePage() {
 
             <div className="max-w-md space-y-6">
               <h1 className="text-4xl font-semibold leading-tight">
-                Recupera tus codigos por correo.
+                Recupera tus códigos por correo.
               </h1>
               <p className="text-base text-white/80">
-                Cada asociacion te enviara su codigo desde su propio correo.
+                Cada asociación te enviará su código desde su propio correo.
               </p>
             </div>
 
@@ -101,18 +101,18 @@ export default function RememberCompanyCodePage() {
           <div className="w-full max-w-md space-y-8">
             <div className="space-y-2">
               <h2 className="text-3xl font-semibold text-slate-900">
-                Recordar codigo de asociacion
+                Recordar código de asociación
               </h2>
               <p className="text-sm text-slate-500">
                 Introduce tu DNI o correo y, si tu cuenta existe, cada
-                asociacion activa te enviara su codigo por email.
+                asociación activa te enviará su código por email.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  DNI o correo electronico
+                  DNI o correo electrónico
                 </label>
                 <input
                   name="identifier"
@@ -142,7 +142,7 @@ export default function RememberCompanyCodePage() {
                 disabled={submitting}
                 className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
               >
-                {submitting ? "Enviando..." : "Enviar codigos por correo"}
+                {submitting ? "Enviando..." : "Enviar códigos por correo"}
               </button>
             </form>
 
@@ -152,7 +152,7 @@ export default function RememberCompanyCodePage() {
                 href="/login"
                 className="font-semibold text-blue-600 hover:text-blue-700"
               >
-                Volver a iniciar sesion
+                Volver a iniciar sesión
               </Link>
             </p>
           </div>

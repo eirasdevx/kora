@@ -23,10 +23,10 @@ export async function GET() {
     return NextResponse.json(
       {
         error:
-          publicDatabaseError?.message ??
+          publicDatabaseError?.message ?
           "No se pudo recuperar la sesión actual.",
       },
-      { status: publicDatabaseError?.status ?? 500 }
+      { status: publicDatabaseError?.status ? 500 }
     );
   }
 }

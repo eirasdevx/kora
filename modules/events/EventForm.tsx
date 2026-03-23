@@ -14,8 +14,8 @@ interface Props {
 }
 
 const CATEGORY_OPTIONS = [
-  "Social / RecaudaciÃ³n",
-  "FormaciÃ³n",
+  "Social / Recaudación",
+  "Formación",
   "Deportivo",
   "Cultural",
   "Comunidad",
@@ -172,7 +172,7 @@ export default function EventForm({
               i
             </span>
             <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-gray-500">
-              InformaciÃ³n general
+              Información general
             </h2>
           </div>
 
@@ -180,20 +180,20 @@ export default function EventForm({
             <div className="grid gap-4 md:grid-cols-[1.4fr_0.6fr]">
               <div>
                 <label className="text-xs font-semibold uppercase text-gray-400">
-                  TÃ­tulo del evento
+                  Título del evento
                 </label>
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                  placeholder="Ej: Gala de Beneficencia OtoÃ±o"
+                  placeholder="Ej: Gala de Beneficencia Otoño"
                   required
                 />
               </div>
 
               <div>
                 <label className="text-xs font-semibold uppercase text-gray-400">
-                  CategorÃ­a
+                  Categoría
                 </label>
                 <div className="relative mt-2">
                   <select
@@ -216,13 +216,13 @@ export default function EventForm({
 
             <div>
               <label className="text-xs font-semibold uppercase text-gray-400">
-                DescripciÃ³n
+                Descripción
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="mt-2 min-h-[180px] w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm text-gray-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-                placeholder="Escribe aquÃ­ los detalles del evento..."
+                placeholder="Escribe aquí los detalles del evento..."
               />
             </div>
           </div>
@@ -234,7 +234,7 @@ export default function EventForm({
               U
             </span>
             <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-gray-500">
-              LogÃ­stica y ubicaciÃ³n
+              Logística y ubicación
             </h2>
           </div>
 
@@ -278,12 +278,12 @@ export default function EventForm({
 
           <div className="mt-4">
             <label className="text-xs font-semibold uppercase text-gray-400">
-              DirecciÃ³n o enlace de reuniÃ³n
+              Dirección o enlace de reunión
             </label>
             <div className="mt-2 flex flex-wrap gap-2">
               {[
                 { label: "Presencial", value: "onsite" },
-                { label: "En lÃ­nea", value: "online" },
+                { label: "En línea", value: "online" },
               ].map((option) => (
                 <button
                   key={option.value}
@@ -308,7 +308,7 @@ export default function EventForm({
               placeholder={
                 locationType === "online"
                   ? "Ej: https://zoom.us/..."
-                  : "Ej: Hotel Continental, SalÃ³n Real"
+                  : "Ej: Hotel Continental, Salón Real"
               }
             />
           </div>
@@ -317,7 +317,7 @@ export default function EventForm({
         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm xl:col-span-5">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-              â‚¬
+              €
             </span>
             <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-gray-500">
               Entradas y aforo
@@ -332,7 +332,7 @@ export default function EventForm({
                 </label>
                 <div className="relative mt-2">
                   <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                    â‚¬
+                    €
                   </span>
                   <input
                     type="number"
@@ -348,7 +348,7 @@ export default function EventForm({
 
               <div>
                 <label className="text-xs font-semibold uppercase text-gray-400">
-                  Capacidad mÃ¡xima
+                  Capacidad máxima
                 </label>
                 <input
                   type="number"
@@ -363,7 +363,7 @@ export default function EventForm({
 
             <div>
               <label className="text-xs font-semibold uppercase text-gray-400">
-                Cierre de inscripciÃ³n
+                Cierre de inscripción
               </label>
               <input
                 type="date"

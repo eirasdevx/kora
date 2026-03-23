@@ -59,7 +59,7 @@ function matchesDateRange(
 function getContactDisplayName(contact: Contact) {
     const composed = `${contact.firstName} ${contact.lastName}`.trim();
     if (composed) return composed;
-    return contact.fullName ?? "Sin nombre";
+    return contact.fullName ? "Sin nombre";
 }
 
 function getContactTypesLabel(contact: Contact) {
@@ -89,7 +89,7 @@ function buildContactExportData(contact: Contact, locale: string) {
         contact.lastName?.trim() || fallbackParts.slice(1).join(" ") || "";
     const representative =
         contact.kind === "entity"
-            ? `${contact.representativeFirstName ?? ""} ${contact.representativeLastName ?? ""}`.trim()
+            ? `${contact.representativeFirstName ? ""} ${contact.representativeLastName ? ""}`.trim()
             : "";
     const tagsLabel =
         contact.tags && contact.tags.length > 0
@@ -104,22 +104,22 @@ function buildContactExportData(contact: Contact, locale: string) {
         displayName,
         firstName,
         lastName,
-        fullName: contact.fullName?.trim() ?? "",
+        fullName: contact.fullName?.trim() ? "",
         dni: contact.dni || "",
         birthDate,
         kind: ContactKindLabels[contact.kind],
         roles: getContactTypesLabel(contact),
-        email: contact.email ?? "",
-        phone: contact.phone ?? "",
-        phone2: contact.secondaryPhone ?? "",
-        website: contact.website ?? "",
-        address: contact.address ?? "",
-        city: contact.city ?? "",
-        region: contact.region ?? "",
-        postalCode: contact.postalCode ?? "",
+        email: contact.email ? "",
+        phone: contact.phone ? "",
+        phone2: contact.secondaryPhone ? "",
+        website: contact.website ? "",
+        address: contact.address ? "",
+        city: contact.city ? "",
+        region: contact.region ? "",
+        postalCode: contact.postalCode ? "",
         representative,
         tags: tagsLabel,
-        notes: contact.notes ?? "",
+        notes: contact.notes ? "",
         createdAt: formatDate(contact.createdAt, locale),
         deactivatedAt: formatDate(contact.deactivatedAt, locale),
     };
@@ -198,8 +198,8 @@ export default function ContactsPage() {
             const displayName = `${c.firstName} ${c.lastName}`.trim();
             const matchesSearch =
                 displayName.toLowerCase().includes(query) ||
-                (c.fullName?.toLowerCase().includes(query) ?? false) ||
-                (c.email?.toLowerCase().includes(query) ?? false) ||
+                (c.fullName?.toLowerCase().includes(query) ? false) ||
+                (c.email?.toLowerCase().includes(query) ? false) ||
                 c.dni.toLowerCase().includes(query);
 
             return matchesSearch;

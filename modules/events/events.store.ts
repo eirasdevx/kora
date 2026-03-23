@@ -8,6 +8,11 @@ import {
 } from "@/core/storage/association-scope";
 import { useSessionStore } from "@/core/session/session.store";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
+import {
+  deleteAssociationModuleRecord,
+  listAssociationModuleRecords,
+  upsertAssociationModuleRecord,
+} from "@/lib/client/association-data-client";
 
 interface EventsState {
   events: Event[];
@@ -25,6 +30,15 @@ export const useEventsStore = create<EventsState>((set, get) => ({
 
   loadEvents: async () => {
     if (!isAuthenticated()) return;
+
+    try {
+      const events = await listAssociationModuleRecords<Event>("events");
+      set({ events });
+      return;
+    } catch (error) {
+      console.error(error);
+    }
+
     const all = await db.events.toArray();
     const { scopedRecords, migratedRecords } = getAssociationScopedRecords(
       all,
@@ -67,6 +81,7 @@ export const useEventsStore = create<EventsState>((set, get) => ({
       });
       return;
     }
+    await upsertAssociationModuleRecord<Event>("events", normalizedEvent);
     await db.events.put(normalizedEvent);
     set((state) => {
       const exists = state.events.some((e) => e.id === normalizedEvent.id);
@@ -112,6 +127,7 @@ export const useEventsStore = create<EventsState>((set, get) => ({
       });
       return;
     }
+    await deleteAssociationModuleRecord("events", id);
     await db.events.delete(id);
     set((state) => ({
       events: state.events.filter((e) => e.id !== id),

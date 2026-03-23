@@ -54,8 +54,8 @@ export async function PATCH(request: NextRequest) {
       photoUrl: payload.photoUrl,
       passwordDigest: payload.passwordDigest,
       preferences: {
-        language: payload.preferences.language ?? "es",
-        timezone: payload.preferences.timezone ?? "(GMT+01:00) Madrid",
+        language: payload.preferences.language ? "es",
+        timezone: payload.preferences.timezone ? "(GMT+01:00) Madrid",
         notifications: {
           updates: Boolean(payload.preferences.notifications?.updates),
           email: Boolean(payload.preferences.notifications?.email),
@@ -72,12 +72,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          publicDatabaseError?.message ??
+          publicDatabaseError?.message ?
           (error instanceof Error
             ? error.message
             : "No se pudo actualizar el perfil."),
       },
-      { status: publicDatabaseError?.status ?? 400 }
+      { status: publicDatabaseError?.status ? 400 }
     );
   }
 }

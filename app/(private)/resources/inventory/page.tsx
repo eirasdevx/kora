@@ -93,7 +93,7 @@ export default function ResourcesInventoryPage() {
   const exportRowsXlsx = useMemo(() => {
     return items.map((item) => {
       const status =
-        item.status ?? (item.borrowed > 0 ? "in_use" : "available");
+        item.status ? (item.borrowed > 0 ? "in_use" : "available");
       const available = Math.max(0, item.quantity - item.borrowed);
       return [
         item.name,
@@ -102,12 +102,12 @@ export default function ResourcesInventoryPage() {
         formatNumber(item.borrowed, formatLocale),
         formatNumber(available, formatLocale),
         ITEM_STATUS_LABELS[status],
-        item.serial ?? "-",
-        item.location ?? "-",
-        item.assignee ?? "-",
+        item.serial ? "-",
+        item.location ? "-",
+        item.assignee ? "-",
         formatDate(item.acquisitionDate, formatLocale),
         formatCurrency(item.value, formatLocale),
-        item.notes ?? "-",
+        item.notes ? "-",
       ];
     });
   }, [items, formatLocale]);
@@ -115,7 +115,7 @@ export default function ResourcesInventoryPage() {
   const exportRowsPdf = useMemo(() => {
     return items.map((item) => {
       const status =
-        item.status ?? (item.borrowed > 0 ? "in_use" : "available");
+        item.status ? (item.borrowed > 0 ? "in_use" : "available");
       const available = Math.max(0, item.quantity - item.borrowed);
       const details = [
         `Categoría: ${item.category}`,
@@ -181,7 +181,7 @@ export default function ResourcesInventoryPage() {
       .filter((item) => item.borrowed > 0)
       .map((item) => ({
         item,
-        lastMove: item.updatedAt ?? item.createdAt,
+        lastMove: item.updatedAt ? item.createdAt,
         borrower:
           item.assignee?.trim() || item.location?.trim() || "Sin asignar",
       }))
@@ -384,7 +384,7 @@ export default function ResourcesInventoryPage() {
                                     : "Sin serie"}
                                 </span>
                                 <span>
-                                  {item.location ?? "Sin ubicación"}
+                                  {item.location ? "Sin ubicación"}
                                 </span>
                               </div>
                             </div>
@@ -512,7 +512,7 @@ export default function ResourcesInventoryPage() {
                 ) : (
                   recentLoans.map(({ item, lastMove, borrower }) => {
                     const status =
-                      item.status ??
+                      item.status ?
                       (item.borrowed > 0 ? "in_use" : "available");
 
                     return (

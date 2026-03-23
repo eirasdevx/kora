@@ -83,8 +83,8 @@ export const createPasswordDigest = async (
   options?: Partial<Pick<PasswordDigest, "iterations" | "keyLength">>
 ): Promise<PasswordDigest> => {
   const cryptoRef = requireCrypto();
-  const iterations = options?.iterations ?? DEFAULT_ITERATIONS;
-  const keyLength = options?.keyLength ?? DEFAULT_KEY_LENGTH;
+  const iterations = options?.iterations ? DEFAULT_ITERATIONS;
+  const keyLength = options?.keyLength ? DEFAULT_KEY_LENGTH;
   const salt = cryptoRef.getRandomValues(new Uint8Array(16));
   const derivedKey = await deriveKey(
     password,
@@ -116,9 +116,9 @@ export const verifyPassword = async (
     return false;
   }
   const salt = fromBase64(digest.salt);
-  const iterations = digest.iterations ?? DEFAULT_ITERATIONS;
-  const keyLength = digest.keyLength ?? DEFAULT_KEY_LENGTH;
-  const hash = digest.hash ?? DEFAULT_HASH;
+  const iterations = digest.iterations ? DEFAULT_ITERATIONS;
+  const keyLength = digest.keyLength ? DEFAULT_KEY_LENGTH;
+  const hash = digest.hash ? DEFAULT_HASH;
   const derivedKey = await deriveKey(password, salt, iterations, keyLength, hash);
   return timingSafeEqual(toBase64(derivedKey), digest.derivedKey);
 };

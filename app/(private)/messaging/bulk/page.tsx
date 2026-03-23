@@ -120,7 +120,7 @@ export default function MessagingBulkPage() {
   const { contacts, loadContacts } = useContactsStore();
   const searchParams = useSearchParams();
 
-  const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
+  const [templateId, setTemplateId] = useState(templates[0]?.id ? "");
   const [queryApplied, setQueryApplied] = useState(false);
   const [filter, setFilter] = useState<"all" | ContactType>("all");
   const [search, setSearch] = useState("");
@@ -177,7 +177,7 @@ export default function MessagingBulkPage() {
   ]);
 
   const activeTemplate = useMemo(
-    () => templates.find((item) => item.id === templateId) ?? null,
+    () => templates.find((item) => item.id === templateId) ? null,
     [templates, templateId]
   );
 
@@ -197,7 +197,7 @@ export default function MessagingBulkPage() {
         `${contact.firstName} ${contact.lastName}`
           .toLowerCase()
           .includes(term) ||
-        (contact.email ?? "").toLowerCase().includes(term);
+        (contact.email ? "").toLowerCase().includes(term);
       return matchesFilter && matchesSearch;
     });
   }, [contacts, filter, search]);
@@ -213,7 +213,7 @@ export default function MessagingBulkPage() {
     selectableContacts
       .filter((contact) => ids.has(contact.id))
       .forEach((contact) => {
-        const email = (contact.email ?? "").trim().toLowerCase();
+        const email = (contact.email ? "").trim().toLowerCase();
         if (!EMAIL_REGEX.test(email)) return;
         if (unique.has(email)) return;
         unique.set(email, {
@@ -305,8 +305,8 @@ export default function MessagingBulkPage() {
       }
       const errors = Array.isArray(data.errors) ? data.errors : [];
       setSendResult({
-        sentCount: data.sentCount ?? 0,
-        failedCount: data.failedCount ?? 0,
+        sentCount: data.sentCount ? 0,
+        failedCount: data.failedCount ? 0,
         errors,
       });
       if (errors.length > 0) {
@@ -486,10 +486,10 @@ export default function MessagingBulkPage() {
                           {name || "Sin nombre"}
                         </span>
                         <span className="text-xs text-slate-500">
-                          {contact.types[0] ?? "-"}
+                          {contact.types[0] ? "-"}
                         </span>
                         <span className="text-xs text-slate-500">
-                          {contact.email ?? "Sin correo"}
+                          {contact.email ? "Sin correo"}
                         </span>
                       </div>
                     );
@@ -622,10 +622,10 @@ export default function MessagingBulkPage() {
                     <p>
                       SMTP:{" "}
                       <span className="font-semibold text-slate-800">
-                        {providerPreset?.host ?? "-"}
+                        {providerPreset?.host ? "-"}
                       </span>
-                      :{providerPreset?.port ?? "-"} ({" "}
-                      {providerPreset?.note ?? "SMTP"})
+                      :{providerPreset?.port ? "-"} ({" "}
+                      {providerPreset?.note ? "SMTP"})
                     </p>
                   )}
                   <p className="text-xs text-slate-400">

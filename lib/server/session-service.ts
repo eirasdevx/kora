@@ -94,27 +94,27 @@ const normalizePermissions = (
   }
 
   const candidate = parseJson<Partial<UserPermissions>>(value, {});
-  const modules: Partial<UserPermissions["modules"]> = candidate.modules ?? {};
-  const actions: Partial<UserPermissions["actions"]> = candidate.actions ?? {};
-  const edit = Boolean(actions.edit ?? DEFAULT_PERMISSIONS.actions.edit);
+  const modules: Partial<UserPermissions["modules"]> = candidate.modules ? {};
+  const actions: Partial<UserPermissions["actions"]> = candidate.actions ? {};
+  const edit = Boolean(actions.edit ? DEFAULT_PERMISSIONS.actions.edit);
 
   return {
     modules: {
       accounting: Boolean(
-        modules.accounting ?? DEFAULT_PERMISSIONS.modules.accounting
+        modules.accounting ? DEFAULT_PERMISSIONS.modules.accounting
       ),
-      events: Boolean(modules.events ?? DEFAULT_PERMISSIONS.modules.events),
+      events: Boolean(modules.events ? DEFAULT_PERMISSIONS.modules.events),
       contacts: Boolean(
-        modules.contacts ?? DEFAULT_PERMISSIONS.modules.contacts
+        modules.contacts ? DEFAULT_PERMISSIONS.modules.contacts
       ),
       documents: Boolean(
-        modules.documents ?? DEFAULT_PERMISSIONS.modules.documents
+        modules.documents ? DEFAULT_PERMISSIONS.modules.documents
       ),
     },
     actions: {
       view: edit ? false : true,
       edit,
-      delete: Boolean(actions.delete ?? DEFAULT_PERMISSIONS.actions.delete),
+      delete: Boolean(actions.delete ? DEFAULT_PERMISSIONS.actions.delete),
     },
   };
 };
@@ -131,8 +131,8 @@ const mapSecurityEvents = (
   securityEvents.map((event) => ({
     id: event.id,
     action: event.description,
-    device: event.userAgent ?? "Navegador",
-    location: event.ipAddress ?? "Local",
+    device: event.userAgent ? "Navegador",
+    location: event.ipAddress ? "Local",
     timestamp: event.createdAt.toISOString(),
   }));
 
@@ -156,10 +156,10 @@ const mapAssociationProfile = (association: {
   }>;
 }): AssociationProfile => ({
   name: association.name,
-  logoUrl: association.logoUrl ?? undefined,
-  taxId: association.taxId ?? undefined,
-  contactEmail: association.contactEmail ?? undefined,
-  phone: association.phone ?? undefined,
+  logoUrl: association.logoUrl ? undefined,
+  taxId: association.taxId ? undefined,
+  contactEmail: association.contactEmail ? undefined,
+  phone: association.phone ? undefined,
   location: buildLocation(association.locationName),
   address: buildAddress(association.addressLine1),
   membershipSettings: getAssociationMembershipSettings({
@@ -169,17 +169,17 @@ const mapAssociationProfile = (association: {
     association.messagingSettings,
     {
       senderName: association.name,
-      emailAddress: association.contactEmail ?? undefined,
+      emailAddress: association.contactEmail ? undefined,
     }
   ),
   representatives:
     association.representatives.length > 0
       ? association.representatives.map((representative) => ({
           id: representative.id,
-          role: representative.roleTitle ?? "",
+          role: representative.roleTitle ? "",
           name: representative.fullName,
-          email: representative.email ?? undefined,
-          phone: representative.phone ?? undefined,
+          email: representative.email ? undefined,
+          phone: representative.phone ? undefined,
         }))
       : undefined,
 });
@@ -220,23 +220,23 @@ const mapAssociationUser = (associationUser: {
   firstName: associationUser.user.firstName,
   lastName: associationUser.user.lastName,
   name: `${associationUser.user.firstName} ${associationUser.user.lastName}`.trim(),
-  phone: associationUser.user.phone ?? undefined,
-  dni: associationUser.user.documentNumber ?? "",
+  phone: associationUser.user.phone ? undefined,
+  dni: associationUser.user.documentNumber ? "",
   email: associationUser.user.email,
   role: associationUser.role,
   status: associationUser.status,
-  photoUrl: associationUser.user.photoUrl ?? undefined,
-  lastAccessAt: associationUser.lastAccessAt?.toISOString() ?? null,
+  photoUrl: associationUser.user.photoUrl ? undefined,
+  lastAccessAt: associationUser.lastAccessAt?.toISOString() ? null,
   permissions: normalizePermissions(
     associationUser.role,
     associationUser.permissions
   ),
   preferences: {
     language:
-      associationUser.languageOverride ?? associationUser.user.language ?? DEFAULT_LANGUAGE,
+      associationUser.languageOverride ? associationUser.user.language ? DEFAULT_LANGUAGE,
     timezone:
-      associationUser.timezoneOverride ??
-      associationUser.user.timezone ??
+      associationUser.timezoneOverride ?
+      associationUser.user.timezone ?
       DEFAULT_TIMEZONE,
     notifications: {
       updates: associationUser.notifyInApp,
@@ -244,9 +244,9 @@ const mapAssociationUser = (associationUser: {
       browser: associationUser.notifyBrowser,
     },
     twoFactorEnabled: associationUser.user.twoFactorEnabled,
-    twoFactorSecret: associationUser.user.twoFactorSecret ?? undefined,
+    twoFactorSecret: associationUser.user.twoFactorSecret ? undefined,
     twoFactorVerifiedAt:
-      associationUser.user.twoFactorVerifiedAt?.toISOString() ?? undefined,
+      associationUser.user.twoFactorVerifiedAt?.toISOString() ? undefined,
   },
   securityActivity: mapSecurityEvents(associationUser.securityEvents),
 });
@@ -392,7 +392,7 @@ export async function buildSessionBootstrap(
   const activeMembership =
     memberships.find(
       (membership) => membership.associationId === activeAssociationId
-    ) ?? memberships[0];
+    ) ? memberships[0];
 
   const members = await prisma.associationUser.findMany({
     where: {
@@ -501,8 +501,8 @@ async function createSecurityEvent(
       associationUserId,
       userId,
       description,
-      userAgent: metadata?.userAgent ?? null,
-      ipAddress: metadata?.ipAddress ?? null,
+      userAgent: metadata?.userAgent ? null,
+      ipAddress: metadata?.ipAddress ? null,
     },
   });
 }
@@ -771,7 +771,7 @@ export async function createAssociationMember(input: {
         permissions:
           input.role === "Admin"
             ? ADMIN_PERMISSIONS
-            : input.permissions ?? DEFAULT_PERMISSIONS,
+            : input.permissions ? DEFAULT_PERMISSIONS,
       },
     });
   });
@@ -860,7 +860,7 @@ export async function updateAssociationMember(
         permissions:
           input.role === "Admin"
             ? ADMIN_PERMISSIONS
-            : input.permissions ?? DEFAULT_PERMISSIONS,
+            : input.permissions ? DEFAULT_PERMISSIONS,
       },
     });
   });
@@ -1292,7 +1292,7 @@ export async function updateCurrentUserSecurity(input: {
     if (input.twoFactor) {
       userUpdates.twoFactorEnabled = input.twoFactor.enabled;
       userUpdates.twoFactorSecret = input.twoFactor.enabled
-        ? input.twoFactor.secret ?? null
+        ? input.twoFactor.secret ? null
         : null;
       userUpdates.twoFactorVerifiedAt = input.twoFactor.enabled
         ? new Date()
@@ -1314,8 +1314,8 @@ export async function updateCurrentUserSecurity(input: {
           associationUserId: context.membership.id,
           userId: context.membership.userId,
           description: "Cambio de contraseña",
-          userAgent: input.metadata?.userAgent ?? null,
-          ipAddress: input.metadata?.ipAddress ?? null,
+          userAgent: input.metadata?.userAgent ? null,
+          ipAddress: input.metadata?.ipAddress ? null,
         },
       });
     }
@@ -1328,8 +1328,8 @@ export async function updateCurrentUserSecurity(input: {
           description: input.twoFactor.enabled
             ? "2FA activado"
             : "2FA desactivado",
-          userAgent: input.metadata?.userAgent ?? null,
-          ipAddress: input.metadata?.ipAddress ?? null,
+          userAgent: input.metadata?.userAgent ? null,
+          ipAddress: input.metadata?.ipAddress ? null,
         },
       });
     }

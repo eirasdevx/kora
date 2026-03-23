@@ -101,7 +101,7 @@ function formatRelative(iso: string) {
 function getExtension(name: string) {
   const parts = name.split(".");
   if (parts.length <= 1) return "";
-  return parts.pop()?.toLowerCase() ?? "";
+  return parts.pop()?.toLowerCase() ? "";
 }
 
 function getTypeFromName(name: string): DocumentType {
@@ -270,7 +270,7 @@ export default function DocumentsPage() {
     confirmDelete?.name?.trim() || "este documento";
 
   useEffect(() => {
-    setNameDraft(selectedDoc?.name ?? "");
+    setNameDraft(selectedDoc?.name ? "");
     setEditingName(false);
   }, [selectedDoc?.id]);
 
@@ -289,7 +289,7 @@ export default function DocumentsPage() {
     );
     await upsertDocuments(docs);
     setPendingFiles(files);
-    setSelectedId(docs[0]?.id ?? "");
+    setSelectedId(docs[0]?.id ? "");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -337,7 +337,7 @@ export default function DocumentsPage() {
     if (!selectedDoc) return;
     const value = permissionDraft.trim();
     if (!value) return;
-    const current = selectedDoc.access ?? [];
+    const current = selectedDoc.access ? [];
     if (current.includes(value)) {
       setPermissionDraft("");
       return;
@@ -352,7 +352,7 @@ export default function DocumentsPage() {
 
   const handleRemovePermission = async (value: string) => {
     if (!selectedDoc) return;
-    const next = (selectedDoc.access ?? []).filter((item) => item !== value);
+    const next = (selectedDoc.access ? []).filter((item) => item !== value);
     await upsertDocument({
       ...selectedDoc,
       access: next,

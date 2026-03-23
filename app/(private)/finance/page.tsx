@@ -140,7 +140,7 @@ export default function FinancePage() {
           </div>
           <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
             Los tipos de cuota, importes y periodicidades se configuran desde
-            la ficha de la asociaciÃ³n.
+            la ficha de la asociación.
           </div>
         </SectionBlock>
 

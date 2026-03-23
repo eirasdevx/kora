@@ -65,12 +65,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          publicDatabaseError?.message ??
+          publicDatabaseError?.message ?
           (error instanceof Error
             ? error.message
             : "No se pudo crear el usuario."),
       },
-      { status: publicDatabaseError?.status ?? 400 }
+      { status: publicDatabaseError?.status ? 400 }
     );
   }
 }

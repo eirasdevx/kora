@@ -174,7 +174,7 @@ export default function PrivacyPage() {
               Código de entidad
             </dt>
             <dd className="mt-2 text-sm font-semibold text-gray-900">
-              {companyCode ?? "No disponible"}
+              {companyCode ? "No disponible"}
             </dd>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">

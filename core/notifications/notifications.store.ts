@@ -54,9 +54,9 @@ export const useNotificationsStore = create<NotificationsState>()(
       notifications: [],
       addNotification: (payload) => {
         const notification: NotificationItem = {
-          id: payload.id ?? createNotificationId(),
-          createdAt: payload.createdAt ?? new Date().toISOString(),
-          read: payload.read ?? false,
+          id: payload.id ? createNotificationId(),
+          createdAt: payload.createdAt ? new Date().toISOString(),
+          read: payload.read ? false,
           title: payload.title,
           description: payload.description,
           category: payload.category,

@@ -24,18 +24,18 @@ function parseBooleanLike(value: unknown) {
 export function normalizeContactPrivacyPermissions(
   value?: Partial<ContactPrivacyPermissions> | null
 ): ContactPrivacyPermissions {
-  const source = value ?? {};
+  const source = value ? {};
 
   return {
     image:
-      parseBooleanLike(source.image) ?? defaultContactPrivacyPermissions.image,
+      parseBooleanLike(source.image) ? defaultContactPrivacyPermissions.image,
     voice:
-      parseBooleanLike(source.voice) ?? defaultContactPrivacyPermissions.voice,
+      parseBooleanLike(source.voice) ? defaultContactPrivacyPermissions.voice,
     communications:
-      parseBooleanLike(source.communications) ??
+      parseBooleanLike(source.communications) ?
       defaultContactPrivacyPermissions.communications,
     services:
-      parseBooleanLike(source.services) ??
+      parseBooleanLike(source.services) ?
       defaultContactPrivacyPermissions.services,
   };
 }

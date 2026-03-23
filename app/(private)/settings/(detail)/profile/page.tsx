@@ -526,12 +526,12 @@ function getInitials(name: string) {
 
 function getUserFormState(user: UserAccount | null): UserProfileFormState {
   return {
-    firstName: user?.firstName ?? "",
-    lastName: user?.lastName ?? "",
-    phone: user?.phone ?? "",
-    photoUrl: user?.photoUrl ?? "",
-    dni: user?.dni ?? "",
-    email: user?.email ?? "",
+    firstName: user?.firstName ? "",
+    lastName: user?.lastName ? "",
+    phone: user?.phone ? "",
+    photoUrl: user?.photoUrl ? "",
+    dni: user?.dni ? "",
+    email: user?.email ? "",
     password: "",
     passwordRepeat: "",
   };
@@ -541,11 +541,11 @@ function resolvePreferences(preferences?: UserPreferences): UserPreferences {
   const defaults = createDefaultPreferences();
   return {
     ...defaults,
-    ...(preferences ?? {}),
-    language: normalizeLanguage(preferences?.language ?? defaults.language),
+    ...(preferences ? {}),
+    language: normalizeLanguage(preferences?.language ? defaults.language),
     notifications: {
       ...defaults.notifications,
-      ...(preferences?.notifications ?? {}),
+      ...(preferences?.notifications ? {}),
     },
   };
 }
@@ -654,12 +654,12 @@ function UserProfileCard({
       preferences.twoFactorEnabled !== baseline.twoFactorEnabled;
     return (
       preferencesChanged ||
-      normalize(form.firstName) !== normalize(user.firstName ?? "") ||
-      normalize(form.lastName) !== normalize(user.lastName ?? "") ||
-      normalize(form.phone) !== normalize(user.phone ?? "") ||
-      normalize(form.photoUrl) !== normalize(user.photoUrl ?? "") ||
-      normalize(form.dni) !== normalize(user.dni ?? "") ||
-      normalizeEmail(form.email) !== normalizeEmail(user.email ?? "") ||
+      normalize(form.firstName) !== normalize(user.firstName ? "") ||
+      normalize(form.lastName) !== normalize(user.lastName ? "") ||
+      normalize(form.phone) !== normalize(user.phone ? "") ||
+      normalize(form.photoUrl) !== normalize(user.photoUrl ? "") ||
+      normalize(form.dni) !== normalize(user.dni ? "") ||
+      normalizeEmail(form.email) !== normalizeEmail(user.email ? "") ||
       normalize(form.password) !== "" ||
       normalize(form.passwordRepeat) !== ""
     );
@@ -776,7 +776,7 @@ function UserProfileCard({
 
   const handleFullNameChange = (value: string) => {
     const parts = value.trim().split(" ").filter(Boolean);
-    const nextFirstName = parts.shift() ?? "";
+    const nextFirstName = parts.shift() ? "";
     const nextLastName = parts.join(" ");
     setForm((prev) => ({
       ...prev,
@@ -1101,7 +1101,7 @@ export default function ProfileSettingsPage() {
   const users = useUsersStore((s) => s.users);
   const ensureSeed = useUsersStore((s) => s.ensureSeed);
   const updateUser = useUsersStore((s) => s.updateUser);
-  const activeUser = users.find((user) => user.id === activeUserId) ?? null;
+  const activeUser = users.find((user) => user.id === activeUserId) ? null;
 
   const [preferences, setPreferences] = useState<UserPreferences>(() =>
     resolvePreferences(activeUser?.preferences)

@@ -34,7 +34,7 @@ export const DEFAULT_MEMBERSHIP_FEE_PLAN: MembershipFeePlan = {
   monthlyChargeDay: 5,
   annualChargeMonth: 1,
   annualChargeDay: 15,
-  description: "Plan estandar para socios activos de la asociacion.",
+  description: "Plan estándar para socios activos de la asociación.",
   benefits: "Acceso general a actividades y comunicaciones ordinarias.",
 };
 

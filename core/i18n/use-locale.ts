@@ -19,11 +19,11 @@ export const useLocale = () => {
   const users = useUsersStore((s) => s.users);
 
   const activeUser = useMemo(
-    () => users.find((user) => user.id === activeUserId) ?? null,
+    () => users.find((user) => user.id === activeUserId) ? null,
     [users, activeUserId]
   );
 
-  const language = activeUser?.preferences?.language ?? DEFAULT_LANGUAGE;
+  const language = activeUser?.preferences?.language ? DEFAULT_LANGUAGE;
   const locale = resolveLocale(language);
 
   return {

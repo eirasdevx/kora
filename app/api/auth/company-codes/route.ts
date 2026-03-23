@@ -11,7 +11,7 @@ type CompanyCodePayload = {
 };
 
 const GENERIC_SUCCESS_MESSAGE =
-  "Si la cuenta existe y tiene asociaciones activas, enviaremos un correo con sus codigos.";
+  "Si la cuenta existe y tiene asociaciones activas, enviaremos un correo con sus códigos.";
 
 type AssociationDelivery = {
   id: string;
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   try {
     payload = (await request.json()) as CompanyCodePayload;
   } catch {
-    return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
 
   const identifier = payload.identifier?.trim();
@@ -99,14 +99,14 @@ export async function POST(request: NextRequest) {
             contactEmail: association.contactEmail,
             messagingSettings: association.messagingSettings,
             recipients: [recipientEmail],
-            subject: `Codigo de acceso a ${association.name} en Kora`,
+            subject: `Código de acceso a ${association.name} en Kora`,
             htmlMessage: `
               <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
-                <h2>Codigo de asociacion</h2>
-                <p>Has solicitado recordar el codigo de acceso de tu asociacion en Kora.</p>
+                <h2>Código de asociación</h2>
+                <p>Has solicitado recordar el código de acceso de tu asociación en Kora.</p>
                 <div style="margin: 16px 0; padding: 16px; border: 1px solid #dbeafe; border-radius: 12px; background: #f8fbff;">
-                  <p style="margin: 0 0 8px;"><strong>Asociacion:</strong> ${association.name}</p>
-                  <p style="margin: 0; letter-spacing: 0.08em;"><strong>Codigo:</strong> ${association.companyCode}</p>
+                  <p style="margin: 0 0 8px;"><strong>Asociación:</strong> ${association.name}</p>
+                  <p style="margin: 0; letter-spacing: 0.08em;"><strong>Código:</strong> ${association.companyCode}</p>
                 </div>
                 <p>Si no solicitaste este correo, puedes ignorarlo.</p>
               </div>
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
       {
         error:
           publicDatabaseError?.message ??
-          "No se pudieron recuperar los codigos de asociacion.",
+          "No se pudieron recuperar los códigos de asociación.",
       },
       { status: publicDatabaseError?.status ?? 500 }
     );

@@ -49,14 +49,14 @@ export async function POST(request: NextRequest) {
   try {
     payload = (await request.json()) as AssociationPostPayload;
   } catch {
-    return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
 
   try {
     if (payload.action === "switch") {
       if (!payload.associationId) {
         return NextResponse.json(
-          { error: "Selecciona una asociacion." },
+          { error: "Selecciona una asociación." },
           { status: 400 }
         );
       }
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     if (!payload.name) {
       return NextResponse.json(
-        { error: "El nombre de la asociacion es obligatorio." },
+        { error: "El nombre de la asociación es obligatorio." },
         { status: 400 }
       );
     }
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
           publicDatabaseError?.message ??
           (error instanceof Error
             ? error.message
-            : "No se pudo procesar la asociacion."),
+            : "No se pudo procesar la asociación."),
       },
       { status: publicDatabaseError?.status ?? 400 }
     );
@@ -106,7 +106,7 @@ export async function PATCH(request: NextRequest) {
   try {
     payload = (await request.json()) as AssociationPayload;
   } catch {
-    return NextResponse.json({ error: "Solicitud invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
 
   try {
@@ -123,7 +123,7 @@ export async function PATCH(request: NextRequest) {
           publicDatabaseError?.message ??
           (error instanceof Error
             ? error.message
-            : "No se pudo actualizar la asociacion."),
+            : "No se pudo actualizar la asociación."),
       },
       { status: publicDatabaseError?.status ?? 400 }
     );
@@ -144,7 +144,7 @@ export async function DELETE() {
           publicDatabaseError?.message ??
           (error instanceof Error
             ? error.message
-            : "No se pudo eliminar la asociacion."),
+            : "No se pudo eliminar la asociación."),
       },
       { status: publicDatabaseError?.status ?? 400 }
     );

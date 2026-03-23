@@ -9,6 +9,11 @@ import {
 import { useSessionStore } from "@/core/session/session.store";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
 import { ensureTransactionAccountingCode } from "@/modules/accounting/accounting-codes";
+import {
+  deleteAssociationModuleRecord,
+  listAssociationModuleRecords,
+  upsertAssociationModuleRecord,
+} from "@/lib/client/association-data-client";
 
 interface TransactionsState {
   transactions: Transaction[];
@@ -35,6 +40,23 @@ export const useTransactionsStore = create<TransactionsState>(
 
     loadTransactions: async () => {
       if (!isAuthenticated()) return;
+
+      try {
+        const persisted =
+          await listAssociationModuleRecords<Transaction>("transactions");
+        const association = useSessionStore.getState().association;
+        const normalizedTransactions = persisted.map((transaction) =>
+          ensureTransactionAccountingCode(transaction, association)
+        );
+
+        set({
+          transactions: normalizedTransactions,
+        });
+        return;
+      } catch (error) {
+        console.error(error);
+      }
+
       const all = await db.transactions.toArray();
       const { scopedRecords, migratedRecords } = getAssociationScopedRecords(
         all,
@@ -86,6 +108,10 @@ export const useTransactionsStore = create<TransactionsState>(
         });
         return;
       }
+      await upsertAssociationModuleRecord<Transaction>(
+        "transactions",
+        normalizedTx
+      );
       await db.transactions.put(normalizedTx);
       set((state) => ({
         transactions: [...state.transactions, normalizedTx],
@@ -130,6 +156,10 @@ export const useTransactionsStore = create<TransactionsState>(
         });
         return;
       }
+      await upsertAssociationModuleRecord<Transaction>(
+        "transactions",
+        normalizedTx
+      );
       await db.transactions.put(normalizedTx);
       set((state) => ({
         transactions: state.transactions.map((t) =>
@@ -169,6 +199,7 @@ export const useTransactionsStore = create<TransactionsState>(
         });
         return;
       }
+      await deleteAssociationModuleRecord("transactions", id);
       await db.transactions.delete(id);
       set((state) => ({
         transactions: state.transactions.filter(

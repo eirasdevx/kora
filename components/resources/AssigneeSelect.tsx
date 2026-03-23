@@ -22,7 +22,7 @@ type AssigneeOption = {
 };
 
 function getDisplayName(contact: Contact) {
-  const composed = `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
+  const composed = `${contact.firstName ? ""} ${contact.lastName ? ""}`.trim();
   if (composed) return composed;
   return contact.fullName?.trim() || contact.email?.trim() || "Sin nombre";
 }
@@ -101,11 +101,11 @@ export default function AssigneeSelect({
     return (
       options.find(
         (option) => option.label.trim().toLowerCase() === normalizedValue
-      ) ?? null
+      ) ? null
     );
   }, [options, value]);
 
-  const selectedValue = selectedOption?.id ?? "";
+  const selectedValue = selectedOption?.id ? "";
 
   return (
     <div className="space-y-3">
@@ -123,7 +123,7 @@ export default function AssigneeSelect({
             }
 
             const option = options.find((entry) => entry.id === nextValue);
-            onChange(option?.label ?? "");
+            onChange(option?.label ? "");
           }}
           className="mt-2 w-full appearance-none rounded-2xl border border-gray-200 bg-white py-3 pl-11 pr-10 text-sm font-normal text-gray-700 shadow-sm focus:border-primary focus:outline-none"
         >

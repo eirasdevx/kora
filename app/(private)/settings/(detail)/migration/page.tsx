@@ -4,12 +4,21 @@ import { useRef, useState } from "react";
 import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
 import { normalizeAssociationAccountingSettings } from "@/core/session/accounting-settings";
 import { normalizeAssociationMembershipSettings } from "@/core/session/membership-settings";
-import { db } from "@/core/storage/kora.db";
+import type { SessionBootstrapPayload } from "@/core/session/session-payload";
 import {
   type AssociationProfile,
   type AssociationRepresentative,
   useSessionStore,
 } from "@/core/session/session.store";
+import {
+  applySessionPayload,
+  parseApiResponse,
+  reloadAssociationScopedStores,
+} from "@/lib/client/session-client";
+import {
+  listAssociationModuleRecords,
+  saveAssociationModuleRecords,
+} from "@/lib/client/association-data-client";
 import type {
   Contact,
   ContactKind,
@@ -161,14 +170,14 @@ function formatBytes(bytes: number) {
 
 function getScopeOption(value: DataScope) {
   return (
-    DATA_SCOPE_OPTIONS.find((option) => option.value === value) ??
+    DATA_SCOPE_OPTIONS.find((option) => option.value === value) ?
     DATA_SCOPE_OPTIONS[0]
   );
 }
 
 function getImportModeOption(value: ImportMode) {
   return (
-    IMPORT_MODE_OPTIONS.find((option) => option.value === value) ??
+    IMPORT_MODE_OPTIONS.find((option) => option.value === value) ?
     IMPORT_MODE_OPTIONS[0]
   );
 }
@@ -451,7 +460,7 @@ function normalizeAssociationProfile(value: unknown): AssociationProfile | null 
   }
 
   const representatives = normalizeRepresentatives(
-    obj.representatives ?? obj.boardMembers ?? obj.committee
+    obj.representatives ? obj.boardMembers ? obj.committee
   );
 
   return {
@@ -462,24 +471,24 @@ function normalizeAssociationProfile(value: unknown): AssociationProfile | null 
     location: location || undefined,
     address: address || undefined,
     accountingSettings: normalizeAssociationAccountingSettings(
-      obj.accountingSettings ?? obj.accountingCatalog
+      obj.accountingSettings ? obj.accountingCatalog
     ),
     membershipSettings: normalizeAssociationMembershipSettings(
-      obj.membershipSettings ?? {
+      obj.membershipSettings ? {
         cycle:
-          obj.membershipCycle ??
-          obj.feeCycle ??
+          obj.membershipCycle ?
+          obj.feeCycle ?
           obj.membershipBillingCycle,
         amount:
-          obj.membershipFeeAmount ??
-          obj.feeAmount ??
+          obj.membershipFeeAmount ?
+          obj.feeAmount ?
           obj.membershipAmount,
         monthlyChargeDay:
-          obj.monthlyChargeDay ?? obj.membershipMonthlyChargeDay,
+          obj.monthlyChargeDay ? obj.membershipMonthlyChargeDay,
         annualChargeMonth:
-          obj.annualChargeMonth ?? obj.membershipAnnualChargeMonth,
+          obj.annualChargeMonth ? obj.membershipAnnualChargeMonth,
         annualChargeDay:
-          obj.annualChargeDay ?? obj.membershipAnnualChargeDay,
+          obj.annualChargeDay ? obj.membershipAnnualChargeDay,
       }
     ),
     representatives: representatives.length ? representatives : undefined,
@@ -497,7 +506,7 @@ function normalizeContact(value: unknown): Contact | null {
 
   if ((!firstName || !lastName) && fullNameRaw) {
     const parts = fullNameRaw.split(" ").filter(Boolean);
-    if (!firstName) firstName = parts[0] ?? "";
+    if (!firstName) firstName = parts[0] ? "";
     if (!lastName) lastName = parts.slice(1).join(" ");
   }
 
@@ -543,7 +552,7 @@ function normalizeContact(value: unknown): Contact | null {
       ? (obj.privacyPermissions as Record<string, unknown>)
       : {};
   const consentDocumentIds = splitList(
-    obj.consentDocumentIds ?? obj.privacyDocumentIds ?? obj.consentDocs
+    obj.consentDocumentIds ? obj.privacyDocumentIds ? obj.consentDocs
   );
 
   return {
@@ -582,32 +591,32 @@ function normalizeContact(value: unknown): Contact | null {
     privacyPermissions: normalizeContactPrivacyPermissions({
       image:
         parseBoolean(
-          privacySource.image ??
-            obj.imageConsent ??
-            obj.imagePermission ??
+          privacySource.image ?
+            obj.imageConsent ?
+            obj.imagePermission ?
             obj.imageAuthorized
-        ) ?? undefined,
+        ) ? undefined,
       voice:
         parseBoolean(
-          privacySource.voice ??
-            obj.voiceConsent ??
-            obj.voicePermission ??
+          privacySource.voice ?
+            obj.voiceConsent ?
+            obj.voicePermission ?
             obj.voiceAuthorized
-        ) ?? undefined,
+        ) ? undefined,
       communications:
         parseBoolean(
-          privacySource.communications ??
-            obj.communicationConsent ??
-            obj.communicationsConsent ??
+          privacySource.communications ?
+            obj.communicationConsent ?
+            obj.communicationsConsent ?
             obj.newsletterConsent
-        ) ?? undefined,
+        ) ? undefined,
       services:
         parseBoolean(
-          privacySource.services ??
-            obj.serviceConsent ??
-            obj.servicesConsent ??
+          privacySource.services ?
+            obj.serviceConsent ?
+            obj.servicesConsent ?
             obj.servicesAuthorized
-        ) ?? undefined,
+        ) ? undefined,
     }),
     privacyUpdatedAt:
       safeString(obj.privacyUpdatedAt) ||
@@ -682,7 +691,7 @@ function normalizeTransaction(value: unknown): Transaction | null {
     ? (typeRaw as TransactionType)
     : "income";
 
-  const amount = parseNumber(obj.amount) ?? 0;
+  const amount = parseNumber(obj.amount) ? 0;
   const date = safeString(obj.date).trim();
   const concept =
     safeString(obj.concept).trim() ||
@@ -747,7 +756,6 @@ function downloadTextFile(filename: string, text: string, mime: string) {
 export default function MigrationSettingsPage() {
   const hydrated = useSessionStore((s) => s.hydrated);
   const association = useSessionStore((s) => s.association);
-  const setAssociation = useSessionStore((s) => s.setAssociation);
 
   const [exportScope, setExportScope] = useState<DataScope>("all");
 
@@ -831,11 +839,40 @@ export default function MigrationSettingsPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const persistAssociationProfile = async (profile: AssociationProfile) => {
+    const response = await fetch("/api/association", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: profile.name,
+        logoUrl: profile.logoUrl,
+        taxId: profile.taxId,
+        phone: profile.phone,
+        contactEmail: profile.contactEmail,
+        location: profile.location,
+        address: profile.address,
+        membershipSettings: profile.membershipSettings,
+        representatives: profile.representatives?.map((representative) => ({
+          id: representative.id,
+          role: representative.role,
+          name: representative.name,
+          email: representative.email,
+          phone: representative.phone,
+        })),
+      }),
+    });
+
+    const session = await parseApiResponse<SessionBootstrapPayload>(response);
+    applySessionPayload(session);
+  };
+
   const exportAllJson = async () => {
     const [contacts, events, transactions] = await Promise.all([
-      db.contacts.toArray(),
-      db.events.toArray(),
-      db.transactions.toArray(),
+      listAssociationModuleRecords<Contact>("contacts"),
+      listAssociationModuleRecords<Event>("events"),
+      listAssociationModuleRecords<Transaction>("transactions"),
     ]);
 
     const payload: KoraExportPayloadV1 = {
@@ -872,7 +909,7 @@ export default function MigrationSettingsPage() {
     }
 
     if (scope === "contacts") {
-      const contacts = await db.contacts.toArray();
+      const contacts = await listAssociationModuleRecords<Contact>("contacts");
       const payload = { version: 1 as const, exportedAt, contacts };
       downloadTextFile(
         "kora-contacts.json",
@@ -883,7 +920,7 @@ export default function MigrationSettingsPage() {
     }
 
     if (scope === "events") {
-      const events = await db.events.toArray();
+      const events = await listAssociationModuleRecords<Event>("events");
       const payload = { version: 1 as const, exportedAt, events };
       downloadTextFile(
         "kora-events.json",
@@ -894,7 +931,8 @@ export default function MigrationSettingsPage() {
     }
 
     if (scope === "transactions") {
-      const transactions = await db.transactions.toArray();
+      const transactions =
+        await listAssociationModuleRecords<Transaction>("transactions");
       const payload = { version: 1 as const, exportedAt, transactions };
       downloadTextFile(
         "kora-transactions.json",
@@ -930,48 +968,52 @@ export default function MigrationSettingsPage() {
       ? normalizeAssociationProfile(payload.associationProfile)
       : null;
 
-    const contacts = (payload.contacts ?? [])
+    const contacts = (payload.contacts ? [])
       .map(normalizeContact)
       .filter(Boolean) as Contact[];
-    const events = (payload.events ?? [])
+    const events = (payload.events ? [])
       .map(normalizeEvent)
       .filter(Boolean) as Event[];
-    const transactions = (payload.transactions ?? [])
+    const transactions = (payload.transactions ? [])
       .map(normalizeTransaction)
       .filter(Boolean) as Transaction[];
-    await db.transaction(
-      "rw",
-      db.contacts,
-      db.events,
-      db.transactions,
-      async () => {
-        if (importMode === "replace") {
-          if (importScope === "all" || importScope === "contacts") {
-            await db.contacts.clear();
-          }
-          if (importScope === "all" || importScope === "events") {
-            await db.events.clear();
-          }
-          if (importScope === "all" || importScope === "transactions") {
-            await db.transactions.clear();
-          }
-        }
+    const tasks: Array<Promise<unknown>> = [];
 
-        if (importScope === "all" || importScope === "contacts") {
-          if (contacts.length) await db.contacts.bulkPut(contacts);
-        }
-        if (importScope === "all" || importScope === "events") {
-          if (events.length) await db.events.bulkPut(events);
-        }
-        if (importScope === "all" || importScope === "transactions") {
-          if (transactions.length) await db.transactions.bulkPut(transactions);
-        }
-      }
-    );
-
-    if (importScope === "all" || importScope === "associationProfile") {
-      if (profile) setAssociation(profile);
+    if (importScope === "all" || importScope === "contacts") {
+      tasks.push(
+        saveAssociationModuleRecords<Contact>(
+          "contacts",
+          contacts,
+          importMode
+        )
+      );
     }
+
+    if (importScope === "all" || importScope === "events") {
+      tasks.push(
+        saveAssociationModuleRecords<Event>("events", events, importMode)
+      );
+    }
+
+    if (importScope === "all" || importScope === "transactions") {
+      tasks.push(
+        saveAssociationModuleRecords<Transaction>(
+          "transactions",
+          transactions,
+          importMode
+        )
+      );
+    }
+
+    if (
+      (importScope === "all" || importScope === "associationProfile") &&
+      profile
+    ) {
+      tasks.push(persistAssociationProfile(profile));
+    }
+
+    await Promise.all(tasks);
+    await reloadAssociationScopedStores();
 
     return {
       profile: profile ? 1 : 0,
@@ -987,8 +1029,8 @@ export default function MigrationSettingsPage() {
 
     if (importScope === "all") {
       return applyImport({
-        associationProfile: (obj.associationProfile ??
-          obj.association ??
+        associationProfile: (obj.associationProfile ?
+          obj.association ?
           null) as AssociationProfile | null,
         contacts: Array.isArray(obj.contacts)
           ? (obj.contacts as Contact[])
@@ -1004,8 +1046,8 @@ export default function MigrationSettingsPage() {
 
     if (importScope === "associationProfile") {
       const profile =
-        obj.associationProfile ??
-        obj.association ??
+        obj.associationProfile ?
+        obj.association ?
         (data as AssociationProfile | null);
       return applyImport({
         associationProfile: profile as AssociationProfile | null,
@@ -1051,7 +1093,7 @@ export default function MigrationSettingsPage() {
 
     try {
       const input = fileInputRef.current;
-      const file = selectedFile ?? input?.files?.[0];
+      const file = selectedFile ? input?.files?.[0];
       if (!file) {
         setError("Selecciona un archivo JSON para importar.");
         return;
@@ -1388,7 +1430,7 @@ export default function MigrationSettingsPage() {
                   Perfil actual
                 </p>
                 <p className="mt-2 text-sm font-semibold text-slate-900">
-                  {association?.name ?? "Sin perfil"}
+                  {association?.name ? "Sin perfil"}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
                   Se incluirá cuando exportes el perfil o el paquete completo.
@@ -1449,7 +1491,7 @@ export default function MigrationSettingsPage() {
                 <p className="font-semibold text-slate-700">
                   Perfil actual:{" "}
                   <span className="font-normal">
-                    {association?.name ?? "Sin perfil"}
+                    {association?.name ? "Sin perfil"}
                   </span>
                 </p>
               </div>

@@ -90,9 +90,9 @@ const getAdminFromPayload = (
   }
 
   return {
-    firstName: adminUser.firstName ?? "",
-    lastName: adminUser.lastName ?? "",
-    dni: adminUser.dni ?? "",
+    firstName: adminUser.firstName ? "",
+    lastName: adminUser.lastName ? "",
+    dni: adminUser.dni ? "",
     email: adminUser.email,
   };
 };
@@ -221,7 +221,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       const entry = {
         id: createAssociationId(),
         profile: normalizeAssociationProfile(state.association)!,
-        companyCode: state.companyCode ?? createCompanyCode(),
+        companyCode: state.companyCode ? createCompanyCode(),
       };
 
       return {
