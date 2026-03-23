@@ -107,7 +107,7 @@ export default function SettingsPage() {
 
   const activeUser = users.find((user) => user.id === activeUserId);
   const activeUserName =
-    `${activeUser?.firstName ? ""} ${activeUser?.lastName ? ""}`.trim() ||
+    `${activeUser?.firstName ?? ""} ${activeUser?.lastName ?? ""}`.trim() ||
     activeUser?.name?.trim() ||
     activeUser?.email ||
     "Admin Kora";

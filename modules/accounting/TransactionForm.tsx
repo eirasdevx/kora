@@ -62,20 +62,20 @@ export default function TransactionForm({
   const loadEvents = useEventsStore((s) => s.loadEvents);
 
   const [type, setType] = useState<TransactionType>(
-    initialData?.type ? "income"
+    initialData?.type ?? "income"
   );
-  const [concept, setConcept] = useState(initialData?.concept ? "");
+  const [concept, setConcept] = useState(initialData?.concept ?? "");
   const [amount, setAmount] = useState(
     initialData ? String(initialData.amount) : ""
   );
   const [category, setCategory] = useState<TransactionCategory>(
-    initialData?.category ? "membership"
+    initialData?.category ?? "membership"
   );
   const [date, setDate] = useState(
-    initialData?.date ? new Date().toISOString().slice(0, 10)
+    initialData?.date ?? new Date().toISOString().slice(0, 10)
   );
   const [status, setStatus] = useState<"completed" | "pending">(
-    initialData?.status ? "completed"
+    initialData?.status ?? "completed"
   );
   const [contactIds, setContactIds] = useState<string[]>(() => {
     if (initialData?.contactIds?.length) return initialData.contactIds;
@@ -83,13 +83,13 @@ export default function TransactionForm({
     return [];
   });
   const [contactFilter, setContactFilter] = useState<ContactType | "all">("all");
-  const [eventId, setEventId] = useState(initialData?.eventId ? "");
+  const [eventId, setEventId] = useState(initialData?.eventId ?? "");
   const [paymentMethod, setPaymentMethod] = useState(
-    initialData?.paymentMethod ? ""
+    initialData?.paymentMethod ?? ""
   );
-  const [notes, setNotes] = useState(initialData?.description ? "");
+  const [notes, setNotes] = useState(initialData?.description ?? "");
   const [attachments, setAttachments] = useState<File[]>(
-    initialData?.attachments ? []
+    initialData?.attachments ?? []
   );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [contactsOpen, setContactsOpen] = useState(false);
@@ -247,7 +247,7 @@ export default function TransactionForm({
     if (!concept.trim() || numericAmount <= 0) return;
 
     const tx: Transaction = {
-      id: initialData?.id ? crypto.randomUUID(),
+      id: initialData?.id ?? crypto.randomUUID(),
       type,
       concept: concept.trim(),
       amount: numericAmount,
@@ -260,7 +260,7 @@ export default function TransactionForm({
       paymentMethod: paymentMethod || undefined,
       description: notes.trim() || undefined,
       attachments: attachments.length ? attachments : undefined,
-      createdAt: initialData?.createdAt ? new Date().toISOString(),
+      createdAt: initialData?.createdAt ?? new Date().toISOString(),
     };
 
     onSubmit(tx);

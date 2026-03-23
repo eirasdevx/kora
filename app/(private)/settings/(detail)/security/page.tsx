@@ -41,7 +41,7 @@ export default function SecuritySettingsPage() {
   const mode = useSessionStore((state) => state.mode);
   const activeUserId = useSessionStore((state) => state.activeUserId);
   const users = useUsersStore((state) => state.users);
-  const activeUser = users.find((user) => user.id === activeUserId) ? null;
+  const activeUser = users.find((user) => user.id === activeUserId) ?? null;
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -501,7 +501,7 @@ export default function SecuritySettingsPage() {
             <span>Ubicación</span>
             <span>Fecha</span>
           </div>
-          {(activeUser.securityActivity ? []).length === 0 ? (
+          {(activeUser.securityActivity ?? []).length === 0 ? (
             <div className="px-4 py-6 text-sm text-slate-500">
               Todavía no hay actividad registrada.
             </div>

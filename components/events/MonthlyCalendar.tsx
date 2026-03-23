@@ -43,7 +43,7 @@ export default function MonthlyCalendar({
     for (const e of events) {
       const d = new Date(e.startDate);
       if (d.getFullYear() === year && d.getMonth() === month) {
-        (byDay[d.getDate()] ?= []).push(e);
+        (byDay[d.getDate()] ??= []).push(e);
       }
     }
 
@@ -125,7 +125,7 @@ export default function MonthlyCalendar({
                     {day}
                   </div>
                   <div className="space-y-1">
-                    {(eventsByDay[day] ? []).map((e) => (
+                    {(eventsByDay[day] ?? []).map((e) => (
                       <button
                         key={e.id}
                         onClick={() => onSelectEvent(e)}

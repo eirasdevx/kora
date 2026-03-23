@@ -60,7 +60,7 @@ const adapter = new PrismaPg(
   }
 );
 
-const prisma = global.prisma ? new PrismaClient({ adapter });
+const prisma = global.prisma ?? new PrismaClient({ adapter });
 
 if (process.env.NODE_ENV !== "production") {
   global.prisma = prisma;

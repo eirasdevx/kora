@@ -54,10 +54,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          publicDatabaseError?.message ?
+          publicDatabaseError?.message ??
           "No se pudo completar el inicio de sesión.",
       },
-      { status: publicDatabaseError?.status ? 500 }
+      { status: publicDatabaseError?.status ?? 500 }
     );
   }
 }

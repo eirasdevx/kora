@@ -170,14 +170,14 @@ function formatBytes(bytes: number) {
 
 function getScopeOption(value: DataScope) {
   return (
-    DATA_SCOPE_OPTIONS.find((option) => option.value === value) ?
+    DATA_SCOPE_OPTIONS.find((option) => option.value === value) ??
     DATA_SCOPE_OPTIONS[0]
   );
 }
 
 function getImportModeOption(value: ImportMode) {
   return (
-    IMPORT_MODE_OPTIONS.find((option) => option.value === value) ?
+    IMPORT_MODE_OPTIONS.find((option) => option.value === value) ??
     IMPORT_MODE_OPTIONS[0]
   );
 }
@@ -460,7 +460,7 @@ function normalizeAssociationProfile(value: unknown): AssociationProfile | null 
   }
 
   const representatives = normalizeRepresentatives(
-    obj.representatives ? obj.boardMembers ? obj.committee
+    obj.representatives ?? obj.boardMembers ?? obj.committee
   );
 
   return {
@@ -471,24 +471,24 @@ function normalizeAssociationProfile(value: unknown): AssociationProfile | null 
     location: location || undefined,
     address: address || undefined,
     accountingSettings: normalizeAssociationAccountingSettings(
-      obj.accountingSettings ? obj.accountingCatalog
+      obj.accountingSettings ?? obj.accountingCatalog
     ),
     membershipSettings: normalizeAssociationMembershipSettings(
-      obj.membershipSettings ? {
+      obj.membershipSettings ?? {
         cycle:
-          obj.membershipCycle ?
-          obj.feeCycle ?
+          obj.membershipCycle ??
+          obj.feeCycle ??
           obj.membershipBillingCycle,
         amount:
-          obj.membershipFeeAmount ?
-          obj.feeAmount ?
+          obj.membershipFeeAmount ??
+          obj.feeAmount ??
           obj.membershipAmount,
         monthlyChargeDay:
-          obj.monthlyChargeDay ? obj.membershipMonthlyChargeDay,
+          obj.monthlyChargeDay ?? obj.membershipMonthlyChargeDay,
         annualChargeMonth:
-          obj.annualChargeMonth ? obj.membershipAnnualChargeMonth,
+          obj.annualChargeMonth ?? obj.membershipAnnualChargeMonth,
         annualChargeDay:
-          obj.annualChargeDay ? obj.membershipAnnualChargeDay,
+          obj.annualChargeDay ?? obj.membershipAnnualChargeDay,
       }
     ),
     representatives: representatives.length ? representatives : undefined,
@@ -506,7 +506,7 @@ function normalizeContact(value: unknown): Contact | null {
 
   if ((!firstName || !lastName) && fullNameRaw) {
     const parts = fullNameRaw.split(" ").filter(Boolean);
-    if (!firstName) firstName = parts[0] ? "";
+    if (!firstName) firstName = parts[0] ?? "";
     if (!lastName) lastName = parts.slice(1).join(" ");
   }
 
@@ -552,7 +552,7 @@ function normalizeContact(value: unknown): Contact | null {
       ? (obj.privacyPermissions as Record<string, unknown>)
       : {};
   const consentDocumentIds = splitList(
-    obj.consentDocumentIds ? obj.privacyDocumentIds ? obj.consentDocs
+    obj.consentDocumentIds ?? obj.privacyDocumentIds ?? obj.consentDocs
   );
 
   return {
@@ -591,32 +591,32 @@ function normalizeContact(value: unknown): Contact | null {
     privacyPermissions: normalizeContactPrivacyPermissions({
       image:
         parseBoolean(
-          privacySource.image ?
-            obj.imageConsent ?
-            obj.imagePermission ?
+          privacySource.image ??
+            obj.imageConsent ??
+            obj.imagePermission ??
             obj.imageAuthorized
-        ) ? undefined,
+        ) ?? undefined,
       voice:
         parseBoolean(
-          privacySource.voice ?
-            obj.voiceConsent ?
-            obj.voicePermission ?
+          privacySource.voice ??
+            obj.voiceConsent ??
+            obj.voicePermission ??
             obj.voiceAuthorized
-        ) ? undefined,
+        ) ?? undefined,
       communications:
         parseBoolean(
-          privacySource.communications ?
-            obj.communicationConsent ?
-            obj.communicationsConsent ?
+          privacySource.communications ??
+            obj.communicationConsent ??
+            obj.communicationsConsent ??
             obj.newsletterConsent
-        ) ? undefined,
+        ) ?? undefined,
       services:
         parseBoolean(
-          privacySource.services ?
-            obj.serviceConsent ?
-            obj.servicesConsent ?
+          privacySource.services ??
+            obj.serviceConsent ??
+            obj.servicesConsent ??
             obj.servicesAuthorized
-        ) ? undefined,
+        ) ?? undefined,
     }),
     privacyUpdatedAt:
       safeString(obj.privacyUpdatedAt) ||
@@ -691,7 +691,7 @@ function normalizeTransaction(value: unknown): Transaction | null {
     ? (typeRaw as TransactionType)
     : "income";
 
-  const amount = parseNumber(obj.amount) ? 0;
+  const amount = parseNumber(obj.amount) ?? 0;
   const date = safeString(obj.date).trim();
   const concept =
     safeString(obj.concept).trim() ||
@@ -968,13 +968,13 @@ export default function MigrationSettingsPage() {
       ? normalizeAssociationProfile(payload.associationProfile)
       : null;
 
-    const contacts = (payload.contacts ? [])
+    const contacts = (payload.contacts ?? [])
       .map(normalizeContact)
       .filter(Boolean) as Contact[];
-    const events = (payload.events ? [])
+    const events = (payload.events ?? [])
       .map(normalizeEvent)
       .filter(Boolean) as Event[];
-    const transactions = (payload.transactions ? [])
+    const transactions = (payload.transactions ?? [])
       .map(normalizeTransaction)
       .filter(Boolean) as Transaction[];
     const tasks: Array<Promise<unknown>> = [];
@@ -1029,8 +1029,8 @@ export default function MigrationSettingsPage() {
 
     if (importScope === "all") {
       return applyImport({
-        associationProfile: (obj.associationProfile ?
-          obj.association ?
+        associationProfile: (obj.associationProfile ??
+          obj.association ??
           null) as AssociationProfile | null,
         contacts: Array.isArray(obj.contacts)
           ? (obj.contacts as Contact[])
@@ -1046,8 +1046,8 @@ export default function MigrationSettingsPage() {
 
     if (importScope === "associationProfile") {
       const profile =
-        obj.associationProfile ?
-        obj.association ?
+        obj.associationProfile ??
+        obj.association ??
         (data as AssociationProfile | null);
       return applyImport({
         associationProfile: profile as AssociationProfile | null,
@@ -1093,7 +1093,7 @@ export default function MigrationSettingsPage() {
 
     try {
       const input = fileInputRef.current;
-      const file = selectedFile ? input?.files?.[0];
+      const file = selectedFile ?? input?.files?.[0];
       if (!file) {
         setError("Selecciona un archivo JSON para importar.");
         return;
@@ -1430,7 +1430,7 @@ export default function MigrationSettingsPage() {
                   Perfil actual
                 </p>
                 <p className="mt-2 text-sm font-semibold text-slate-900">
-                  {association?.name ? "Sin perfil"}
+                  {association?.name ?? "Sin perfil"}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
                   Se incluirá cuando exportes el perfil o el paquete completo.
@@ -1491,7 +1491,7 @@ export default function MigrationSettingsPage() {
                 <p className="font-semibold text-slate-700">
                   Perfil actual:{" "}
                   <span className="font-normal">
-                    {association?.name ? "Sin perfil"}
+                    {association?.name ?? "Sin perfil"}
                   </span>
                 </p>
               </div>

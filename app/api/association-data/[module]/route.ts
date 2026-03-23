@@ -54,12 +54,12 @@ export async function GET(
     return NextResponse.json(
       {
         error:
-          publicDatabaseError?.message ?
+          publicDatabaseError?.message ??
           (error instanceof Error
             ? error.message
             : "No se pudieron recuperar los registros."),
       },
-      { status: publicDatabaseError?.status ? 400 }
+      { status: publicDatabaseError?.status ?? 400 }
     );
   }
 }
@@ -114,12 +114,12 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          publicDatabaseError?.message ?
+          publicDatabaseError?.message ??
           (error instanceof Error
             ? error.message
             : "No se pudieron guardar los registros."),
       },
-      { status: publicDatabaseError?.status ? 400 }
+      { status: publicDatabaseError?.status ?? 400 }
     );
   }
 }
@@ -156,12 +156,12 @@ export async function DELETE(
     return NextResponse.json(
       {
         error:
-          publicDatabaseError?.message ?
+          publicDatabaseError?.message ??
           (error instanceof Error
             ? error.message
             : "No se pudo eliminar el registro."),
       },
-      { status: publicDatabaseError?.status ? 400 }
+      { status: publicDatabaseError?.status ?? 400 }
     );
   }
 }

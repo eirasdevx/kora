@@ -74,10 +74,10 @@ export const getAssociationMessagingSettings = (
     emailAppPassword:
       normalizeString(candidate.emailAppPassword) ||
       normalizeString(fallback?.emailAppPassword),
-    emailProvider: normalizeProvider(candidate.emailProvider ? fallback?.emailProvider),
+    emailProvider: normalizeProvider(candidate.emailProvider ?? fallback?.emailProvider),
     smtpHost:
       normalizeString(candidate.smtpHost) || normalizeString(fallback?.smtpHost),
-    smtpPort: normalizePort(candidate.smtpPort ? fallback?.smtpPort),
+    smtpPort: normalizePort(candidate.smtpPort ?? fallback?.smtpPort),
     smtpSecure:
       typeof candidate.smtpSecure === "boolean"
         ? candidate.smtpSecure

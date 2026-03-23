@@ -50,7 +50,7 @@ const CONTACT_KIND_FILTERS: Array<{ label: string; value: "all" | ContactKind }>
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
   if (composed) return composed;
-  return contact.fullName ? "Sin nombre";
+  return contact.fullName ?? "Sin nombre";
 }
 
 function getInitials(contact: Contact) {
@@ -110,7 +110,7 @@ export default function PeopleContactsPage() {
       }
       if (!query.trim()) return true;
       const name = getDisplayName(contact).toLowerCase();
-      const email = contact.email?.toLowerCase() ? "";
+      const email = contact.email?.toLowerCase() ?? "";
       return (
         name.includes(query.toLowerCase()) || email.includes(query.toLowerCase())
       );

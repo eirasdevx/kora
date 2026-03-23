@@ -35,7 +35,7 @@ export function buildAccountingId() {
 }
 
 export function getContactDisplayName(contact: Contact) {
-  const composed = `${contact.firstName ? ""} ${contact.lastName ? ""}`.trim();
+  const composed = `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
   return composed || contact.fullName || contact.email || "contacto";
 }
 
@@ -84,18 +84,18 @@ export function createMembershipTransaction({
 }: CreateMembershipTransactionInput): Transaction {
   const association = useSessionStore.getState().association;
   const plan = getContactMembershipPlan(contact, association);
-  const createdStamp = createdAt ? new Date().toISOString();
-  const txDate = date ? (contact.createdAt || createdStamp).slice(0, 10);
+  const createdStamp = createdAt ?? new Date().toISOString();
+  const txDate = date ?? (contact.createdAt || createdStamp).slice(0, 10);
   const displayName = getContactDisplayName(contact);
 
   return {
     id: buildAccountingId(),
     type: "income",
-    amount: amount ? plan.amount,
+    amount: amount ?? plan.amount,
     date: txDate,
-    concept: concept ? buildMembershipConcept(plan, txDate),
+    concept: concept ?? buildMembershipConcept(plan, txDate),
     description:
-      description ?
+      description ??
       `${plan.name} asignada al socio ${displayName}.`,
     category: "membership",
     status,

@@ -72,7 +72,7 @@ function extractAccountingSequence(code: string, prefix: string) {
 
 export function getPrimaryContactAccountingType(types: ContactType[]) {
   return (
-    CONTACT_ACCOUNTING_PRIORITY.find((type) => types.includes(type)) ? "other"
+    CONTACT_ACCOUNTING_PRIORITY.find((type) => types.includes(type)) ?? "other"
   );
 }
 
@@ -149,7 +149,7 @@ export function hydrateContactsWithAccountingCodes(contacts: Contact[]) {
   }, []);
 
   const assignedById = new Map(assigned.map((contact) => [contact.id, contact]));
-  return contacts.map((contact) => assignedById.get(contact.id) ? contact);
+  return contacts.map((contact) => assignedById.get(contact.id) ?? contact);
 }
 
 function normalizeAccountingAccountKey(

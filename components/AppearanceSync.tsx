@@ -22,7 +22,7 @@ export default function AppearanceSync() {
   useEffect(() => {
     const root = document.documentElement;
     const rgb =
-      hexToRgbChannels(brandColor) ? hexToRgbChannels(DEFAULT_PRIMARY);
+      hexToRgbChannels(brandColor) ?? hexToRgbChannels(DEFAULT_PRIMARY);
     if (rgb) {
       root.style.setProperty("--color-primary", rgb);
     }

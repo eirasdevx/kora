@@ -8,7 +8,7 @@ const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30;
 
 export async function getSessionToken() {
   const cookieStore = await cookies();
-  return cookieStore.get(SESSION_COOKIE_NAME)?.value ? null;
+  return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
 }
 
 export function createSessionToken() {

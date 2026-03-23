@@ -33,7 +33,7 @@ const isBinaryValue = (value: unknown) => {
 
 const sanitizePersistedValue = (
   value: unknown
-): Prisma.InputJsonValue | undefined => {
+): Prisma.InputJsonValue | null | undefined => {
   if (value === undefined) {
     return undefined;
   }
@@ -72,7 +72,7 @@ const sanitizePersistedValue = (
   }
 
   if (isPlainObject(value)) {
-    const normalized: Record<string, Prisma.InputJsonValue> = {};
+    const normalized: Record<string, Prisma.InputJsonValue | null> = {};
 
     for (const [key, entry] of Object.entries(value)) {
       const sanitized = sanitizePersistedValue(entry);

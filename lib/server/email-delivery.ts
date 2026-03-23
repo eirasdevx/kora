@@ -48,7 +48,7 @@ export function buildAssociationEmailPayload(input: {
 }): SendEmailPayload {
   const settings = getAssociationMessagingSettings(input.messagingSettings, {
     senderName: input.associationName,
-    emailAddress: input.contactEmail ? undefined,
+    emailAddress: input.contactEmail ?? undefined,
   });
 
   if (!settings.emailAddress || !settings.emailAppPassword) {
@@ -136,11 +136,11 @@ const normalizeRecipients = (recipients: RecipientPayload[]) => {
 
     const variables: Record<string, string> = {};
     const firstName =
-      typeof recipient === "object" ? recipient.firstName?.trim() ? "" : "";
+      typeof recipient === "object" ? recipient.firstName?.trim() ?? "" : "";
     const lastName =
-      typeof recipient === "object" ? recipient.lastName?.trim() ? "" : "";
+      typeof recipient === "object" ? recipient.lastName?.trim() ?? "" : "";
     const fullName =
-      typeof recipient === "object" ? recipient.fullName?.trim() ? "" : "";
+      typeof recipient === "object" ? recipient.fullName?.trim() ?? "" : "";
     const inferredFirstName =
       firstName || fullName.split(" ")[0] || normalizedEmail.split("@")[0];
     const inferredLastName =
@@ -200,7 +200,7 @@ export async function sendEmailBatch(
   let transportSecure = false;
 
   if (normalizedProvider === "custom") {
-    transportHost = payload.smtpHost?.trim() ? "";
+    transportHost = payload.smtpHost?.trim() ?? "";
     transportPort = Number(payload.smtpPort);
     transportSecure = Boolean(payload.smtpSecure);
     if (!transportHost || !transportPort) {

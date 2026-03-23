@@ -65,13 +65,13 @@ export default function MessagingPage() {
   }, [templates]);
   const channelSummary = useMemo(() => {
     const counts = templates.reduce<Record<string, number>>((acc, item) => {
-      acc[item.channel] = (acc[item.channel] ? 0) + 1;
+      acc[item.channel] = (acc[item.channel] ?? 0) + 1;
       return acc;
     }, {});
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }, [templates]);
-  const mainChannel = channelSummary[0]?.[0] ? "email";
-  const mainChannelCount = channelSummary[0]?.[1] ? 0;
+  const mainChannel = channelSummary[0]?.[0] ?? "email";
+  const mainChannelCount = channelSummary[0]?.[1] ?? 0;
 
   const confirmDeleteLabel =
     confirmDelete?.title?.trim() || "esta plantilla";
@@ -163,10 +163,10 @@ export default function MessagingPage() {
           <div className="mt-3 flex items-center gap-3">
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                CHANNEL_BADGE[mainChannel] ? "bg-slate-100 text-slate-600"
+                CHANNEL_BADGE[mainChannel] ?? "bg-slate-100 text-slate-600"
               }`}
             >
-              {CHANNEL_LABEL[mainChannel] ? "Email"}
+              {CHANNEL_LABEL[mainChannel] ?? "Email"}
             </span>
             <span className="text-sm text-slate-500">
               {mainChannelCount} plantillas
@@ -251,11 +251,11 @@ export default function MessagingPage() {
                 <div className="flex items-center justify-between">
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                      CHANNEL_BADGE[template.channel] ?
+                      CHANNEL_BADGE[template.channel] ??
                       "bg-slate-100 text-slate-600"
                     }`}
                   >
-                    {CHANNEL_LABEL[template.channel] ? template.channel}
+                    {CHANNEL_LABEL[template.channel] ?? template.channel}
                   </span>
                   <span className="text-xs text-slate-400">
                     {formatDateTime(template.updatedAt, formatLocale)}

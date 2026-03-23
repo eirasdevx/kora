@@ -14,7 +14,7 @@ import { VolunteerProfileType } from "@/modules/volunteers/volunteer-activity.ty
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
   if (composed) return composed;
-  return contact.fullName ? "Sin nombre";
+  return contact.fullName ?? "Sin nombre";
 }
 
 function toInputDate(value?: string) {
@@ -89,14 +89,14 @@ export default function VolunteerRecordPage() {
   const filteredContacts = contactPool.filter((contact) => {
     if (!search.trim()) return true;
     const name = getDisplayName(contact).toLowerCase();
-    const dni = contact.dni?.toLowerCase() ? "";
+    const dni = contact.dni?.toLowerCase() ?? "";
     return (
       name.includes(search.toLowerCase()) ||
       dni.includes(search.toLowerCase())
     );
   });
 
-  const selectedContact = contacts.find((contact) => contact.id === selectedId) ? null;
+  const selectedContact = contacts.find((contact) => contact.id === selectedId) ?? null;
 
   const handleSelectContact = (contact: Contact) => {
     setSelectedId(contact.id);

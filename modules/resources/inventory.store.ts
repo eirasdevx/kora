@@ -47,7 +47,7 @@ const normalizeItem = (item: InventoryItem): InventoryItem => {
     quantity,
     borrowed,
     status: normalizeStatus(item.status, borrowed),
-    createdAt: item.createdAt ? new Date().toISOString(),
+    createdAt: item.createdAt ?? new Date().toISOString(),
   };
 };
 

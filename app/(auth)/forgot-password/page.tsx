@@ -102,8 +102,8 @@ export default function ForgotPasswordPage() {
       const digest = await createPasswordDigest(tempPassword);
 
       const senderName =
-        (settings.senderName ? "").trim() ||
-        (association?.name ? "").trim() ||
+        (settings.senderName ?? "").trim() ||
+        (association?.name ?? "").trim() ||
         "Kora";
 
       const response = await fetch("/api/send-email", {

@@ -18,7 +18,7 @@ interface Props {
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
   if (composed) return composed;
-  return contact.fullName ? "Sin nombre";
+  return contact.fullName ?? "Sin nombre";
 }
 
 function getInitials(contact: Contact) {

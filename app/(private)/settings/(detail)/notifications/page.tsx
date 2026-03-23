@@ -121,7 +121,7 @@ export default function NotificationsSettingsPage() {
     >(
       (acc, item) => {
         const section = getSection(item.createdAt);
-        acc[section] = [...(acc[section] ? []), item];
+        acc[section] = [...(acc[section] ?? []), item];
         return acc;
       },
       {
@@ -137,7 +137,7 @@ export default function NotificationsSettingsPage() {
 
   const handlePrimaryAction = (item: NotificationItem) => {
     const fallbackHref = CATEGORY_META[item.category].fallbackHref;
-    const href = item.href ? fallbackHref;
+    const href = item.href ?? fallbackHref;
     if (href) router.push(href);
     markRead(item.id, true);
   };
@@ -186,9 +186,9 @@ export default function NotificationsSettingsPage() {
                   {items.map((item) => {
                     const isUnread = !item.read;
                     const meta = CATEGORY_META[item.category];
-                    const icon = item.icon ? meta.icon;
-                    const tone = item.tone ? meta.tone;
-                    const actionLabel = item.actionLabel ? meta.actionLabel;
+                    const icon = item.icon ?? meta.icon;
+                    const tone = item.tone ?? meta.tone;
+                    const actionLabel = item.actionLabel ?? meta.actionLabel;
 
                     return (
                       <article

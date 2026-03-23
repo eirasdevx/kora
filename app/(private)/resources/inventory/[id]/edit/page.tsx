@@ -77,16 +77,16 @@ export default function InventoryEditPage() {
   useEffect(() => {
     if (!item) return;
     setForm({
-      name: item.name ? "",
-      serial: item.serial ? "",
-      category: item.category ? "",
-      status: item.status ? (item.borrowed > 0 ? "in_use" : "available"),
-      location: item.location ? "",
-      assignee: item.assignee ? "",
-      acquisitionDate: item.acquisitionDate ? "",
+      name: item.name ?? "",
+      serial: item.serial ?? "",
+      category: item.category ?? "",
+      status: item.status ?? (item.borrowed > 0 ? "in_use" : "available"),
+      location: item.location ?? "",
+      assignee: item.assignee ?? "",
+      acquisitionDate: item.acquisitionDate ?? "",
       value: item.value ? String(item.value) : "",
-      notes: item.notes ? "",
-      photoUrl: item.photoUrl ? undefined,
+      notes: item.notes ?? "",
+      photoUrl: item.photoUrl ?? undefined,
     });
   }, [item]);
 
@@ -129,8 +129,8 @@ export default function InventoryEditPage() {
     setIsSaving(true);
     try {
       const now = new Date().toISOString();
-      const quantity = item.quantity ? 1;
-      const borrowedBase = item.borrowed ? 0;
+      const quantity = item.quantity ?? 1;
+      const borrowedBase = item.borrowed ?? 0;
       const borrowed =
         form.status === "in_use"
           ? Math.max(1, borrowedBase)
@@ -457,7 +457,7 @@ export default function InventoryEditPage() {
                   accept="image/png,image/jpeg"
                   className="hidden"
                   onChange={(event) =>
-                    handleFileChange(event.target.files?.[0] ? null)
+                    handleFileChange(event.target.files?.[0] ?? null)
                   }
                 />
                 {form.photoUrl ? (
@@ -468,7 +468,7 @@ export default function InventoryEditPage() {
                       className="h-24 w-24 rounded-2xl object-cover"
                     />
                     <span className="text-xs text-gray-500">
-                      {photoName ? "Imagen cargada"}
+                      {photoName ?? "Imagen cargada"}
                     </span>
                     <span className="text-xs font-semibold text-primary">
                       Cambiar foto

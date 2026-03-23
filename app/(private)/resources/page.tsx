@@ -103,7 +103,7 @@ export default function ResourcesPage() {
           item.location?.trim() ||
           "Sin asignar",
         borrowed: item.borrowed,
-        date: item.updatedAt ? item.createdAt,
+        date: item.updatedAt ?? item.createdAt,
         status: resolveItemStatus(item),
       }))
       .sort((a, b) => toTime(b.date) - toTime(a.date))
@@ -119,8 +119,8 @@ export default function ResourcesPage() {
 
     return [...documents]
       .sort((a, b) =>
-        toTime(b.updatedAt ? b.createdAt) -
-        toTime(a.updatedAt ? a.createdAt)
+        toTime(b.updatedAt ?? b.createdAt) -
+        toTime(a.updatedAt ?? a.createdAt)
       )
       .slice(0, 3);
   }, [documents]);
@@ -265,7 +265,7 @@ export default function ResourcesPage() {
                       <p className="text-xs text-gray-500">
                         {doc.category} ·{" "}
                         {formatDate(
-                          doc.updatedAt ? doc.createdAt,
+                          doc.updatedAt ?? doc.createdAt,
                           formatLocale
                         )}
                       </p>

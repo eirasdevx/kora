@@ -165,7 +165,7 @@ export default function DashboardPage() {
     const expenseTotals = rangeTransactions
       .filter((t) => t.type === "expense")
       .reduce<Record<string, number>>((acc, t) => {
-        acc[t.category] = (acc[t.category] ? 0) + t.amount;
+        acc[t.category] = (acc[t.category] ?? 0) + t.amount;
         return acc;
       }, {});
 
@@ -177,7 +177,7 @@ export default function DashboardPage() {
     const incomeTotals = rangeTransactions
       .filter((t) => t.type === "income")
       .reduce<Record<string, number>>((acc, t) => {
-        acc[t.category] = (acc[t.category] ? 0) + t.amount;
+        acc[t.category] = (acc[t.category] ?? 0) + t.amount;
         return acc;
       }, {});
 
@@ -576,7 +576,7 @@ export default function DashboardPage() {
                       <div key={item.category} className="space-y-2">
                         <div className="flex items-center justify-between text-sm text-gray-600">
                           <span>
-                            {CATEGORY_LABELS[item.category] ? item.category}
+                            {CATEGORY_LABELS[item.category] ?? item.category}
                           </span>
                           <span className="font-semibold">
                             {percent.toFixed(0)}%
@@ -611,7 +611,7 @@ export default function DashboardPage() {
                       <div key={item.category} className="space-y-2">
                         <div className="flex items-center justify-between text-sm text-gray-600">
                           <span>
-                            {CATEGORY_LABELS[item.category] ? item.category}
+                            {CATEGORY_LABELS[item.category] ?? item.category}
                           </span>
                           <span className="font-semibold">
                             {percent.toFixed(0)}%
@@ -656,8 +656,8 @@ export default function DashboardPage() {
                 </p>
               )}
               {upcomingEvents.map((event) => {
-                const capacity = event.capacity ? 0;
-                const used = event.participantIds?.length ? 0;
+                const capacity = event.capacity ?? 0;
+                const used = event.participantIds?.length ?? 0;
                 const progress = capacity ? (used / capacity) * 100 : 0;
                 const date = new Date(event.startDate);
                 return (

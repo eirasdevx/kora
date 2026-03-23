@@ -48,7 +48,7 @@ export default function TermsPage() {
   const associationLocation =
     association?.location?.trim() || "No indicado";
   const representative =
-    association?.representatives?.find((item) => item.name?.trim()) ? null;
+    association?.representatives?.find((item) => item.name?.trim()) ?? null;
   const effectiveDate = formatLongDate(new Date());
 
   const summaryCards = [
@@ -64,7 +64,7 @@ export default function TermsPage() {
     },
     {
       label: "Código interno",
-      value: companyCode ? "No disponible",
+      value: companyCode ?? "No disponible",
       note: "Referencia de acceso y administración de la organización.",
     },
     {

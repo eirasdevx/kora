@@ -161,7 +161,7 @@ const DEFAULT_ACCOUNTING_ACCOUNT_MAP = new Map(
 );
 
 function getDefaultAccountingAccountByKey(key: AccountingAccountKey) {
-  return DEFAULT_ACCOUNTING_ACCOUNT_MAP.get(key) ? DEFAULT_ACCOUNTING_ACCOUNTS[0];
+  return DEFAULT_ACCOUNTING_ACCOUNT_MAP.get(key) ?? DEFAULT_ACCOUNTING_ACCOUNTS[0];
 }
 
 function normalizeAccountingAccountCode(value: unknown, fallback: string) {
@@ -177,7 +177,7 @@ function resolveAccountingAccountFallback(
   const source = value as Record<string, unknown>;
 
   const key =
-    parseAccountingAccountKey(source.key) ?
+    parseAccountingAccountKey(source.key) ??
     (isTransactionCategory(normalizeText(source.category)) &&
     isTransactionType(normalizeText(source.type))
       ? createAccountingAccountKey(
@@ -233,7 +233,7 @@ export function normalizeAssociationAccountingSettings(
 
   const usedCodes = new Set<string>();
   const accounts = DEFAULT_ACCOUNTING_ACCOUNTS.map((account) => {
-    const resolved = accountsByKey.get(account.key) ? { ...account };
+    const resolved = accountsByKey.get(account.key) ?? { ...account };
     const normalizedCode = normalizeAccountingAccountCode(resolved.code, account.code);
     const dedupeKey = normalizedCode.toUpperCase();
 
@@ -276,7 +276,7 @@ export function getAccountingAccountByKey(
   key: AccountingAccountKey
 ) {
   return (
-    getAccountingCatalog(settings).find((account) => account.key === key) ?
+    getAccountingCatalog(settings).find((account) => account.key === key) ??
     getDefaultAccountingAccountByKey(key)
   );
 }

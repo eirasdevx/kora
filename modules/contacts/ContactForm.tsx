@@ -144,49 +144,49 @@ export default function ContactForm({
   }, [loadContacts]);
 
   const [contactKind, setContactKind] = useState<ContactKind>(
-    initialData?.kind ? "person"
+    initialData?.kind ?? "person"
   );
   const [firstName, setFirstName] = useState(
-    initialData?.firstName ? ""
+    initialData?.firstName ?? ""
   );
   const [lastName, setLastName] = useState(
-    initialData?.lastName ? ""
+    initialData?.lastName ?? ""
   );
   const [representativeFirstName, setRepresentativeFirstName] = useState(
-    initialData?.representativeFirstName ? ""
+    initialData?.representativeFirstName ?? ""
   );
   const [representativeLastName, setRepresentativeLastName] = useState(
-    initialData?.representativeLastName ? ""
+    initialData?.representativeLastName ?? ""
   );
-  const [dni, setDni] = useState(initialData?.dni ? "");
+  const [dni, setDni] = useState(initialData?.dni ?? "");
   const [birthDate, setBirthDate] = useState(
     toInputDate(initialData?.birthDate)
   );
   const [types, setTypes] = useState<ContactType[]>(
-    initialData?.types ? []
+    initialData?.types ?? []
   );
   const [membershipPlanId, setMembershipPlanId] = useState(
-    initialData?.membershipPlanId ? defaultMembershipPlan.id
+    initialData?.membershipPlanId ?? defaultMembershipPlan.id
   );
-  const [email, setEmail] = useState(initialData?.email ? "");
-  const [phone, setPhone] = useState(initialData?.phone ? "");
+  const [email, setEmail] = useState(initialData?.email ?? "");
+  const [phone, setPhone] = useState(initialData?.phone ?? "");
   const [secondaryPhone, setSecondaryPhone] = useState(
-    initialData?.secondaryPhone ? ""
+    initialData?.secondaryPhone ?? ""
   );
-  const [website, setWebsite] = useState(initialData?.website ? "");
+  const [website, setWebsite] = useState(initialData?.website ?? "");
   const [postalCode, setPostalCode] = useState(
-    initialData?.postalCode ? ""
+    initialData?.postalCode ?? ""
   );
   const [address, setAddress] = useState(
-    initialData?.address ? ""
+    initialData?.address ?? ""
   );
-  const [city, setCity] = useState(initialData?.city ? "");
+  const [city, setCity] = useState(initialData?.city ?? "");
   const [region, setRegion] = useState(
-    initialData?.region ? ""
+    initialData?.region ?? ""
   );
-  const [notes, setNotes] = useState(initialData?.notes ? "");
+  const [notes, setNotes] = useState(initialData?.notes ?? "");
   const [photoUrl, setPhotoUrl] = useState(
-    initialData?.photoUrl ? ""
+    initialData?.photoUrl ?? ""
   );
   const [registeredDate, setRegisteredDate] = useState(
     toInputDate(initialData?.createdAt) ||
@@ -206,7 +206,7 @@ export default function ContactForm({
   const normalizedPreviewTypes = types.filter((type) => allowedTypes.includes(type));
   const accountingContactPreview = ensureContactAccountingCode(
     {
-      id: initialData?.id ? "preview-contact",
+      id: initialData?.id ?? "preview-contact",
       kind: contactKind,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -218,8 +218,8 @@ export default function ContactForm({
         : undefined,
       email: email.trim() || undefined,
       createdAt:
-        fromInputDate(registeredDate) ?
-        initialData?.createdAt ?
+        fromInputDate(registeredDate) ??
+        initialData?.createdAt ??
         new Date().toISOString(),
     },
     contacts
@@ -303,13 +303,13 @@ export default function ContactForm({
 
     const fullName = `${trimmedFirst} ${trimmedLast}`.trim();
     const createdAt =
-      fromInputDate(registeredDate) ?
-      initialData?.createdAt ?
+      fromInputDate(registeredDate) ??
+      initialData?.createdAt ??
       new Date().toISOString();
     const deactivatedAt = fromInputDate(deactivatedDate);
 
     const contact: Contact = {
-      id: initialData?.id ? crypto.randomUUID(),
+      id: initialData?.id ?? crypto.randomUUID(),
       kind: contactKind,
       firstName: trimmedFirst,
       lastName: trimmedLast,

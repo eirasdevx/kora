@@ -41,7 +41,7 @@ const volunteersTableSectionStyles =
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
   if (composed) return composed;
-  return contact.fullName ? "Sin nombre";
+  return contact.fullName ?? "Sin nombre";
 }
 
 function getInitials(contact: Contact) {
@@ -124,13 +124,13 @@ export default function VolunteersPage() {
   const volunteerMetrics = useMemo(() => {
     const activityByContact = new Map<string, typeof activities>();
     activities.forEach((activity) => {
-      const list = activityByContact.get(activity.contactId) ? [];
+      const list = activityByContact.get(activity.contactId) ?? [];
       list.push(activity);
       activityByContact.set(activity.contactId, list);
     });
 
     return volunteers.map((volunteer) => {
-      const list = activityByContact.get(volunteer.id) ? [];
+      const list = activityByContact.get(volunteer.id) ?? [];
       const totalHours = list.reduce((sum, entry) => sum + entry.hours, 0);
       const lastActivity = [...list].sort(
         (a, b) =>
@@ -197,7 +197,7 @@ export default function VolunteersPage() {
     if (typeFilter !== "all" && item.type !== typeFilter) return false;
     if (!query.trim()) return true;
     const name = getDisplayName(item.volunteer).toLowerCase();
-    const email = item.volunteer.email?.toLowerCase() ? "";
+    const email = item.volunteer.email?.toLowerCase() ?? "";
     return (
       name.includes(query.toLowerCase()) ||
       email.includes(query.toLowerCase())

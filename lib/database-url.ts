@@ -67,7 +67,7 @@ const readEnvValue = (value?: string) => {
 export const getConfiguredDatabaseUrlInfo = (
   env: NodeJS.ProcessEnv = process.env
 ) => {
-  const environment = env.NODE_ENV ? "development";
+  const environment = env.NODE_ENV ?? "development";
   const isProduction = environment === "production";
   const hostedDatabaseUrl = readEnvValue(env.DATABASE_URL);
   const localDatabaseUrl = readEnvValue(env.LOCAL_DATABASE_URL);
@@ -169,7 +169,7 @@ export const resolveConnectionString = (value?: string) => {
 export const inspectConnectionString = (
   value: string,
   source: DatabaseUrlSource = null,
-  environment = process.env.NODE_ENV ? "development"
+  environment = process.env.NODE_ENV ?? "development"
 ): DatabaseConnectionDiagnostics => {
   const parsed = new URL(value);
   const hostname = parsed.hostname.toLowerCase();
@@ -237,12 +237,12 @@ export const formatDatabaseTargetForLogs = (
           : "postgres";
 
   return [
-    `source=${diagnostics.source ? "unknown"}`,
+    `source=${diagnostics.source ?? "unknown"}`,
     `env=${diagnostics.environment}`,
-    `host=${diagnostics.hostname ? "unknown"}`,
-    `port=${diagnostics.port ? "default"}`,
-    `database=${diagnostics.databaseName ? "default"}`,
-    `sslmode=${diagnostics.sslMode ? "default"}`,
+    `host=${diagnostics.hostname ?? "unknown"}`,
+    `port=${diagnostics.port ?? "default"}`,
+    `database=${diagnostics.databaseName ?? "default"}`,
+    `sslmode=${diagnostics.sslMode ?? "default"}`,
     `provider=${provider}`,
   ].join(" ");
 };

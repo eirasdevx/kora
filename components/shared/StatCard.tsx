@@ -49,7 +49,7 @@ export default function StatCard({
           <span
             className={cx(
               "flex h-10 w-10 items-center justify-center rounded-2xl text-[18px]",
-              accentClassName ? "bg-primary/10 text-primary"
+              accentClassName ?? "bg-primary/10 text-primary"
             )}
           >
             <span className="material-symbols-outlined text-[18px]">
