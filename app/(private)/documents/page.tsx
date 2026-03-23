@@ -24,6 +24,13 @@ import {
   tableWrapperStyles,
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
+import {
+  applySortDirection,
+  compareDate,
+  compareNumber,
+  compareText,
+  SortState,
+} from "@/lib/table-sorting";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
 import {
   DocumentCategory,
@@ -57,6 +64,8 @@ const categoryStyles: Record<DocumentCategory, string> = {
 function cx(...classes: Array<string | undefined | null | false>) {
   return classes.filter(Boolean).join(" ");
 }
+
+type DocumentsSortKey = "name" | "security" | "updatedAt" | "size";
 
 function formatBytes(bytes: number) {
   if (!bytes) return "-";
@@ -219,6 +228,10 @@ export default function DocumentsPage() {
   const [confirmDelete, setConfirmDelete] = useState<DocumentItem | null>(null);
   const [confirmDeleteFinal, setConfirmDeleteFinal] =
     useState<DocumentItem | null>(null);
+  const [sortState, setSortState] = useState<SortState<DocumentsSortKey>>({
+    key: "updatedAt",
+    direction: "desc",
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const pageSize = 5;
@@ -236,15 +249,43 @@ export default function DocumentsPage() {
     });
   }, [documents, filter, search]);
 
+  const sortedDocuments = useMemo(() => {
+    return [...filteredDocuments].sort((left, right) => {
+      switch (sortState.key) {
+        case "name":
+          return applySortDirection(
+            compareText(left.name, right.name, formatLocale),
+            sortState.direction
+          );
+        case "security":
+          return applySortDirection(
+            compareText(left.security, right.security, formatLocale),
+            sortState.direction
+          );
+        case "size":
+          return applySortDirection(
+            compareNumber(left.type === "folder" ? 0 : left.size, right.type === "folder" ? 0 : right.size),
+            sortState.direction
+          );
+        case "updatedAt":
+        default:
+          return applySortDirection(
+            compareDate(left.updatedAt, right.updatedAt),
+            sortState.direction
+          );
+      }
+    });
+  }, [filteredDocuments, formatLocale, sortState]);
+
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(filteredDocuments.length / pageSize)),
-    [filteredDocuments.length, pageSize]
+    () => Math.max(1, Math.ceil(sortedDocuments.length / pageSize)),
+    [pageSize, sortedDocuments.length]
   );
   const currentPageSafe = Math.min(currentPage, totalPages);
   const pagedDocuments = useMemo(() => {
     const start = (currentPageSafe - 1) * pageSize;
-    return filteredDocuments.slice(start, start + pageSize);
-  }, [filteredDocuments, currentPageSafe, pageSize]);
+    return sortedDocuments.slice(start, start + pageSize);
+  }, [currentPageSafe, pageSize, sortedDocuments]);
 
   useEffect(() => {
     if (currentPage !== currentPageSafe) {
@@ -501,6 +542,27 @@ export default function DocumentsPage() {
                   />
                 </div>
                 <div className="flex items-center gap-2">
+                  <select
+                    value={`${sortState.key}:${sortState.direction}`}
+                    onChange={(event) => {
+                      const [key, direction] = event.target.value.split(":") as [
+                        DocumentsSortKey,
+                        "asc" | "desc",
+                      ];
+                      setSortState({ key, direction });
+                      setCurrentPage(1);
+                    }}
+                    className="h-9 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                    aria-label="Ordenar documentos"
+                  >
+                    <option value="updatedAt:desc">Más recientes</option>
+                    <option value="updatedAt:asc">Más antiguos</option>
+                    <option value="name:asc">Nombre A-Z</option>
+                    <option value="name:desc">Nombre Z-A</option>
+                    <option value="size:desc">Mayor tamaño</option>
+                    <option value="size:asc">Menor tamaño</option>
+                    <option value="security:asc">Seguridad A-Z</option>
+                  </select>
                   <button
                     type="button"
                     className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 shadow-sm"
@@ -583,7 +645,7 @@ export default function DocumentsPage() {
                     </tr>
                   </thead>
                   <tbody className={tableBodyStyles}>
-                    {filteredDocuments.length === 0 ? (
+                    {sortedDocuments.length === 0 ? (
                       <tr>
                         <td
                           colSpan={5}
@@ -665,7 +727,7 @@ export default function DocumentsPage() {
               </div>
             ) : (
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredDocuments.length === 0 ? (
+                {sortedDocuments.length === 0 ? (
                   <div className="col-span-full rounded-2xl border border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
                     No se encontraron documentos con esos filtros.
                   </div>
@@ -728,7 +790,7 @@ export default function DocumentsPage() {
 
             <div className={tableFooterStyles}>
               <span>
-                Mostrando {pagedDocuments.length} de {filteredDocuments.length} archivos
+                Mostrando {pagedDocuments.length} de {sortedDocuments.length} archivos
               </span>
               <div className="flex items-center gap-2">
                 <button

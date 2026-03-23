@@ -8,6 +8,12 @@ import {
 } from "@/core/storage/association-scope";
 import { useSessionStore } from "@/core/session/session.store";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
+import {
+  deleteAssociationModuleRecord,
+  listAssociationModuleRecords,
+  saveAssociationModuleRecords,
+  upsertAssociationModuleRecord,
+} from "@/lib/client/association-data-client";
 
 interface DocumentsState {
   documents: DocumentItem[];
@@ -31,6 +37,34 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       all,
       getActiveAssociationId()
     );
+
+    try {
+      const persisted =
+        await listAssociationModuleRecords<DocumentItem>("documents");
+      const localById = new Map(scopedRecords.map((item) => [item.id, item]));
+      const mergedDocuments = persisted.map((item) => {
+        const cachedItem = localById.get(item.id);
+
+        if (!cachedItem) {
+          return item;
+        }
+
+        return {
+          ...cachedItem,
+          ...item,
+          file: item.file ?? cachedItem.file,
+        };
+      });
+
+      if (mergedDocuments.length > 0 || migratedRecords.length > 0) {
+        await db.documents.bulkPut(mergedDocuments);
+      }
+
+      set({ documents: mergedDocuments });
+      return;
+    } catch (error) {
+      console.error(error);
+    }
 
     if (migratedRecords.length > 0) {
       await db.documents.bulkPut(scopedRecords);
@@ -66,6 +100,7 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       });
       return;
     }
+    await upsertAssociationModuleRecord<DocumentItem>("documents", scopedDoc);
     await db.documents.put(scopedDoc);
     set((state) => {
       const exists = state.documents.some((item) => item.id === scopedDoc.id);
@@ -105,6 +140,11 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       });
       return;
     }
+    await saveAssociationModuleRecords<DocumentItem>(
+      "documents",
+      scopedDocs,
+      "merge"
+    );
     await db.documents.bulkPut(scopedDocs);
     set((state) => {
       const map = new Map(state.documents.map((item) => [item.id, item]));
@@ -134,6 +174,7 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       });
       return;
     }
+    await deleteAssociationModuleRecord("documents", id);
     await db.documents.delete(id);
     set((state) => ({
       documents: state.documents.filter((item) => item.id !== id),

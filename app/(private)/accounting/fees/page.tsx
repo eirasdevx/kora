@@ -6,7 +6,16 @@ import Link from "next/link";
 import TransactionsTable from "@/components/accounting/TransactionsTable";
 import PageHeader from "@/components/shared/PageHeader";
 import SectionBlock from "@/components/shared/SectionBlock";
+import SortableHeader from "@/components/shared/SortableHeader";
 import { useLocale } from "@/core/i18n/use-locale";
+import {
+  applySortDirection,
+  compareDate,
+  compareNumber,
+  compareText,
+  SortState,
+  toggleSort,
+} from "@/lib/table-sorting";
 import {
   getContactMembershipPlan,
   getMembershipExecutionLabel,
@@ -20,6 +29,8 @@ import {
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { Contact } from "@/modules/contacts/contact.types";
+
+type FeesSortKey = "member" | "plan" | "status" | "debt" | "lastCompleted";
 
 function formatCurrency(value: number, locale: string) {
   return new Intl.NumberFormat(locale, {
@@ -72,6 +83,10 @@ export default function AccountingFeesPage() {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [notes, setNotes] = useState("");
   const [query, setQuery] = useState("");
+  const [sortState, setSortState] = useState<SortState<FeesSortKey>>({
+    key: "member",
+    direction: "asc",
+  });
 
   useEffect(() => {
     loadContacts();
@@ -155,6 +170,56 @@ export default function AccountingFeesPage() {
       );
     });
   }, [memberRecords, query]);
+
+  const sortedRecords = useMemo(() => {
+    return [...filteredRecords].sort((left, right) => {
+      const leftStatus =
+        left.pendingCount > 0
+          ? `${left.pendingCount} pendiente(s)`
+          : left.completedCount > 0
+            ? "Al día"
+            : "Sin cobros";
+      const rightStatus =
+        right.pendingCount > 0
+          ? `${right.pendingCount} pendiente(s)`
+          : right.completedCount > 0
+            ? "Al día"
+            : "Sin cobros";
+
+      switch (sortState.key) {
+        case "plan":
+          return applySortDirection(
+            compareText(left.plan.name, right.plan.name, formatLocale),
+            sortState.direction
+          );
+        case "status":
+          return applySortDirection(
+            compareText(leftStatus, rightStatus, formatLocale),
+            sortState.direction
+          );
+        case "debt":
+          return applySortDirection(
+            compareNumber(left.pendingAmount, right.pendingAmount),
+            sortState.direction
+          );
+        case "lastCompleted":
+          return applySortDirection(
+            compareDate(left.lastCompleted, right.lastCompleted),
+            sortState.direction
+          );
+        case "member":
+        default:
+          return applySortDirection(
+            compareText(
+              getContactDisplayName(left.member),
+              getContactDisplayName(right.member),
+              formatLocale
+            ),
+            sortState.direction
+          );
+      }
+    });
+  }, [filteredRecords, formatLocale, sortState]);
 
   const currentMonthRevenue = useMemo(() => {
     const start = startOfMonth(new Date());
@@ -471,9 +536,32 @@ export default function AccountingFeesPage() {
               placeholder="Buscar socio por nombre, email o plan..."
               className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
             />
-            <p className="text-sm text-gray-500">
-              {filteredRecords.length} socios visibles
-            </p>
+            <div className="flex items-center gap-3">
+              <select
+                value={`${sortState.key}:${sortState.direction}`}
+                onChange={(event) => {
+                  const [key, direction] = event.target.value.split(":") as [
+                    FeesSortKey,
+                    "asc" | "desc",
+                  ];
+                  setSortState({ key, direction });
+                }}
+                className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-600 shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                aria-label="Ordenar operativa por socio"
+              >
+                <option value="member:asc">Socio A-Z</option>
+                <option value="member:desc">Socio Z-A</option>
+                <option value="plan:asc">Plan A-Z</option>
+                <option value="status:asc">Estado A-Z</option>
+                <option value="debt:desc">Mayor deuda</option>
+                <option value="debt:asc">Menor deuda</option>
+                <option value="lastCompleted:desc">Último cobro reciente</option>
+                <option value="lastCompleted:asc">Último cobro antiguo</option>
+              </select>
+              <p className="text-sm text-gray-500">
+                {sortedRecords.length} socios visibles
+              </p>
+            </div>
           </div>
 
           {members.length === 0 ? (
@@ -485,16 +573,51 @@ export default function AccountingFeesPage() {
               <table className="w-full min-w-[860px] text-left text-sm">
                 <thead className="border-y border-gray-100 bg-gray-50 text-[11px] uppercase tracking-[0.12em] text-gray-400">
                   <tr>
-                    <th className="px-5 py-4 font-semibold">Socio</th>
-                    <th className="px-5 py-4 font-semibold">Plan</th>
-                    <th className="px-5 py-4 font-semibold">Estado</th>
-                    <th className="px-5 py-4 font-semibold text-right">Deuda</th>
+                    <SortableHeader
+                      label="Socio"
+                      active={sortState.key === "member"}
+                      direction={sortState.direction}
+                      onClick={() =>
+                        setSortState((current) => toggleSort(current, "member"))
+                      }
+                      className="px-5 py-4 font-semibold"
+                    />
+                    <SortableHeader
+                      label="Plan"
+                      active={sortState.key === "plan"}
+                      direction={sortState.direction}
+                      onClick={() =>
+                        setSortState((current) => toggleSort(current, "plan"))
+                      }
+                      className="px-5 py-4 font-semibold"
+                    />
+                    <SortableHeader
+                      label="Estado"
+                      active={sortState.key === "status"}
+                      direction={sortState.direction}
+                      onClick={() =>
+                        setSortState((current) => toggleSort(current, "status"))
+                      }
+                      className="px-5 py-4 font-semibold"
+                    />
+                    <SortableHeader
+                      label="Deuda"
+                      active={sortState.key === "debt"}
+                      direction={sortState.direction}
+                      onClick={() =>
+                        setSortState((current) =>
+                          toggleSort(current, "debt", "desc")
+                        )
+                      }
+                      className="px-5 py-4 font-semibold text-right"
+                      align="right"
+                    />
                     <th className="px-5 py-4 font-semibold">Último cobro</th>
                     <th className="px-5 py-4 font-semibold text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-gray-700">
-                  {filteredRecords.map((record) => {
+                  {sortedRecords.map((record) => {
                     const displayName = getContactDisplayName(record.member);
                     const statusTone =
                       record.pendingCount > 0

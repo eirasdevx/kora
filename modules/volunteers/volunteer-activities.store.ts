@@ -10,6 +10,11 @@ import {
 } from "@/core/storage/association-scope";
 import { VolunteerActivity } from "./volunteer-activity.types";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
+import {
+  deleteAssociationModuleRecord,
+  listAssociationModuleRecords,
+  upsertAssociationModuleRecord,
+} from "@/lib/client/association-data-client";
 
 interface VolunteerActivitiesState {
   activities: VolunteerActivity[];
@@ -34,6 +39,22 @@ export const useVolunteerActivitiesStore =
         all,
         getActiveAssociationId()
       );
+
+      try {
+        const persisted =
+          await listAssociationModuleRecords<VolunteerActivity>(
+            "volunteerActivities"
+          );
+
+        if (persisted.length > 0 || migratedRecords.length > 0) {
+          await db.volunteerActivities.bulkPut(persisted);
+        }
+
+        set({ activities: persisted });
+        return;
+      } catch (error) {
+        console.error(error);
+      }
 
       if (migratedRecords.length > 0) {
         await db.volunteerActivities.bulkPut(scopedRecords);
@@ -61,6 +82,10 @@ export const useVolunteerActivitiesStore =
         });
         return;
       }
+      await upsertAssociationModuleRecord<VolunteerActivity>(
+        "volunteerActivities",
+        scopedActivity
+      );
       await db.volunteerActivities.put(scopedActivity);
       set((state) => ({
         activities: [scopedActivity, ...state.activities],
@@ -99,6 +124,10 @@ export const useVolunteerActivitiesStore =
         });
         return;
       }
+      await upsertAssociationModuleRecord<VolunteerActivity>(
+        "volunteerActivities",
+        scopedActivity
+      );
       await db.volunteerActivities.put(scopedActivity);
       set((state) => ({
         activities: state.activities.map((item) =>
@@ -137,6 +166,7 @@ export const useVolunteerActivitiesStore =
         });
         return;
       }
+      await deleteAssociationModuleRecord("volunteerActivities", id);
       await db.volunteerActivities.delete(id);
       set((state) => ({
         activities: state.activities.filter((item) => item.id !== id),

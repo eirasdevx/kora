@@ -57,7 +57,7 @@ export default function DashboardPage() {
   const { events, loadEvents } = useEventsStore();
   const { documents, loadDocuments } = useDocumentsStore();
   const { settings, loadSettings } = useMessagingSettingsStore();
-  const { templates } = useMessagingStore();
+  const { templates, loadTemplates } = useMessagingStore();
   const [monthsRange, setMonthsRange] = useState(6);
 
   useEffect(() => {
@@ -70,6 +70,10 @@ export default function DashboardPage() {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  useEffect(() => {
+    void loadTemplates();
+  }, [loadTemplates]);
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);

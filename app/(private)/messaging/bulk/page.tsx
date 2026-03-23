@@ -111,7 +111,7 @@ const MESSAGING_MODULE_DESCRIPTION =
 export default function MessagingBulkPage() {
   const mode = useSessionStore((s) => s.mode);
   const association = useSessionStore((s) => s.association);
-  const { templates } = useMessagingStore();
+  const { templates, loadTemplates } = useMessagingStore();
   const {
     settings,
     hydrated,
@@ -141,6 +141,10 @@ export default function MessagingBulkPage() {
   useEffect(() => {
     loadContacts();
   }, [loadContacts]);
+
+  useEffect(() => {
+    void loadTemplates();
+  }, [loadTemplates]);
 
   useEffect(() => {
     loadSettings();

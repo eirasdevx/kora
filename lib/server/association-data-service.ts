@@ -8,6 +8,8 @@ import type {
 } from "@/lib/association-data";
 import { getCurrentSessionContext } from "@/lib/server/session-service";
 
+const WRITE_BATCH_SIZE = 100;
+
 const isPlainObject = (
   value: unknown
 ): value is Record<string, unknown> =>
@@ -152,6 +154,37 @@ const hydrateStoredRecord = (
   };
 };
 
+const chunkRecords = <T,>(records: T[], size: number) => {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < records.length; index += size) {
+    chunks.push(records.slice(index, index + size));
+  }
+
+  return chunks;
+};
+
+const deduplicateRecords = (
+  records: Array<{
+    recordId: string;
+    payload: Prisma.InputJsonValue;
+  }>
+) => {
+  const entries = new Map<
+    string,
+    {
+      recordId: string;
+      payload: Prisma.InputJsonValue;
+    }
+  >();
+
+  for (const record of records) {
+    entries.set(record.recordId, record);
+  }
+
+  return Array.from(entries.values());
+};
+
 export async function listAssociationModuleRecords(
   module: AssociationDataModule
 ) {
@@ -183,41 +216,47 @@ export async function saveAssociationModuleRecords(
 ) {
   const context = await requireAssociationContext();
   const associationId = context.membership.associationId;
-  const normalizedRecords = records.map((record) =>
-    normalizePersistedRecord(record, associationId)
+  const normalizedRecords = deduplicateRecords(
+    records.map((record) => normalizePersistedRecord(record, associationId))
   );
 
-  await prisma.$transaction(async (tx) => {
-    if (mode === "replace") {
-      await tx.associationDataRecord.deleteMany({
-        where: {
-          associationId,
-          module,
-        },
-      });
+  if (mode === "replace") {
+    await prisma.associationDataRecord.deleteMany({
+      where: {
+        associationId,
+        module,
+      },
+    });
+  }
+
+  for (const batch of chunkRecords(normalizedRecords, WRITE_BATCH_SIZE)) {
+    if (batch.length === 0) {
+      continue;
     }
 
-    for (const record of normalizedRecords) {
-      await tx.associationDataRecord.upsert({
-        where: {
-          associationId_module_recordId: {
+    await prisma.$transaction(
+      batch.map((record) =>
+        prisma.associationDataRecord.upsert({
+          where: {
+            associationId_module_recordId: {
+              associationId,
+              module,
+              recordId: record.recordId,
+            },
+          },
+          create: {
             associationId,
             module,
             recordId: record.recordId,
+            payload: record.payload,
           },
-        },
-        create: {
-          associationId,
-          module,
-          recordId: record.recordId,
-          payload: record.payload,
-        },
-        update: {
-          payload: record.payload,
-        },
-      });
-    }
-  });
+          update: {
+            payload: record.payload,
+          },
+        })
+      )
+    );
+  }
 
   return listAssociationModuleRecords(module);
 }

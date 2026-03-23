@@ -32,23 +32,46 @@ import type {
   TransactionStatus,
   TransactionType,
 } from "@/modules/accounting/transaction.types";
+import type {
+  DocumentCategory,
+  DocumentItem,
+  DocumentSecurity,
+  DocumentType,
+} from "@/modules/documents/document.types";
+import type {
+  InventoryItem,
+  InventoryStatus,
+} from "@/modules/resources/inventory.types";
+import type {
+  VolunteerActivity,
+  VolunteerProfileType,
+} from "@/modules/volunteers/volunteer-activity.types";
+import type { MessageTemplate } from "@/modules/messaging/messaging.types";
 
 type DataScope =
   | "all"
   | "associationProfile"
   | "contacts"
   | "events"
-  | "transactions";
+  | "transactions"
+  | "documents"
+  | "inventory"
+  | "volunteerActivities"
+  | "messagingTemplates";
 
 type ImportMode = "merge" | "replace";
 
-type KoraExportPayloadV1 = {
-  version: 1;
+type KoraExportPayload = {
+  version: 1 | 2;
   exportedAt: string;
   associationProfile: AssociationProfile | null;
   contacts: Contact[];
   events: Event[];
   transactions: Transaction[];
+  documents: DocumentItem[];
+  inventory: InventoryItem[];
+  volunteerActivities: VolunteerActivity[];
+  messagingTemplates: MessageTemplate[];
 };
 
 const CONTACT_TYPES: ContactType[] = [
@@ -68,6 +91,37 @@ const TRANSACTION_CATEGORIES: TransactionCategory[] = [
   "other",
 ];
 const TRANSACTION_STATUSES: TransactionStatus[] = ["completed", "pending"];
+const DOCUMENT_CATEGORIES: DocumentCategory[] = [
+  "PDF",
+  "Imagenes",
+  "Contratos",
+  "Hojas de Calculo",
+  "Carpetas",
+];
+const DOCUMENT_SECURITIES: DocumentSecurity[] = [
+  "Privado",
+  "Compartido",
+  "Cifrado",
+];
+const DOCUMENT_TYPES: DocumentType[] = [
+  "pdf",
+  "doc",
+  "sheet",
+  "folder",
+  "csv",
+  "image",
+  "other",
+];
+const INVENTORY_STATUSES: InventoryStatus[] = [
+  "available",
+  "in_use",
+  "maintenance",
+  "retired",
+];
+const VOLUNTEER_PROFILE_TYPES: VolunteerProfileType[] = [
+  "member",
+  "contact",
+];
 
 const DATA_SCOPE_OPTIONS: Array<{
   value: DataScope;
@@ -80,7 +134,8 @@ const DATA_SCOPE_OPTIONS: Array<{
   {
     value: "all",
     label: "Todos los módulos",
-    description: "Perfil, contactos, eventos, contabilidad.",
+    description:
+      "Perfil, contactos, eventos, contabilidad, documentos, inventario, voluntariado y mensajer\u00eda.",
     icon: "deployed_code",
     eyebrow: "Paquete completo",
     iconClassName: "bg-blue-50 text-blue-600",
@@ -116,6 +171,38 @@ const DATA_SCOPE_OPTIONS: Array<{
     icon: "receipt_long",
     eyebrow: "Finanzas",
     iconClassName: "bg-slate-100 text-slate-700",
+  },
+  {
+    value: "documents",
+    label: "Documentos",
+    description: "Metadatos, accesos y versiones.",
+    icon: "description",
+    eyebrow: "Archivo",
+    iconClassName: "bg-cyan-50 text-cyan-700",
+  },
+  {
+    value: "inventory",
+    label: "Inventario",
+    description: "Activos, estados y asignaciones.",
+    icon: "inventory_2",
+    eyebrow: "Recursos",
+    iconClassName: "bg-orange-50 text-orange-700",
+  },
+  {
+    value: "volunteerActivities",
+    label: "Voluntariado",
+    description: "Horas, actividades y participaciones.",
+    icon: "volunteer_activism",
+    eyebrow: "Equipo",
+    iconClassName: "bg-indigo-50 text-indigo-700",
+  },
+  {
+    value: "messagingTemplates",
+    label: "Mensajer\u00eda",
+    description: "Plantillas y contenido reutilizable.",
+    icon: "mail",
+    eyebrow: "Comunicaci\u00f3n",
+    iconClassName: "bg-sky-50 text-sky-700",
   },
 ];
 
@@ -187,7 +274,11 @@ function getExportFilename(scope: DataScope) {
   if (scope === "associationProfile") return "kora-associationProfile.json";
   if (scope === "contacts") return "kora-contacts.json";
   if (scope === "events") return "kora-events.json";
-  return "kora-transactions.json";
+  if (scope === "transactions") return "kora-transactions.json";
+  if (scope === "documents") return "kora-documents.json";
+  if (scope === "inventory") return "kora-inventory.json";
+  if (scope === "volunteerActivities") return "kora-volunteerActivities.json";
+  return "kora-messagingTemplates.json";
 }
 
 type ScopeOptionCardProps = {
@@ -740,6 +831,214 @@ function normalizeTransaction(value: unknown): Transaction | null {
   };
 }
 
+function getFileExtension(value: string) {
+  const parts = value.split(".");
+  if (parts.length <= 1) return "";
+  return parts.pop()?.toLowerCase() ?? "";
+}
+
+function inferDocumentType(name: string): DocumentType {
+  const extension = getFileExtension(name);
+
+  if (extension === "pdf") return "pdf";
+  if (["doc", "docx", "odt"].includes(extension)) return "doc";
+  if (["xls", "xlsx"].includes(extension)) return "sheet";
+  if (extension === "csv") return "csv";
+  if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(extension)) {
+    return "image";
+  }
+
+  return "other";
+}
+
+function inferDocumentCategory(type: DocumentType): DocumentCategory {
+  if (type === "pdf") return "PDF";
+  if (type === "doc") return "Contratos";
+  if (type === "sheet" || type === "csv") return "Hojas de Calculo";
+  if (type === "image") return "Imagenes";
+  if (type === "folder") return "Carpetas";
+  return "PDF";
+}
+
+function normalizeDocument(value: unknown): DocumentItem | null {
+  if (!value || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+
+  const name =
+    safeString(obj.name).trim() || safeString(obj.title).trim();
+
+  if (!name) return null;
+
+  const typeRaw = safeString(obj.type).trim();
+  const type: DocumentType = DOCUMENT_TYPES.includes(typeRaw as DocumentType)
+    ? (typeRaw as DocumentType)
+    : inferDocumentType(name);
+
+  const categoryRaw = safeString(obj.category).trim();
+  const category: DocumentCategory = DOCUMENT_CATEGORIES.includes(
+    categoryRaw as DocumentCategory
+  )
+    ? (categoryRaw as DocumentCategory)
+    : inferDocumentCategory(type);
+
+  const securityRaw = safeString(obj.security).trim();
+  const security: DocumentSecurity = DOCUMENT_SECURITIES.includes(
+    securityRaw as DocumentSecurity
+  )
+    ? (securityRaw as DocumentSecurity)
+    : "Privado";
+
+  const versions = Array.isArray(obj.versions)
+    ? obj.versions
+        .map((entry) => {
+          if (!entry || typeof entry !== "object") return null;
+          const version = entry as Record<string, unknown>;
+          const label = safeString(version.label).trim();
+          const author = safeString(version.author).trim();
+          const time = safeString(version.time).trim();
+
+          if (!label && !author && !time) return null;
+
+          return {
+            id: ensureId(version.id),
+            label: label || "Version",
+            author: author || "Kora",
+            time: time || nowIso(),
+          };
+        })
+        .filter(
+          (entry): entry is NonNullable<typeof entry> =>
+            entry !== null
+        )
+    : [];
+
+  return {
+    id: ensureId(obj.id),
+    name,
+    category,
+    security,
+    type,
+    size: Math.max(0, parseNumber(obj.size) ?? 0),
+    mimeType:
+      safeString(obj.mimeType).trim() || "application/octet-stream",
+    location: safeString(obj.location).trim() || "/Documentos",
+    owner: safeString(obj.owner).trim() || "Kora",
+    createdAt: safeString(obj.createdAt).trim() || nowIso(),
+    updatedAt:
+      safeString(obj.updatedAt).trim() ||
+      safeString(obj.createdAt).trim() ||
+      nowIso(),
+    access: splitList(obj.access),
+    versions: versions.length ? versions : undefined,
+  };
+}
+
+function normalizeInventoryItem(value: unknown): InventoryItem | null {
+  if (!value || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+
+  const name =
+    safeString(obj.name).trim() || safeString(obj.title).trim();
+
+  if (!name) return null;
+
+  const quantity = Math.max(1, Math.round(parseNumber(obj.quantity) ?? 1));
+  const borrowed = Math.max(
+    0,
+    Math.min(quantity, Math.round(parseNumber(obj.borrowed) ?? 0))
+  );
+  const statusRaw = safeString(obj.status).trim();
+  const status: InventoryStatus = INVENTORY_STATUSES.includes(
+    statusRaw as InventoryStatus
+  )
+    ? (statusRaw as InventoryStatus)
+    : borrowed > 0
+      ? "in_use"
+      : "available";
+
+  return {
+    id: ensureId(obj.id),
+    name,
+    category: safeString(obj.category).trim() || "General",
+    quantity,
+    borrowed,
+    status,
+    serial: safeString(obj.serial).trim() || undefined,
+    location: safeString(obj.location).trim() || undefined,
+    assignee: safeString(obj.assignee).trim() || undefined,
+    acquisitionDate:
+      safeString(obj.acquisitionDate).trim() || undefined,
+    value: parseNumber(obj.value),
+    notes: safeString(obj.notes).trim() || undefined,
+    photoUrl: safeString(obj.photoUrl).trim() || undefined,
+    createdAt: safeString(obj.createdAt).trim() || nowIso(),
+    updatedAt:
+      safeString(obj.updatedAt).trim() ||
+      safeString(obj.createdAt).trim() ||
+      nowIso(),
+  };
+}
+
+function normalizeVolunteerActivity(value: unknown): VolunteerActivity | null {
+  if (!value || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+
+  const contactId =
+    safeString(obj.contactId).trim() ||
+    safeString(obj.memberId).trim() ||
+    safeString(obj.volunteerId).trim();
+  const date =
+    safeString(obj.date).trim() || safeString(obj.activityDate).trim();
+  const hours =
+    parseNumber(obj.hours) ?? parseNumber(obj.durationHours) ?? 0;
+
+  if (!contactId || !date || hours <= 0) return null;
+
+  const profileTypeRaw = safeString(obj.profileType).trim();
+  const profileType: VolunteerProfileType = VOLUNTEER_PROFILE_TYPES.includes(
+    profileTypeRaw as VolunteerProfileType
+  )
+    ? (profileTypeRaw as VolunteerProfileType)
+    : "contact";
+
+  return {
+    id: ensureId(obj.id),
+    contactId,
+    profileType,
+    date,
+    hours,
+    eventId: safeString(obj.eventId).trim() || undefined,
+    notes: safeString(obj.notes).trim() || undefined,
+    createdAt: safeString(obj.createdAt).trim() || nowIso(),
+  };
+}
+
+function normalizeMessageTemplate(value: unknown): MessageTemplate | null {
+  if (!value || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+
+  const title =
+    safeString(obj.title).trim() || safeString(obj.name).trim();
+  const subject = safeString(obj.subject).trim();
+  const html =
+    safeString(obj.html).trim() || safeString(obj.body).trim();
+
+  if (!title || !subject || !html) return null;
+
+  return {
+    id: ensureId(obj.id),
+    title,
+    channel: "email",
+    subject,
+    html,
+    createdAt: safeString(obj.createdAt).trim() || nowIso(),
+    updatedAt:
+      safeString(obj.updatedAt).trim() ||
+      safeString(obj.createdAt).trim() ||
+      nowIso(),
+  };
+}
+
 
 function downloadTextFile(filename: string, text: string, mime: string) {
   const blob = new Blob([text], { type: mime });
@@ -869,19 +1168,35 @@ export default function MigrationSettingsPage() {
   };
 
   const exportAllJson = async () => {
-    const [contacts, events, transactions] = await Promise.all([
+    const [
+      contacts,
+      events,
+      transactions,
+      documents,
+      inventory,
+      volunteerActivities,
+      messagingTemplates,
+    ] = await Promise.all([
       listAssociationModuleRecords<Contact>("contacts"),
       listAssociationModuleRecords<Event>("events"),
       listAssociationModuleRecords<Transaction>("transactions"),
+      listAssociationModuleRecords<DocumentItem>("documents"),
+      listAssociationModuleRecords<InventoryItem>("inventory"),
+      listAssociationModuleRecords<VolunteerActivity>("volunteerActivities"),
+      listAssociationModuleRecords<MessageTemplate>("messagingTemplates"),
     ]);
 
-    const payload: KoraExportPayloadV1 = {
-      version: 1,
+    const payload: KoraExportPayload = {
+      version: 2,
       exportedAt: nowIso(),
       associationProfile: association,
       contacts,
       events,
       transactions,
+      documents,
+      inventory,
+      volunteerActivities,
+      messagingTemplates,
     };
 
     downloadTextFile(
@@ -941,6 +1256,66 @@ export default function MigrationSettingsPage() {
       );
       return;
     }
+
+    if (scope === "documents") {
+      const documents =
+        await listAssociationModuleRecords<DocumentItem>("documents");
+      const payload = { version: 2 as const, exportedAt, documents };
+      downloadTextFile(
+        "kora-documents.json",
+        JSON.stringify(payload, null, 2),
+        "application/json"
+      );
+      return;
+    }
+
+    if (scope === "inventory") {
+      const inventory =
+        await listAssociationModuleRecords<InventoryItem>("inventory");
+      const payload = { version: 2 as const, exportedAt, inventory };
+      downloadTextFile(
+        "kora-inventory.json",
+        JSON.stringify(payload, null, 2),
+        "application/json"
+      );
+      return;
+    }
+
+    if (scope === "volunteerActivities") {
+      const volunteerActivities =
+        await listAssociationModuleRecords<VolunteerActivity>(
+          "volunteerActivities"
+        );
+      const payload = {
+        version: 2 as const,
+        exportedAt,
+        volunteerActivities,
+      };
+      downloadTextFile(
+        "kora-volunteerActivities.json",
+        JSON.stringify(payload, null, 2),
+        "application/json"
+      );
+      return;
+    }
+
+    if (scope === "messagingTemplates") {
+      const messagingTemplates =
+        await listAssociationModuleRecords<MessageTemplate>(
+          "messagingTemplates"
+        );
+      const payload = {
+        version: 2 as const,
+        exportedAt,
+        messagingTemplates,
+      };
+      downloadTextFile(
+        "kora-messagingTemplates.json",
+        JSON.stringify(payload, null, 2),
+        "application/json"
+      );
+      return;
+    }
   };
 
   const handleExport = async () => {
@@ -963,7 +1338,7 @@ export default function MigrationSettingsPage() {
     }
   };
 
-  const applyImport = async (payload: Partial<KoraExportPayloadV1>) => {
+  const applyImport = async (payload: Partial<KoraExportPayload>) => {
     const profile = payload.associationProfile
       ? normalizeAssociationProfile(payload.associationProfile)
       : null;
@@ -977,6 +1352,18 @@ export default function MigrationSettingsPage() {
     const transactions = (payload.transactions ?? [])
       .map(normalizeTransaction)
       .filter(Boolean) as Transaction[];
+    const documents = (payload.documents ?? [])
+      .map(normalizeDocument)
+      .filter(Boolean) as DocumentItem[];
+    const inventory = (payload.inventory ?? [])
+      .map(normalizeInventoryItem)
+      .filter(Boolean) as InventoryItem[];
+    const volunteerActivities = (payload.volunteerActivities ?? [])
+      .map(normalizeVolunteerActivity)
+      .filter(Boolean) as VolunteerActivity[];
+    const messagingTemplates = (payload.messagingTemplates ?? [])
+      .map(normalizeMessageTemplate)
+      .filter(Boolean) as MessageTemplate[];
     const tasks: Array<Promise<unknown>> = [];
 
     if (importScope === "all" || importScope === "contacts") {
@@ -1005,6 +1392,46 @@ export default function MigrationSettingsPage() {
       );
     }
 
+    if (importScope === "all" || importScope === "documents") {
+      tasks.push(
+        saveAssociationModuleRecords<DocumentItem>(
+          "documents",
+          documents,
+          importMode
+        )
+      );
+    }
+
+    if (importScope === "all" || importScope === "inventory") {
+      tasks.push(
+        saveAssociationModuleRecords<InventoryItem>(
+          "inventory",
+          inventory,
+          importMode
+        )
+      );
+    }
+
+    if (importScope === "all" || importScope === "volunteerActivities") {
+      tasks.push(
+        saveAssociationModuleRecords<VolunteerActivity>(
+          "volunteerActivities",
+          volunteerActivities,
+          importMode
+        )
+      );
+    }
+
+    if (importScope === "all" || importScope === "messagingTemplates") {
+      tasks.push(
+        saveAssociationModuleRecords<MessageTemplate>(
+          "messagingTemplates",
+          messagingTemplates,
+          importMode
+        )
+      );
+    }
+
     if (
       (importScope === "all" || importScope === "associationProfile") &&
       profile
@@ -1020,6 +1447,10 @@ export default function MigrationSettingsPage() {
       contacts: contacts.length,
       events: events.length,
       transactions: transactions.length,
+      documents: documents.length,
+      inventory: inventory.length,
+      volunteerActivities: volunteerActivities.length,
+      messagingTemplates: messagingTemplates.length,
     };
   };
 
@@ -1041,6 +1472,24 @@ export default function MigrationSettingsPage() {
         transactions: Array.isArray(obj.transactions)
           ? (obj.transactions as Transaction[])
           : [],
+        documents: Array.isArray(obj.documents)
+          ? (obj.documents as DocumentItem[])
+          : [],
+        inventory: Array.isArray(obj.inventory)
+          ? (obj.inventory as InventoryItem[])
+          : Array.isArray(obj.resources)
+            ? (obj.resources as InventoryItem[])
+            : [],
+        volunteerActivities: Array.isArray(obj.volunteerActivities)
+          ? (obj.volunteerActivities as VolunteerActivity[])
+          : Array.isArray(obj.activities)
+            ? (obj.activities as VolunteerActivity[])
+            : [],
+        messagingTemplates: Array.isArray(obj.messagingTemplates)
+          ? (obj.messagingTemplates as MessageTemplate[])
+          : Array.isArray(obj.templates)
+            ? (obj.templates as MessageTemplate[])
+            : [],
       });
     }
 
@@ -1082,6 +1531,49 @@ export default function MigrationSettingsPage() {
           : [];
       return applyImport({ transactions });
     }
+
+    if (importScope === "documents") {
+      const documents = Array.isArray(obj.documents)
+        ? (obj.documents as DocumentItem[])
+        : Array.isArray(data)
+          ? (data as DocumentItem[])
+          : [];
+      return applyImport({ documents });
+    }
+
+    if (importScope === "inventory") {
+      const inventory = Array.isArray(obj.inventory)
+        ? (obj.inventory as InventoryItem[])
+        : Array.isArray(obj.resources)
+          ? (obj.resources as InventoryItem[])
+          : Array.isArray(data)
+            ? (data as InventoryItem[])
+            : [];
+      return applyImport({ inventory });
+    }
+
+    if (importScope === "volunteerActivities") {
+      const volunteerActivities = Array.isArray(obj.volunteerActivities)
+        ? (obj.volunteerActivities as VolunteerActivity[])
+        : Array.isArray(obj.activities)
+          ? (obj.activities as VolunteerActivity[])
+          : Array.isArray(data)
+            ? (data as VolunteerActivity[])
+            : [];
+      return applyImport({ volunteerActivities });
+    }
+
+    if (importScope === "messagingTemplates") {
+      const messagingTemplates = Array.isArray(obj.messagingTemplates)
+        ? (obj.messagingTemplates as MessageTemplate[])
+        : Array.isArray(obj.templates)
+          ? (obj.templates as MessageTemplate[])
+          : Array.isArray(data)
+            ? (data as MessageTemplate[])
+            : [];
+      return applyImport({ messagingTemplates });
+    }
+
     return applyImport({});
   };
 
@@ -1106,7 +1598,7 @@ export default function MigrationSettingsPage() {
       const result = await importJsonText(await file.text());
 
       setMessage(
-        `Importación completada. Perfil: ${result.profile}, Contactos: ${result.contacts}, Eventos: ${result.events}, Contabilidad: ${result.transactions}.`
+        `Importación completada. Perfil: ${result.profile}, Contactos: ${result.contacts}, Eventos: ${result.events}, Contabilidad: ${result.transactions}, Documentos: ${result.documents}, Inventario: ${result.inventory}, Voluntariado: ${result.volunteerActivities}, Plantillas: ${result.messagingTemplates}.`
       );
 
       if (input) input.value = "";

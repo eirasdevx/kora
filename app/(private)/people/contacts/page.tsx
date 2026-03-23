@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/shared/PageHeader";
+import SortableHeader from "@/components/shared/SortableHeader";
 import StatCard from "@/components/shared/StatCard";
 import {
   tableBodyStyles,
@@ -19,6 +20,12 @@ import {
   tableWrapperStyles,
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
+import {
+  applySortDirection,
+  compareText,
+  SortState,
+  toggleSort,
+} from "@/lib/table-sorting";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import {
   Contact,
@@ -46,6 +53,8 @@ const CONTACT_KIND_FILTERS: Array<{ label: string; value: "all" | ContactKind }>
   { label: "Persona", value: "person" },
   { label: "Entidad", value: "entity" },
 ];
+
+type ContactsSortKey = "contact" | "type" | "phone";
 
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
@@ -80,6 +89,10 @@ export default function PeopleContactsPage() {
   const [kindFilter, setKindFilter] = useState<"all" | ContactKind>("all");
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortState, setSortState] = useState<SortState<ContactsSortKey>>({
+    key: "contact",
+    direction: "asc",
+  });
 
   useEffect(() => {
     loadContacts();
@@ -117,12 +130,51 @@ export default function PeopleContactsPage() {
     });
   }, [contactPool, kindFilter, query, typeFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredContacts.length / PAGE_SIZE));
+  const sortedContacts = useMemo(() => {
+    return [...filteredContacts].sort((left, right) => {
+      const leftTypeLabel =
+        left.types.length === 0
+          ? "Otro"
+          : left.types.map((type) => ContactTypeLabels[type]).join(", ");
+      const rightTypeLabel =
+        right.types.length === 0
+          ? "Otro"
+          : right.types.map((type) => ContactTypeLabels[type]).join(", ");
+      const leftPhone = left.phone?.trim() || left.secondaryPhone?.trim() || "-";
+      const rightPhone =
+        right.phone?.trim() || right.secondaryPhone?.trim() || "-";
+
+      switch (sortState.key) {
+        case "type":
+          return applySortDirection(
+            compareText(leftTypeLabel, rightTypeLabel, formatLocale),
+            sortState.direction
+          );
+        case "phone":
+          return applySortDirection(
+            compareText(leftPhone, rightPhone, formatLocale),
+            sortState.direction
+          );
+        case "contact":
+        default:
+          return applySortDirection(
+            compareText(
+              getDisplayName(left),
+              getDisplayName(right),
+              formatLocale
+            ),
+            sortState.direction
+          );
+      }
+    });
+  }, [filteredContacts, formatLocale, sortState]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedContacts.length / PAGE_SIZE));
   const currentPageSafe = Math.min(currentPage, totalPages);
   const pageContacts = useMemo(() => {
     const start = (currentPageSafe - 1) * PAGE_SIZE;
-    return filteredContacts.slice(start, start + PAGE_SIZE);
-  }, [currentPageSafe, filteredContacts]);
+    return sortedContacts.slice(start, start + PAGE_SIZE);
+  }, [currentPageSafe, sortedContacts]);
 
   const activeFiltersCount = useMemo(() => {
     let total = 0;
@@ -258,9 +310,36 @@ export default function PeopleContactsPage() {
           <table className="w-full text-left text-sm">
             <thead className={tableHeadStyles}>
               <tr>
-                <th className={tableHeadCellStyles}>Contacto</th>
-                <th className={tableHeadCellStyles}>Tipo</th>
-                <th className={tableHeadCellStyles}>Teléfono</th>
+                <SortableHeader
+                  label="Contacto"
+                  active={sortState.key === "contact"}
+                  direction={sortState.direction}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setSortState((current) => toggleSort(current, "contact"));
+                  }}
+                  className={tableHeadCellStyles}
+                />
+                <SortableHeader
+                  label="Tipo"
+                  active={sortState.key === "type"}
+                  direction={sortState.direction}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setSortState((current) => toggleSort(current, "type"));
+                  }}
+                  className={tableHeadCellStyles}
+                />
+                <SortableHeader
+                  label="Teléfono"
+                  active={sortState.key === "phone"}
+                  direction={sortState.direction}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setSortState((current) => toggleSort(current, "phone"));
+                  }}
+                  className={tableHeadCellStyles}
+                />
                 <th className={`${tableHeadCellStyles} text-right`}>
                   Acciones
                 </th>
@@ -348,8 +427,8 @@ export default function PeopleContactsPage() {
             {pageContacts.length === 0
               ? 0
               : (currentPageSafe - 1) * PAGE_SIZE + 1}{" "}
-            a {Math.min(currentPageSafe * PAGE_SIZE, filteredContacts.length)} de{" "}
-            {filteredContacts.length} contactos
+            a {Math.min(currentPageSafe * PAGE_SIZE, sortedContacts.length)} de{" "}
+            {sortedContacts.length} contactos
           </span>
           <div className="flex items-center gap-2">
             <button

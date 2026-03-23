@@ -2,6 +2,10 @@ export const ASSOCIATION_DATA_MODULES = [
   "contacts",
   "events",
   "transactions",
+  "documents",
+  "inventory",
+  "volunteerActivities",
+  "messagingTemplates",
 ] as const;
 
 export type AssociationDataModule =

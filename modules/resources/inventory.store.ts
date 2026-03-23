@@ -8,6 +8,12 @@ import {
 } from "@/core/storage/association-scope";
 import { InventoryItem, InventoryStatus } from "./inventory.types";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
+import {
+  deleteAssociationModuleRecord,
+  listAssociationModuleRecords,
+  saveAssociationModuleRecords,
+  upsertAssociationModuleRecord,
+} from "@/lib/client/association-data-client";
 
 interface InventoryState {
   items: InventoryItem[];
@@ -62,6 +68,24 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       all,
       getActiveAssociationId()
     );
+
+    try {
+      const persisted =
+        await listAssociationModuleRecords<InventoryItem>("inventory");
+      const normalizedPersistedItems = persisted.map((item) =>
+        normalizeItem(item)
+      );
+
+      if (normalizedPersistedItems.length > 0 || migratedRecords.length > 0) {
+        await db.inventory.bulkPut(normalizedPersistedItems);
+      }
+
+      set({ items: normalizedPersistedItems });
+      return;
+    } catch (error) {
+      console.error(error);
+    }
+
     const normalizedItems = scopedRecords.map((item) => normalizeItem(item));
 
     if (migratedRecords.length > 0) {
@@ -101,6 +125,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       return;
     }
 
+    await upsertAssociationModuleRecord<InventoryItem>("inventory", normalized);
     await db.inventory.put(normalized);
     set((state) => {
       const exists = state.items.some((entry) => entry.id === item.id);
@@ -147,6 +172,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       return;
     }
 
+    await deleteAssociationModuleRecord("inventory", id);
     await db.inventory.delete(id);
     set((state) => ({
       items: state.items.filter((entry) => entry.id !== id),
@@ -179,6 +205,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       return;
     }
 
+    await saveAssociationModuleRecords<InventoryItem>("inventory", [], "replace");
     const all = await db.inventory.toArray();
     const { scopedRecords } = getAssociationScopedRecords(
       all,
@@ -198,5 +225,5 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     });
   },
 
-  resetItems: () => set({ items: [] }),
+    resetItems: () => set({ items: [] }),
 }));

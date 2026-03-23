@@ -10,13 +10,20 @@ import {
 } from "@/core/session/accounting-settings";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useSessionStore } from "@/core/session/session.store";
+import {
+  applySortDirection,
+  compareDate,
+  compareNumber,
+  compareText,
+  SortState,
+} from "@/lib/table-sorting";
 import { buildAccountSummaries } from "@/modules/accounting/accounting-reports";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 
 type AccountCodeState = Record<string, string>;
 type AccountTypeFilter = "all" | "income" | "expense";
 type AccountActivityFilter = "all" | "active" | "inactive";
-type CodeSortDirection = "asc" | "desc";
+type AccountsSortKey = "label" | "status" | "balance" | "activity" | "code";
 
 const ACCOUNTS_PER_PAGE = 5;
 
@@ -87,8 +94,10 @@ export default function AccountingAccountsPage() {
   const [activityFilter, setActivityFilter] =
     useState<AccountActivityFilter>("all");
   const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [codeSortDirection, setCodeSortDirection] =
-    useState<CodeSortDirection>("asc");
+  const [sortState, setSortState] = useState<SortState<AccountsSortKey>>({
+    key: "code",
+    direction: "asc",
+  });
 
   useEffect(() => {
     setCodes(initialCodes);
@@ -179,13 +188,49 @@ export default function AccountingAccountsPage() {
         return true;
       })
       .sort((a, b) => {
-        const compare = a.code.localeCompare(b.code, "es", {
-          numeric: true,
-          sensitivity: "base",
-        });
-        return codeSortDirection === "asc" ? compare : -compare;
+        const leftSummary = summaryByKey.get(a.key);
+        const rightSummary = summaryByKey.get(b.key);
+
+        switch (sortState.key) {
+          case "label":
+            return applySortDirection(
+              compareText(a.label, b.label, formatLocale),
+              sortState.direction
+            );
+          case "status":
+            return applySortDirection(
+              compareNumber(
+                (leftSummary?.movementCount ?? 0) > 0 ? 1 : 0,
+                (rightSummary?.movementCount ?? 0) > 0 ? 1 : 0
+              ),
+              sortState.direction
+            );
+          case "balance":
+            return applySortDirection(
+              compareNumber(leftSummary?.balance ?? 0, rightSummary?.balance ?? 0),
+              sortState.direction
+            );
+          case "activity":
+            return applySortDirection(
+              compareDate(
+                leftSummary?.lastEntryDate,
+                rightSummary?.lastEntryDate
+              ) ||
+                compareNumber(
+                  leftSummary?.movementCount ?? 0,
+                  rightSummary?.movementCount ?? 0
+                ),
+              sortState.direction
+            );
+          case "code":
+          default:
+            return applySortDirection(
+              compareText(a.code, b.code, formatLocale),
+              sortState.direction
+            );
+        }
       });
-  }, [activityFilter, codeSortDirection, previewCatalog, query, summaryByKey, typeFilter]);
+  }, [activityFilter, formatLocale, previewCatalog, query, sortState, summaryByKey, typeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredCatalog.length / ACCOUNTS_PER_PAGE));
   const currentPageSafe = Math.min(currentPage, totalPages);
@@ -318,24 +363,48 @@ export default function AccountingAccountsPage() {
                 className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 py-2.5 pl-12 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setShowFilters((current) => !current)}
-              aria-expanded={showFilters}
-              className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-semibold shadow-sm transition ${
-                showFilters || activeFiltersCount > 0
-                  ? "border-primary/30 bg-primary/5 text-primary"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">tune</span>
-              Mas Filtros
-              {activeFiltersCount > 0 ? (
-                <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                  {activeFiltersCount}
-                </span>
-              ) : null}
-            </button>
+            <div className="flex items-center gap-3">
+              <select
+                value={`${sortState.key}:${sortState.direction}`}
+                onChange={(event) => {
+                  const [key, direction] = event.target.value.split(":") as [
+                    AccountsSortKey,
+                    "asc" | "desc",
+                  ];
+                  setSortState({ key, direction });
+                  setCurrentPage(1);
+                }}
+                className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                aria-label="Ordenar elementos contables"
+              >
+                <option value="code:asc">Código ascendente</option>
+                <option value="code:desc">Código descendente</option>
+                <option value="label:asc">Nombre A-Z</option>
+                <option value="label:desc">Nombre Z-A</option>
+                <option value="balance:desc">Mayor saldo</option>
+                <option value="balance:asc">Menor saldo</option>
+                <option value="activity:desc">Actividad reciente</option>
+                <option value="status:desc">Activas primero</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowFilters((current) => !current)}
+                aria-expanded={showFilters}
+                className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-semibold shadow-sm transition ${
+                  showFilters || activeFiltersCount > 0
+                    ? "border-primary/30 bg-primary/5 text-primary"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">tune</span>
+                Mas Filtros
+                {activeFiltersCount > 0 ? (
+                  <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                    {activeFiltersCount}
+                  </span>
+                ) : null}
+              </button>
+            </div>
           </div>
 
           {showFilters ? (
@@ -396,16 +465,23 @@ export default function AccountingAccountsPage() {
                 <th className="px-6 py-4 font-semibold">
                   <button
                     type="button"
-                    onClick={() =>
-                      setCodeSortDirection((current) =>
-                        current === "asc" ? "desc" : "asc"
-                      )
-                    }
+                    onClick={() => {
+                      setSortState((current) => ({
+                        key: "code",
+                        direction:
+                          current.key === "code" && current.direction === "asc"
+                            ? "desc"
+                            : "asc",
+                      }));
+                      setCurrentPage(1);
+                    }}
                     className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400 transition hover:text-gray-600"
                   >
                     Código contable
                     <span className="material-symbols-outlined text-[16px]">
-                      {codeSortDirection === "asc" ? "north" : "south"}
+                      {sortState.key === "code" && sortState.direction === "desc"
+                        ? "south"
+                        : "north"}
                     </span>
                   </button>
                 </th>

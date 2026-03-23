@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageTopbar from "@/components/PageTopbar";
 import BackLink from "@/components/shared/BackLink";
+import SortableHeader from "@/components/shared/SortableHeader";
 import {
   tableBodyStyles,
   tableFooterStyles,
@@ -18,6 +19,13 @@ import {
   tableWrapperStyles,
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
+import {
+  applySortDirection,
+  compareNumber,
+  compareText,
+  SortState,
+  toggleSort,
+} from "@/lib/table-sorting";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { useVolunteerActivitiesStore } from "@/modules/volunteers/volunteer-activities.store";
 import { useEventsStore } from "@/modules/events/events.store";
@@ -25,6 +33,7 @@ import { Contact } from "@/modules/contacts/contact.types";
 
 type VolunteerStatus = "Disponible" | "En Servicio" | "Inactivo";
 type VolunteerType = "Socio" | "Contacto";
+type VolunteersSortKey = "volunteer" | "status" | "hours" | "task";
 
 const STATUS_STYLES: Record<VolunteerStatus, string> = {
   Disponible: "bg-emerald-50 text-emerald-700",
@@ -81,6 +90,10 @@ export default function VolunteersPage() {
   );
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortState, setSortState] = useState<SortState<VolunteersSortKey>>({
+    key: "volunteer",
+    direction: "asc",
+  });
 
   useEffect(() => {
     loadContacts();
@@ -192,24 +205,58 @@ export default function VolunteersPage() {
     (item) => item.status === "En Servicio"
   ).length;
 
-  const filteredVolunteers = volunteerMetrics.filter((item) => {
-    if (statusFilter !== "all" && item.status !== statusFilter) return false;
-    if (typeFilter !== "all" && item.type !== typeFilter) return false;
-    if (!query.trim()) return true;
-    const name = getDisplayName(item.volunteer).toLowerCase();
-    const email = item.volunteer.email?.toLowerCase() ?? "";
-    return (
-      name.includes(query.toLowerCase()) ||
-      email.includes(query.toLowerCase())
-    );
-  });
+  const filteredVolunteers = useMemo(() => {
+    return volunteerMetrics.filter((item) => {
+      if (statusFilter !== "all" && item.status !== statusFilter) return false;
+      if (typeFilter !== "all" && item.type !== typeFilter) return false;
+      if (!query.trim()) return true;
+      const name = getDisplayName(item.volunteer).toLowerCase();
+      const email = item.volunteer.email?.toLowerCase() ?? "";
+      return (
+        name.includes(query.toLowerCase()) ||
+        email.includes(query.toLowerCase())
+      );
+    });
+  }, [query, statusFilter, typeFilter, volunteerMetrics]);
+
+  const sortedVolunteers = useMemo(() => {
+    return [...filteredVolunteers].sort((left, right) => {
+      switch (sortState.key) {
+        case "status":
+          return applySortDirection(
+            compareText(left.status, right.status, formatLocale),
+            sortState.direction
+          );
+        case "hours":
+          return applySortDirection(
+            compareNumber(left.totalHours, right.totalHours),
+            sortState.direction
+          );
+        case "task":
+          return applySortDirection(
+            compareText(left.taskLabel, right.taskLabel, formatLocale),
+            sortState.direction
+          );
+        case "volunteer":
+        default:
+          return applySortDirection(
+            compareText(
+              getDisplayName(left.volunteer),
+              getDisplayName(right.volunteer),
+              formatLocale
+            ),
+            sortState.direction
+          );
+      }
+    });
+  }, [filteredVolunteers, formatLocale, sortState]);
 
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredVolunteers.length / PAGE_SIZE)
+    Math.ceil(sortedVolunteers.length / PAGE_SIZE)
   );
   const currentPageSafe = Math.min(currentPage, totalPages);
-  const pageVolunteers = filteredVolunteers.slice(
+  const pageVolunteers = sortedVolunteers.slice(
     (currentPageSafe - 1) * PAGE_SIZE,
     currentPageSafe * PAGE_SIZE
   );
@@ -400,10 +447,48 @@ export default function VolunteersPage() {
           <table className="w-full text-left text-sm">
             <thead className={tableHeadStyles}>
               <tr>
-                <th className={tableHeadCellStyles}>Voluntario</th>
-                <th className={tableHeadCellStyles}>Estado</th>
-                <th className={tableHeadCellStyles}>Horas Totales</th>
-                <th className={tableHeadCellStyles}>Tareas Actuales</th>
+                <SortableHeader
+                  label="Voluntario"
+                  active={sortState.key === "volunteer"}
+                  direction={sortState.direction}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setSortState((current) => toggleSort(current, "volunteer"));
+                  }}
+                  className={tableHeadCellStyles}
+                />
+                <SortableHeader
+                  label="Estado"
+                  active={sortState.key === "status"}
+                  direction={sortState.direction}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setSortState((current) => toggleSort(current, "status"));
+                  }}
+                  className={tableHeadCellStyles}
+                />
+                <SortableHeader
+                  label="Horas Totales"
+                  active={sortState.key === "hours"}
+                  direction={sortState.direction}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setSortState((current) =>
+                      toggleSort(current, "hours", "desc")
+                    );
+                  }}
+                  className={tableHeadCellStyles}
+                />
+                <SortableHeader
+                  label="Tareas Actuales"
+                  active={sortState.key === "task"}
+                  direction={sortState.direction}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setSortState((current) => toggleSort(current, "task"));
+                  }}
+                  className={tableHeadCellStyles}
+                />
                 <th className={`${tableHeadCellStyles} text-right`}>Acciones</th>
               </tr>
             </thead>
@@ -487,8 +572,8 @@ export default function VolunteersPage() {
               ? 0
               : (currentPageSafe - 1) * PAGE_SIZE + 1}{" "}
             a{" "}
-            {Math.min(currentPageSafe * PAGE_SIZE, filteredVolunteers.length)}{" "}
-            de {filteredVolunteers.length} voluntarios
+            {Math.min(currentPageSafe * PAGE_SIZE, sortedVolunteers.length)}{" "}
+            de {sortedVolunteers.length} voluntarios
           </span>
           <div className="flex items-center gap-2">
             <button

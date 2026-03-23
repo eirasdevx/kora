@@ -6,6 +6,7 @@ import ModuleTopbar, {
   moduleTopbarButtonIconStyles,
   moduleTopbarButtonStyles,
 } from "@/components/shared/ModuleTopbar";
+import SortableHeader from "@/components/shared/SortableHeader";
 import SectionBlock from "@/components/shared/SectionBlock";
 import StatCard from "@/components/shared/StatCard";
 import {
@@ -23,11 +24,19 @@ import {
   tableWrapperStyles,
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
+import {
+  applySortDirection,
+  compareDate,
+  compareText,
+  SortState,
+  toggleSort,
+} from "@/lib/table-sorting";
 import { useContactsStore } from "@/modules/contacts/contacts.store";
 import { Contact } from "@/modules/contacts/contact.types";
 import { useVolunteerActivitiesStore } from "@/modules/volunteers/volunteer-activities.store";
 
 type PeopleSegment = "member" | "volunteer" | "contact";
+type PeopleSortKey = "contact" | "createdAt";
 
 const PAGE_SIZE = 5;
 const PEOPLE_MODULE_TITLE = "Personas";
@@ -80,6 +89,10 @@ export default function PeoplePage() {
   const { activities, loadActivities } = useVolunteerActivitiesStore();
   const [currentPage, setCurrentPage] = useState(1);
   const [tableFilter, setTableFilter] = useState<PeopleSegment>("contact");
+  const [sortState, setSortState] = useState<SortState<PeopleSortKey>>({
+    key: "createdAt",
+    direction: "desc",
+  });
 
   useEffect(() => {
     loadContacts();
@@ -152,12 +165,20 @@ export default function PeoplePage() {
   }, [activities, startOfMonth]);
 
   const sortedContacts = useMemo(() => {
-    return [...tableContacts].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() -
-        new Date(a.createdAt).getTime()
-    );
-  }, [tableContacts]);
+    return [...tableContacts].sort((left, right) => {
+      if (sortState.key === "contact") {
+        return applySortDirection(
+          compareText(getDisplayName(left), getDisplayName(right), formatLocale),
+          sortState.direction
+        );
+      }
+
+      return applySortDirection(
+        compareDate(left.createdAt, right.createdAt),
+        sortState.direction
+      );
+    });
+  }, [formatLocale, sortState, tableContacts]);
 
   const totalPages = Math.max(1, Math.ceil(sortedContacts.length / PAGE_SIZE));
   const currentPageSafe = Math.min(currentPage, totalPages);
@@ -287,8 +308,28 @@ export default function PeoplePage() {
             <table className="w-full text-left text-sm">
               <thead className={tableHeadStyles}>
                 <tr>
-                  <th className={tableHeadCellStyles}>Contacto</th>
-                  <th className={tableHeadCellStyles}>Registro</th>
+                  <SortableHeader
+                    label="Contacto"
+                    active={sortState.key === "contact"}
+                    direction={sortState.direction}
+                    onClick={() => {
+                      setCurrentPage(1);
+                      setSortState((current) => toggleSort(current, "contact"));
+                    }}
+                    className={tableHeadCellStyles}
+                  />
+                  <SortableHeader
+                    label="Registro"
+                    active={sortState.key === "createdAt"}
+                    direction={sortState.direction}
+                    onClick={() => {
+                      setCurrentPage(1);
+                      setSortState((current) =>
+                        toggleSort(current, "createdAt", "desc")
+                      );
+                    }}
+                    className={tableHeadCellStyles}
+                  />
                   <th className={`${tableHeadCellStyles} text-right`}>Acciones</th>
                 </tr>
               </thead>

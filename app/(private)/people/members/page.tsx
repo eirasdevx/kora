@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/shared/PageHeader";
+import SortableHeader from "@/components/shared/SortableHeader";
 import {
   tableBodyStyles,
   tableFooterStyles,
@@ -14,6 +15,14 @@ import {
   tableWrapperStyles,
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
+import {
+  applySortDirection,
+  compareDate,
+  compareNumber,
+  compareText,
+  SortState,
+  toggleSort,
+} from "@/lib/table-sorting";
 import {
   getContactMembershipPlan,
   getMembershipStatusWindowDays,
@@ -29,6 +38,14 @@ import {
 
 type MemberStatus = "Activo" | "Pendiente" | "Baja";
 type PaymentStatus = "Al dia" | "Deuda" | "Vencido";
+type MembersSortKey =
+  | "member"
+  | "memberId"
+  | "status"
+  | "feePlan"
+  | "lastPayment"
+  | "paymentStatus"
+  | "permissions";
 
 const STATUS_STYLES: Record<MemberStatus, string> = {
   Activo: "bg-emerald-50 text-emerald-700",
@@ -126,6 +143,10 @@ export default function MembersPage() {
   >("all");
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortState, setSortState] = useState<SortState<MembersSortKey>>({
+    key: "member",
+    direction: "asc",
+  });
 
   useEffect(() => {
     loadContacts();
@@ -272,12 +293,76 @@ export default function MembersPage() {
     return total;
   }, [paymentFilter, feeCycleFilter]);
 
+  const sortedMembers = useMemo(() => {
+    return [...filteredMembers].sort((left, right) => {
+      const leftPermissionCount = [
+        left.permissions.image,
+        left.permissions.voice,
+        left.permissions.communications,
+        left.permissions.services,
+      ].filter(Boolean).length;
+      const rightPermissionCount = [
+        right.permissions.image,
+        right.permissions.voice,
+        right.permissions.communications,
+        right.permissions.services,
+      ].filter(Boolean).length;
+
+      switch (sortState.key) {
+        case "memberId":
+          return applySortDirection(
+            compareText(
+              formatMemberId(left.member.id),
+              formatMemberId(right.member.id),
+              formatLocale
+            ),
+            sortState.direction
+          );
+        case "status":
+          return applySortDirection(
+            compareText(left.status, right.status, formatLocale),
+            sortState.direction
+          );
+        case "feePlan":
+          return applySortDirection(
+            compareText(left.feePlan.name, right.feePlan.name, formatLocale),
+            sortState.direction
+          );
+        case "lastPayment":
+          return applySortDirection(
+            compareDate(left.lastPaymentDate, right.lastPaymentDate),
+            sortState.direction
+          );
+        case "paymentStatus":
+          return applySortDirection(
+            compareText(left.paymentStatus, right.paymentStatus, formatLocale),
+            sortState.direction
+          );
+        case "permissions":
+          return applySortDirection(
+            compareNumber(leftPermissionCount, rightPermissionCount),
+            sortState.direction
+          );
+        case "member":
+        default:
+          return applySortDirection(
+            compareText(
+              getDisplayName(left.member),
+              getDisplayName(right.member),
+              formatLocale
+            ),
+            sortState.direction
+          );
+      }
+    });
+  }, [filteredMembers, formatLocale, sortState]);
+
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredMembers.length / PAGE_SIZE)
+    Math.ceil(sortedMembers.length / PAGE_SIZE)
   );
   const currentPageSafe = Math.min(currentPage, totalPages);
-  const pageMembers = filteredMembers.slice(
+  const pageMembers = sortedMembers.slice(
     (currentPageSafe - 1) * PAGE_SIZE,
     currentPageSafe * PAGE_SIZE
   );
@@ -381,6 +466,28 @@ export default function MembersPage() {
                 className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 py-2.5 pl-12 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               />
             </div>
+            <select
+              value={`${sortState.key}:${sortState.direction}`}
+              onChange={(event) => {
+                const [key, direction] = event.target.value.split(":") as [
+                  MembersSortKey,
+                  "asc" | "desc",
+                ];
+                setSortState({ key, direction });
+                setCurrentPage(1);
+              }}
+              className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              aria-label="Ordenar socios"
+            >
+              <option value="member:asc">Socio A-Z</option>
+              <option value="member:desc">Socio Z-A</option>
+              <option value="memberId:asc">ID ascendente</option>
+              <option value="feePlan:asc">Cuota A-Z</option>
+              <option value="lastPayment:desc">Último pago reciente</option>
+              <option value="lastPayment:asc">Último pago antiguo</option>
+              <option value="paymentStatus:asc">Saldo A-Z</option>
+              <option value="permissions:desc">Más permisos</option>
+            </select>
             <button
               type="button"
               onClick={() => setShowFilters((current) => !current)}
@@ -456,10 +563,46 @@ export default function MembersPage() {
           <table className="min-w-[1180px] w-full text-left text-sm">
           <thead className={membersTableHeadStyles}>
             <tr>
-              <th className={membersTableHeadCellStyles}>Socio</th>
-              <th className={membersTableHeadCellStyles}>ID Socio</th>
-              <th className={membersTableHeadCellStyles}>Estado</th>
-              <th className={membersTableHeadCellStyles}>Cuota</th>
+              <SortableHeader
+                label="Socio"
+                active={sortState.key === "member"}
+                direction={sortState.direction}
+                onClick={() => {
+                  setCurrentPage(1);
+                  setSortState((current) => toggleSort(current, "member"));
+                }}
+                className={membersTableHeadCellStyles}
+              />
+              <SortableHeader
+                label="ID Socio"
+                active={sortState.key === "memberId"}
+                direction={sortState.direction}
+                onClick={() => {
+                  setCurrentPage(1);
+                  setSortState((current) => toggleSort(current, "memberId"));
+                }}
+                className={membersTableHeadCellStyles}
+              />
+              <SortableHeader
+                label="Estado"
+                active={sortState.key === "status"}
+                direction={sortState.direction}
+                onClick={() => {
+                  setCurrentPage(1);
+                  setSortState((current) => toggleSort(current, "status"));
+                }}
+                className={membersTableHeadCellStyles}
+              />
+              <SortableHeader
+                label="Cuota"
+                active={sortState.key === "feePlan"}
+                direction={sortState.direction}
+                onClick={() => {
+                  setCurrentPage(1);
+                  setSortState((current) => toggleSort(current, "feePlan"));
+                }}
+                className={membersTableHeadCellStyles}
+              />
               <th className={membersTableHeadCellStyles}>Último Pago</th>
               <th className={membersTableHeadCellStyles}>Saldo</th>
               <th className={membersTableHeadCellStyles}>Permisos</th>
@@ -583,8 +726,8 @@ export default function MembersPage() {
               ? 0
               : (currentPageSafe - 1) * PAGE_SIZE + 1}{" "}
             a{" "}
-            {Math.min(currentPageSafe * PAGE_SIZE, filteredMembers.length)}{" "}
-            de {filteredMembers.length} socios
+            {Math.min(currentPageSafe * PAGE_SIZE, sortedMembers.length)}{" "}
+            de {sortedMembers.length} socios
           </span>
           <div className="flex items-center gap-2">
             <button

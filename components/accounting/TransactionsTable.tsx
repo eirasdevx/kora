@@ -3,7 +3,16 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Modal from "@/components/Modal";
+import SortableHeader from "@/components/shared/SortableHeader";
 import { useLocale } from "@/core/i18n/use-locale";
+import {
+  applySortDirection,
+  compareDate,
+  compareNumber,
+  compareText,
+  SortState,
+  toggleSort,
+} from "@/lib/table-sorting";
 import { tableWrapperStyles } from "@/components/shared/tableStyles";
 import {
   Transaction,
@@ -15,6 +24,8 @@ import { useTransactionsStore } from "@/modules/accounting/transactions.store";
 interface Props {
   transactions: Transaction[];
 }
+
+type TransactionsSortKey = "date" | "concept" | "category" | "status" | "amount";
 
 const STATUS_STYLES: Record<keyof typeof TransactionStatusLabels, string> = {
   completed:
@@ -353,6 +364,10 @@ export default function TransactionsTable({ transactions }: Props) {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortState, setSortState] = useState<SortState<TransactionsSortKey>>({
+    key: "date",
+    direction: "desc",
+  });
 
   const filteredTransactions = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -382,15 +397,59 @@ export default function TransactionsTable({ transactions }: Props) {
     dateTo,
   ]);
 
+  const sortedTransactions = useMemo(() => {
+    return [...filteredTransactions].sort((left, right) => {
+      switch (sortState.key) {
+        case "concept":
+          return applySortDirection(
+            compareText(left.concept, right.concept, formatLocale),
+            sortState.direction
+          );
+        case "category":
+          return applySortDirection(
+            compareText(
+              TransactionCategoryLabels[left.category],
+              TransactionCategoryLabels[right.category],
+              formatLocale
+            ),
+            sortState.direction
+          );
+        case "status":
+          return applySortDirection(
+            compareText(
+              TransactionStatusLabels[left.status],
+              TransactionStatusLabels[right.status],
+              formatLocale
+            ),
+            sortState.direction
+          );
+        case "amount":
+          return applySortDirection(
+            compareNumber(
+              left.type === "expense" ? -left.amount : left.amount,
+              right.type === "expense" ? -right.amount : right.amount
+            ),
+            sortState.direction
+          );
+        case "date":
+        default:
+          return applySortDirection(
+            compareDate(left.date, right.date),
+            sortState.direction
+          );
+      }
+    });
+  }, [filteredTransactions, formatLocale, sortState]);
+
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(filteredTransactions.length / PAGE_SIZE)),
-    [filteredTransactions.length]
+    () => Math.max(1, Math.ceil(sortedTransactions.length / PAGE_SIZE)),
+    [sortedTransactions.length]
   );
   const currentPageSafe = Math.min(currentPage, totalPages);
   const pagedTransactions = useMemo(() => {
     const start = (currentPageSafe - 1) * PAGE_SIZE;
-    return filteredTransactions.slice(start, start + PAGE_SIZE);
-  }, [filteredTransactions, currentPageSafe]);
+    return sortedTransactions.slice(start, start + PAGE_SIZE);
+  }, [sortedTransactions, currentPageSafe]);
 
   const pageNumbers = useMemo(() => {
     if (totalPages <= 3) {
@@ -408,14 +467,14 @@ export default function TransactionsTable({ transactions }: Props) {
   const canNext = currentPageSafe < totalPages;
 
   const exportRows = useMemo(() => {
-    return filteredTransactions.map((tx) => ({
+    return sortedTransactions.map((tx) => ({
       fecha: formatDate(tx.date, formatLocale),
       concepto: tx.concept,
       estado: TransactionStatusLabels[tx.status],
       importe: formatAmount(tx.amount, tx.type, formatLocale),
       notas: tx.description ?? "",
     }));
-  }, [filteredTransactions, formatLocale]);
+  }, [sortedTransactions, formatLocale]);
 
   const handleExportPdf = () => {
     const columns = [
@@ -719,19 +778,50 @@ export default function TransactionsTable({ transactions }: Props) {
           <table className="w-full min-w-[980px] text-left text-sm">
             <thead className={TABLE_HEAD_STYLES}>
               <tr>
-                <th className={`${TABLE_HEAD_CELL_STYLES} text-left`}>Fecha</th>
-                <th className={`${TABLE_HEAD_CELL_STYLES} text-left`}>
-                  Concepto
-                </th>
+                <SortableHeader
+                  label="Fecha"
+                  active={sortState.key === "date"}
+                  direction={sortState.direction}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setSortState((current) => toggleSort(current, "date", "desc"));
+                  }}
+                  className={`${TABLE_HEAD_CELL_STYLES} text-left`}
+                />
+                <SortableHeader
+                  label="Concepto"
+                  active={sortState.key === "concept"}
+                  direction={sortState.direction}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setSortState((current) => toggleSort(current, "concept"));
+                  }}
+                  className={`${TABLE_HEAD_CELL_STYLES} text-left`}
+                />
                 <th className={`${TABLE_HEAD_CELL_STYLES} text-left`}>
                   Categoría
                 </th>
-                <th className={`${TABLE_HEAD_CELL_STYLES} text-left`}>
-                  Estado
-                </th>
-                <th className={`${TABLE_HEAD_CELL_STYLES} text-right`}>
-                  Importe
-                </th>
+                <SortableHeader
+                  label="Estado"
+                  active={sortState.key === "status"}
+                  direction={sortState.direction}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setSortState((current) => toggleSort(current, "status"));
+                  }}
+                  className={`${TABLE_HEAD_CELL_STYLES} text-left`}
+                />
+                <SortableHeader
+                  label="Importe"
+                  active={sortState.key === "amount"}
+                  direction={sortState.direction}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setSortState((current) => toggleSort(current, "amount", "desc"));
+                  }}
+                  className={`${TABLE_HEAD_CELL_STYLES} text-right`}
+                  align="right"
+                />
                 <th className={`${TABLE_HEAD_CELL_STYLES} text-right`}>
                   Acciones
                 </th>
@@ -808,7 +898,7 @@ export default function TransactionsTable({ transactions }: Props) {
 
       <div className={TABLE_FOOTER_STYLES}>
         <span>
-          Mostrando {pagedTransactions.length} de {filteredTransactions.length} transacciones
+          Mostrando {pagedTransactions.length} de {sortedTransactions.length} transacciones
         </span>
         <div className="flex items-center gap-2">
           <button

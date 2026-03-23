@@ -22,6 +22,13 @@ import {
   tableWrapperStyles,
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
+import {
+  applySortDirection,
+  compareDate,
+  compareNumber,
+  compareText,
+  SortState,
+} from "@/lib/table-sorting";
 import { downloadPdf, downloadXlsx } from "@/lib/exporters";
 import { useInventoryStore } from "@/modules/resources/inventory.store";
 import { InventoryItem, InventoryStatus } from "@/modules/resources/inventory.types";
@@ -44,6 +51,9 @@ const INVENTORY_PDF_COLUMNS = [
   { label: "Item", width: 18 },
   { label: "Detalles", width: 70 },
 ];
+
+type InventorySortKey = "name" | "category" | "quantity" | "borrowed" | "available";
+type RecentLoansSortKey = "item" | "borrower" | "borrowed" | "lastMove" | "status";
 
 function formatNumber(value: number, locale: string) {
   return new Intl.NumberFormat(locale, {
@@ -79,6 +89,16 @@ export default function ResourcesInventoryPage() {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(
     null
   );
+  const [inventorySortState, setInventorySortState] =
+    useState<SortState<InventorySortKey>>({
+      key: "name",
+      direction: "asc",
+    });
+  const [recentLoansSortState, setRecentLoansSortState] =
+    useState<SortState<RecentLoansSortKey>>({
+      key: "lastMove",
+      direction: "desc",
+    });
 
   useEffect(() => {
     loadItems();
@@ -91,7 +111,41 @@ export default function ResourcesInventoryPage() {
   }, [items]);
 
   const exportRowsXlsx = useMemo(() => {
-    return items.map((item) => {
+    const orderedItems = [...items].sort((left, right) => {
+      const leftAvailable = Math.max(0, left.quantity - left.borrowed);
+      const rightAvailable = Math.max(0, right.quantity - right.borrowed);
+
+      switch (inventorySortState.key) {
+        case "category":
+          return applySortDirection(
+            compareText(left.category, right.category, formatLocale),
+            inventorySortState.direction
+          );
+        case "quantity":
+          return applySortDirection(
+            compareNumber(left.quantity, right.quantity),
+            inventorySortState.direction
+          );
+        case "borrowed":
+          return applySortDirection(
+            compareNumber(left.borrowed, right.borrowed),
+            inventorySortState.direction
+          );
+        case "available":
+          return applySortDirection(
+            compareNumber(leftAvailable, rightAvailable),
+            inventorySortState.direction
+          );
+        case "name":
+        default:
+          return applySortDirection(
+            compareText(left.name, right.name, formatLocale),
+            inventorySortState.direction
+          );
+      }
+    });
+
+    return orderedItems.map((item) => {
       const status =
         item.status ?? (item.borrowed > 0 ? "in_use" : "available");
       const available = Math.max(0, item.quantity - item.borrowed);
@@ -110,10 +164,44 @@ export default function ResourcesInventoryPage() {
         item.notes ?? "-",
       ];
     });
-  }, [items, formatLocale]);
+  }, [formatLocale, inventorySortState, items]);
 
   const exportRowsPdf = useMemo(() => {
-    return items.map((item) => {
+    const orderedItems = [...items].sort((left, right) => {
+      const leftAvailable = Math.max(0, left.quantity - left.borrowed);
+      const rightAvailable = Math.max(0, right.quantity - right.borrowed);
+
+      switch (inventorySortState.key) {
+        case "category":
+          return applySortDirection(
+            compareText(left.category, right.category, formatLocale),
+            inventorySortState.direction
+          );
+        case "quantity":
+          return applySortDirection(
+            compareNumber(left.quantity, right.quantity),
+            inventorySortState.direction
+          );
+        case "borrowed":
+          return applySortDirection(
+            compareNumber(left.borrowed, right.borrowed),
+            inventorySortState.direction
+          );
+        case "available":
+          return applySortDirection(
+            compareNumber(leftAvailable, rightAvailable),
+            inventorySortState.direction
+          );
+        case "name":
+        default:
+          return applySortDirection(
+            compareText(left.name, right.name, formatLocale),
+            inventorySortState.direction
+          );
+      }
+    });
+
+    return orderedItems.map((item) => {
       const status =
         item.status ?? (item.borrowed > 0 ? "in_use" : "available");
       const available = Math.max(0, item.quantity - item.borrowed);
@@ -138,7 +226,7 @@ export default function ResourcesInventoryPage() {
         .join(" | ");
       return [item.name, details];
     });
-  }, [items, formatLocale]);
+  }, [formatLocale, inventorySortState, items]);
 
   const handleExportXlsx = () => {
     if (items.length === 0) return;
@@ -192,6 +280,85 @@ export default function ResourcesInventoryPage() {
       })
       .slice(0, 6);
   }, [items]);
+
+  const sortedItems = useMemo(() => {
+    return [...items].sort((left, right) => {
+      const leftAvailable = Math.max(0, left.quantity - left.borrowed);
+      const rightAvailable = Math.max(0, right.quantity - right.borrowed);
+
+      switch (inventorySortState.key) {
+        case "category":
+          return applySortDirection(
+            compareText(left.category, right.category, formatLocale),
+            inventorySortState.direction
+          );
+        case "quantity":
+          return applySortDirection(
+            compareNumber(left.quantity, right.quantity),
+            inventorySortState.direction
+          );
+        case "borrowed":
+          return applySortDirection(
+            compareNumber(left.borrowed, right.borrowed),
+            inventorySortState.direction
+          );
+        case "available":
+          return applySortDirection(
+            compareNumber(leftAvailable, rightAvailable),
+            inventorySortState.direction
+          );
+        case "name":
+        default:
+          return applySortDirection(
+            compareText(left.name, right.name, formatLocale),
+            inventorySortState.direction
+          );
+      }
+    });
+  }, [formatLocale, inventorySortState, items]);
+
+  const sortedRecentLoans = useMemo(() => {
+    return [...recentLoans].sort((left, right) => {
+      const leftStatus =
+        left.item.status ?? (left.item.borrowed > 0 ? "in_use" : "available");
+      const rightStatus =
+        right.item.status ??
+        (right.item.borrowed > 0 ? "in_use" : "available");
+
+      switch (recentLoansSortState.key) {
+        case "borrower":
+          return applySortDirection(
+            compareText(left.borrower, right.borrower, formatLocale),
+            recentLoansSortState.direction
+          );
+        case "borrowed":
+          return applySortDirection(
+            compareNumber(left.item.borrowed, right.item.borrowed),
+            recentLoansSortState.direction
+          );
+        case "status":
+          return applySortDirection(
+            compareText(
+              ITEM_STATUS_LABELS[leftStatus],
+              ITEM_STATUS_LABELS[rightStatus],
+              formatLocale
+            ),
+            recentLoansSortState.direction
+          );
+        case "lastMove":
+          return applySortDirection(
+            compareDate(left.lastMove, right.lastMove),
+            recentLoansSortState.direction
+          );
+        case "item":
+        default:
+          return applySortDirection(
+            compareText(left.item.name, right.item.name, formatLocale),
+            recentLoansSortState.direction
+          );
+      }
+    });
+  }, [formatLocale, recentLoans, recentLoansSortState]);
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -289,6 +456,27 @@ export default function ResourcesInventoryPage() {
         }
       >
         <div className="overflow-hidden rounded-[28px] border border-gray-200 bg-white">
+          <div className="flex justify-end px-5 pt-5">
+            <select
+              value={`${inventorySortState.key}:${inventorySortState.direction}`}
+              onChange={(event) => {
+                const [key, direction] = event.target.value.split(":") as [
+                  InventorySortKey,
+                  "asc" | "desc",
+                ];
+                setInventorySortState({ key, direction });
+              }}
+              className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              aria-label="Ordenar inventario"
+            >
+              <option value="name:asc">Nombre A-Z</option>
+              <option value="name:desc">Nombre Z-A</option>
+              <option value="category:asc">Categoría A-Z</option>
+              <option value="quantity:desc">Más cantidad</option>
+              <option value="borrowed:desc">Más prestados</option>
+              <option value="available:desc">Más disponibles</option>
+            </select>
+          </div>
           {items.length === 0 ? (
             <div className="m-5 flex flex-col gap-4 rounded-3xl border border-dashed border-gray-200 bg-gradient-to-r from-gray-50 to-white p-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-4">
@@ -361,7 +549,7 @@ export default function ResourcesInventoryPage() {
                     </td>
                   </tr>
                 ) : (
-                  items.map((item) => {
+                  sortedItems.map((item) => {
                     const available = Math.max(0, item.quantity - item.borrowed);
 
                     return (
@@ -439,7 +627,7 @@ export default function ResourcesInventoryPage() {
             <p>
               {items.length === 0
                 ? "Listo para registrar el primer activo."
-                : `Mostrando 1 a ${items.length} de ${items.length} activos`}
+                : `Mostrando 1 a ${sortedItems.length} de ${sortedItems.length} activos`}
             </p>
           </div>
         </div>
@@ -451,7 +639,7 @@ export default function ResourcesInventoryPage() {
         actions={
           <>
             <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-600">
-              {formatNumber(recentLoans.length, formatLocale)} movimientos
+              {formatNumber(sortedRecentLoans.length, formatLocale)} movimientos
             </span>
             <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
               {formatNumber(summary.borrowed, formatLocale)} unidades activas
@@ -466,6 +654,27 @@ export default function ResourcesInventoryPage() {
         }
       >
         <div className="overflow-hidden rounded-[28px] border border-gray-200 bg-white">
+          <div className="flex justify-end px-5 pt-5">
+            <select
+              value={`${recentLoansSortState.key}:${recentLoansSortState.direction}`}
+              onChange={(event) => {
+                const [key, direction] = event.target.value.split(":") as [
+                  RecentLoansSortKey,
+                  "asc" | "desc",
+                ];
+                setRecentLoansSortState({ key, direction });
+              }}
+              className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              aria-label="Ordenar préstamos"
+            >
+              <option value="lastMove:desc">Más recientes</option>
+              <option value="lastMove:asc">Más antiguos</option>
+              <option value="item:asc">Activo A-Z</option>
+              <option value="borrower:asc">Responsable A-Z</option>
+              <option value="borrowed:desc">Más prestados</option>
+              <option value="status:asc">Estado A-Z</option>
+            </select>
+          </div>
           <div className={tableWrapperStyles}>
             <table className={tableMinWidthStyles}>
               <thead className={tableHeadStyles}>
@@ -487,7 +696,7 @@ export default function ResourcesInventoryPage() {
                 </tr>
               </thead>
               <tbody className={tableBodyStyles}>
-                {recentLoans.length === 0 ? (
+                {sortedRecentLoans.length === 0 ? (
                   <tr>
                     <td colSpan={6} className={tableEmptyCellStyles}>
                       <div className="flex flex-col items-center gap-3 py-10">
@@ -510,7 +719,7 @@ export default function ResourcesInventoryPage() {
                     </td>
                   </tr>
                 ) : (
-                  recentLoans.map(({ item, lastMove, borrower }) => {
+                  sortedRecentLoans.map(({ item, lastMove, borrower }) => {
                     const status =
                       item.status ??
                       (item.borrowed > 0 ? "in_use" : "available");
@@ -588,9 +797,9 @@ export default function ResourcesInventoryPage() {
 
           <div className={tableFooterStyles}>
             <p>
-              {recentLoans.length === 0
+              {sortedRecentLoans.length === 0
                 ? "Sin movimientos recientes por ahora."
-                : `Mostrando 1 a ${recentLoans.length} de ${recentLoans.length} movimientos`}
+                : `Mostrando 1 a ${sortedRecentLoans.length} de ${sortedRecentLoans.length} movimientos`}
             </p>
           </div>
         </div>

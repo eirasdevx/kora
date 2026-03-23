@@ -4,6 +4,13 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { MessageTemplate } from "./messaging.types";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
+import { useSessionStore } from "@/core/session/session.store";
+import {
+  deleteAssociationModuleRecord,
+  listAssociationModuleRecords,
+  saveAssociationModuleRecords,
+  upsertAssociationModuleRecord,
+} from "@/lib/client/association-data-client";
 
 const createTemplateId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -13,6 +20,14 @@ const createTemplateId = () => {
 };
 
 const nowIso = () => new Date().toISOString();
+
+const isAuthenticated = () =>
+  useSessionStore.getState().mode === "authenticated";
+
+const getDefaultTemplates = () =>
+  DEFAULT_TEMPLATES.map((template) => ({
+    ...template,
+  }));
 
 const DEFAULT_TEMPLATES: MessageTemplate[] = [
   {
@@ -52,21 +67,79 @@ const DEFAULT_TEMPLATES: MessageTemplate[] = [
 
 interface MessagingState {
   templates: MessageTemplate[];
+  hydrated: boolean;
+  loadedAssociationId: string | null;
+  loadTemplates: () => Promise<void>;
+  resetTemplates: () => void;
   addTemplate: (
     payload: Omit<MessageTemplate, "id" | "createdAt" | "updatedAt">
-  ) => MessageTemplate;
+  ) => Promise<MessageTemplate>;
   updateTemplate: (
     id: string,
     updates: Partial<Omit<MessageTemplate, "id" | "createdAt">>
-  ) => MessageTemplate | null;
-  removeTemplate: (id: string) => void;
+  ) => Promise<MessageTemplate | null>;
+  removeTemplate: (id: string) => Promise<void>;
 }
 
 export const useMessagingStore = create<MessagingState>()(
   persist(
     (set, get) => ({
-      templates: DEFAULT_TEMPLATES,
-      addTemplate: (payload) => {
+      templates: getDefaultTemplates(),
+      hydrated: false,
+      loadedAssociationId: null,
+      loadTemplates: async () => {
+        const { activeAssociationId } = useSessionStore.getState();
+
+        if (!activeAssociationId || !isAuthenticated()) {
+          set({
+            templates: getDefaultTemplates(),
+            hydrated: true,
+            loadedAssociationId: null,
+          });
+          return;
+        }
+
+        try {
+          let persisted =
+            await listAssociationModuleRecords<MessageTemplate>(
+              "messagingTemplates"
+            );
+
+          if (persisted.length === 0) {
+            persisted =
+              await saveAssociationModuleRecords<MessageTemplate>(
+                "messagingTemplates",
+                getDefaultTemplates(),
+                "replace"
+              );
+          }
+
+          set({
+            templates: persisted,
+            hydrated: true,
+            loadedAssociationId: activeAssociationId,
+          });
+          return;
+        } catch (error) {
+          console.error(error);
+        }
+
+        set((state) => ({
+          templates:
+            state.loadedAssociationId === activeAssociationId
+              ? state.templates
+              : getDefaultTemplates(),
+          hydrated: true,
+          loadedAssociationId: activeAssociationId,
+        }));
+      },
+      resetTemplates: () =>
+        set({
+          templates: getDefaultTemplates(),
+          hydrated: false,
+          loadedAssociationId: null,
+        }),
+      addTemplate: async (payload) => {
         const stamp = nowIso();
         const template: MessageTemplate = {
           ...payload,
@@ -74,6 +147,14 @@ export const useMessagingStore = create<MessagingState>()(
           createdAt: stamp,
           updatedAt: stamp,
         };
+
+        if (isAuthenticated()) {
+          await upsertAssociationModuleRecord<MessageTemplate>(
+            "messagingTemplates",
+            template
+          );
+        }
+
         set((state) => ({ templates: [template, ...state.templates] }));
         useNotificationsStore.getState().addNotification({
           category: "system",
@@ -86,7 +167,7 @@ export const useMessagingStore = create<MessagingState>()(
         });
         return template;
       },
-      updateTemplate: (id, updates) => {
+      updateTemplate: async (id, updates) => {
         const { templates } = get();
         const target = templates.find((item) => item.id === id);
         if (!target) return null;
@@ -95,6 +176,14 @@ export const useMessagingStore = create<MessagingState>()(
           ...updates,
           updatedAt: nowIso(),
         };
+
+        if (isAuthenticated()) {
+          await upsertAssociationModuleRecord<MessageTemplate>(
+            "messagingTemplates",
+            updated
+          );
+        }
+
         set({
           templates: templates.map((item) => (item.id === id ? updated : item)),
         });
@@ -109,8 +198,13 @@ export const useMessagingStore = create<MessagingState>()(
         });
         return updated;
       },
-      removeTemplate: (id) => {
+      removeTemplate: async (id) => {
         const target = get().templates.find((item) => item.id === id);
+
+        if (isAuthenticated()) {
+          await deleteAssociationModuleRecord("messagingTemplates", id);
+        }
+
         set((state) => ({
           templates: state.templates.filter((item) => item.id !== id),
         }));
@@ -130,7 +224,21 @@ export const useMessagingStore = create<MessagingState>()(
     {
       name: "kora-messaging",
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ templates: state.templates }),
+      partialize: (state) => ({
+        templates: state.templates,
+        loadedAssociationId: state.loadedAssociationId,
+      }),
     }
   )
 );
+
+useSessionStore.subscribe((state, previousState) => {
+  if (
+    state.mode === previousState.mode &&
+    state.activeAssociationId === previousState.activeAssociationId
+  ) {
+    return;
+  }
+
+  void useMessagingStore.getState().loadTemplates();
+});

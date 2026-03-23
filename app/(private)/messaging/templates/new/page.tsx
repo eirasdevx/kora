@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PageHeader from "@/components/shared/PageHeader";
 import { moduleTopbarButtonStyles } from "@/components/shared/ModuleTopbar";
@@ -53,17 +53,18 @@ function TemplateEditor({
     channel: MessagingChannel;
     subject: string;
     html: string;
-  }) => void;
+  }) => Promise<void> | void;
 }) {
   const [title, setTitle] = useState(activeTemplate?.title ?? "");
   const [channel] = useState<MessagingChannel>("email");
   const [subject, setSubject] = useState(activeTemplate?.subject ?? "");
   const [html, setHtml] = useState(activeTemplate?.html ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const previewHtml = useMemo(() => applyPreviewVariables(html), [html]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError(null);
     if (!title.trim()) {
       setError("Ingresa el nombre de la plantilla.");
@@ -78,12 +79,19 @@ function TemplateEditor({
       return;
     }
 
-    onSave({
-      title: title.trim(),
-      channel,
-      subject: subject.trim(),
-      html: html.trim(),
-    });
+    setSaving(true);
+    try {
+      await Promise.resolve(
+        onSave({
+          title: title.trim(),
+          channel,
+          subject: subject.trim(),
+          html: html.trim(),
+        })
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const insertToken = (token: string) => {
@@ -102,9 +110,10 @@ function TemplateEditor({
           <button
             type="button"
             onClick={handleSave}
+            disabled={saving}
             className={moduleTopbarButtonStyles.primary}
           >
-            Guardar plantilla
+            {saving ? "Guardando..." : "Guardar plantilla"}
           </button>
         }
       />
@@ -237,8 +246,13 @@ export default function NewTemplatePage() {
   const searchParams = useSearchParams();
   const mode = useSessionStore((s) => s.mode);
   const templateId = searchParams.get("id");
-  const { templates, addTemplate, updateTemplate } = useMessagingStore();
+  const { templates, addTemplate, updateTemplate, loadTemplates } =
+    useMessagingStore();
   const activeTemplate = templates.find((item) => item.id === templateId);
+
+  useEffect(() => {
+    void loadTemplates();
+  }, [loadTemplates]);
 
   if (mode === "guest") {
     return (
@@ -269,16 +283,16 @@ export default function NewTemplatePage() {
     <TemplateEditor
       key={activeTemplate?.id ?? "new-template"}
       activeTemplate={activeTemplate}
-      onSave={({ title, channel, subject, html }) => {
+      onSave={async ({ title, channel, subject, html }) => {
         if (activeTemplate) {
-          updateTemplate(activeTemplate.id, {
+          await updateTemplate(activeTemplate.id, {
             title,
             channel,
             subject,
             html,
           });
         } else {
-          addTemplate({
+          await addTemplate({
             title,
             channel,
             subject,

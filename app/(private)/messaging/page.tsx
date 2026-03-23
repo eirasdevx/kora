@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Modal from "@/components/Modal";
 import ModuleTopbar, {
@@ -33,7 +33,7 @@ const MESSAGING_MODULE_DESCRIPTION =
 export default function MessagingPage() {
   const { formatLocale } = useLocale();
   const mode = useSessionStore((s) => s.mode);
-  const { templates, removeTemplate } = useMessagingStore();
+  const { templates, removeTemplate, loadTemplates } = useMessagingStore();
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<MessageTemplate | null>(
     null
@@ -75,6 +75,10 @@ export default function MessagingPage() {
 
   const confirmDeleteLabel =
     confirmDelete?.title?.trim() || "esta plantilla";
+
+  useEffect(() => {
+    void loadTemplates();
+  }, [loadTemplates]);
 
   const handleDeleteTemplate = (template: MessageTemplate) => {
     setConfirmDelete(template);
@@ -335,9 +339,9 @@ export default function MessagingPage() {
             Cancelar
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
               if (confirmDeleteFinal) {
-                removeTemplate(confirmDeleteFinal.id);
+                await removeTemplate(confirmDeleteFinal.id);
               }
               setConfirmDeleteFinal(null);
             }}

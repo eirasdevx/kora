@@ -17,6 +17,13 @@ import {
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
 import {
+  applySortDirection,
+  compareDate,
+  compareNumber,
+  compareText,
+  SortState,
+} from "@/lib/table-sorting";
+import {
   getContactMembershipPlan,
   getMembershipExecutionLabel,
   getNextMembershipChargeDate,
@@ -45,6 +52,7 @@ import {
 } from "@/modules/people/people.utils";
 
 type PaymentStatus = "Pagado" | "Pendiente";
+type MemberPaymentsSortKey = "date" | "category" | "amount" | "status";
 
 const PAYMENT_STYLES: Record<PaymentStatus, string> = {
   Pagado: "bg-emerald-50 text-emerald-700",
@@ -244,6 +252,11 @@ export default function MemberDetailPageView() {
   const [isSavingPermissions, setIsSavingPermissions] = useState(false);
   const [isUploadingConsents, setIsUploadingConsents] = useState(false);
   const [deletingConsentId, setDeletingConsentId] = useState("");
+  const [paymentsSortState, setPaymentsSortState] =
+    useState<SortState<MemberPaymentsSortKey>>({
+      key: "date",
+      direction: "desc",
+    });
 
   useEffect(() => {
     void loadContacts();
@@ -286,6 +299,42 @@ export default function MemberDetailPageView() {
         .slice(0, 4),
     [membershipTransactions]
   );
+
+  const sortedPaymentHistory = useMemo(() => {
+    return [...paymentHistory].sort((left, right) => {
+      switch (paymentsSortState.key) {
+        case "category":
+          return applySortDirection(
+            compareText(
+              left.membershipPlanName ?? feePlan.name,
+              right.membershipPlanName ?? feePlan.name,
+              formatLocale
+            ),
+            paymentsSortState.direction
+          );
+        case "amount":
+          return applySortDirection(
+            compareNumber(left.amount, right.amount),
+            paymentsSortState.direction
+          );
+        case "status":
+          return applySortDirection(
+            compareText(
+              left.status === "completed" ? "Pagado" : "Pendiente",
+              right.status === "completed" ? "Pagado" : "Pendiente",
+              formatLocale
+            ),
+            paymentsSortState.direction
+          );
+        case "date":
+        default:
+          return applySortDirection(
+            compareDate(left.date, right.date),
+            paymentsSortState.direction
+          );
+      }
+    });
+  }, [feePlan.name, formatLocale, paymentHistory, paymentsSortState]);
 
   const pendingAmount = useMemo(
     () =>
@@ -633,9 +682,30 @@ export default function MemberDetailPageView() {
             title="Historial de Pagos Recientes"
             subtitle="Últimos movimientos de cuota"
             actions={
-              <Link href="/finance" className="text-xs font-semibold text-primary">
-                Ver todo
-              </Link>
+              <div className="flex items-center gap-3">
+                <select
+                  value={`${paymentsSortState.key}:${paymentsSortState.direction}`}
+                  onChange={(event) => {
+                    const [key, direction] = event.target.value.split(":") as [
+                      MemberPaymentsSortKey,
+                      "asc" | "desc",
+                    ];
+                    setPaymentsSortState({ key, direction });
+                  }}
+                  className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                  aria-label="Ordenar pagos"
+                >
+                  <option value="date:desc">Pagos más recientes</option>
+                  <option value="date:asc">Pagos más antiguos</option>
+                  <option value="amount:desc">Mayor importe</option>
+                  <option value="amount:asc">Menor importe</option>
+                  <option value="category:asc">Categoría A-Z</option>
+                  <option value="status:asc">Estado A-Z</option>
+                </select>
+                <Link href="/finance" className="text-xs font-semibold text-primary">
+                  Ver todo
+                </Link>
+              </div>
             }
           >
             <div className={tableWrapperStyles}>
@@ -652,14 +722,14 @@ export default function MemberDetailPageView() {
                   </tr>
                 </thead>
                 <tbody className={tableBodyStyles}>
-                  {paymentHistory.length === 0 ? (
+                  {sortedPaymentHistory.length === 0 ? (
                     <tr>
                       <td colSpan={5} className={tableEmptyCellStyles}>
                         No hay pagos registrados todavia.
                       </td>
                     </tr>
                   ) : (
-                    paymentHistory.map((tx) => (
+                    sortedPaymentHistory.map((tx) => (
                       <tr key={tx.id} className={tableRowStyles}>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {formatDate(tx.date, formatLocale)}
