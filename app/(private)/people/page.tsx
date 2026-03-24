@@ -99,10 +99,6 @@ export default function PeoplePage() {
     loadActivities();
   }, [loadContacts, loadActivities]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [contacts.length, tableFilter]);
-
   const now = useMemo(() => new Date(), []);
   const startOfMonth = useMemo(
     () => new Date(now.getFullYear(), now.getMonth(), 1),
@@ -192,7 +188,7 @@ export default function PeoplePage() {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
     let start = Math.max(1, currentPageSafe - 1);
-    let end = Math.min(totalPages, start + 2);
+    const end = Math.min(totalPages, start + 2);
     if (end - start < 2) {
       start = Math.max(1, end - 2);
     }
@@ -455,7 +451,10 @@ export default function PeoplePage() {
           <div className="grid gap-3">
             <button
               type="button"
-              onClick={() => setTableFilter("member")}
+              onClick={() => {
+                setTableFilter("member");
+                setCurrentPage(1);
+              }}
               className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                 tableFilter === "member"
                   ? "border-primary/40 bg-white text-gray-800 shadow-sm"
@@ -476,7 +475,10 @@ export default function PeoplePage() {
             </button>
             <button
               type="button"
-              onClick={() => setTableFilter("volunteer")}
+              onClick={() => {
+                setTableFilter("volunteer");
+                setCurrentPage(1);
+              }}
               className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                 tableFilter === "volunteer"
                   ? "border-primary/40 bg-white text-gray-800 shadow-sm"
@@ -497,7 +499,10 @@ export default function PeoplePage() {
             </button>
             <button
               type="button"
-              onClick={() => setTableFilter("contact")}
+              onClick={() => {
+                setTableFilter("contact");
+                setCurrentPage(1);
+              }}
               className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                 tableFilter === "contact"
                   ? "border-primary/40 bg-white text-gray-800 shadow-sm"

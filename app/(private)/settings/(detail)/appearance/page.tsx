@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import PageTopbar from "@/components/PageTopbar";
+import { useMemo, useState } from "react";
 import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
 import { useAppearanceStore } from "@/core/appearance/appearance.store";
 
@@ -45,21 +43,16 @@ function isValidHex(value: string) {
 }
 
 export default function AppearanceSettingsPage() {
-  const router = useRouter();
   const brandColor = useAppearanceStore((s) => s.brandColor);
   const theme = useAppearanceStore((s) => s.theme);
   const fontScale = useAppearanceStore((s) => s.fontScale);
   const setAppearance = useAppearanceStore((s) => s.setAppearance);
 
-  const [draft, setDraft] = useState({
+  const [draft, setDraft] = useState(() => ({
     brandColor,
     theme,
     fontScale,
-  });
-
-  useEffect(() => {
-    setDraft({ brandColor, theme, fontScale });
-  }, [brandColor, theme, fontScale]);
+  }));
 
   const normalizedDraftColor = useMemo(
     () => normalizeHex(draft.brandColor),
@@ -102,29 +95,6 @@ export default function AppearanceSettingsPage() {
         title="Apariencia"
         subtitle="Personaliza el aspecto visual de tu plataforma para adaptarla a tu imagen corporativa."
       />
-      <div className="hidden">
-      <PageTopbar>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-              Configuración &nbsp;›&nbsp; Apariencia
-            </p>
-            <h1 className="text-2xl font-semibold text-gray-900">Apariencia</h1>
-            <p className="text-sm text-gray-500">
-              Personaliza el aspecto visual de tu plataforma para adaptarla a tu
-              imagen corporativa.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => router.push("/settings")}
-            className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
-          >
-            ← Volver a configuración
-          </button>
-        </div>
-      </PageTopbar>
-      </div>
 
       <section className="grid grid-cols-1 gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1.2fr]">
         <div>
@@ -277,7 +247,7 @@ export default function AppearanceSettingsPage() {
                 fontSize: `${draft.fontScale}rem`,
               }}
             >
-              "La asociación gestiona eficazmente sus recursos."
+              La asociación gestiona eficazmente sus recursos.
             </span>
           </p>
         </div>

@@ -101,10 +101,6 @@ export default function VolunteersPage() {
     loadEvents();
   }, [loadContacts, loadActivities, loadEvents]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [query, statusFilter, typeFilter]);
-
   const now = useMemo(() => new Date(), []);
   const startOfMonth = useMemo(
     () => new Date(now.getFullYear(), now.getMonth(), 1),
@@ -375,7 +371,10 @@ export default function VolunteersPage() {
               <input
                 type="text"
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Buscar voluntarios..."
                 className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 py-2.5 pl-12 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               />
@@ -408,9 +407,10 @@ export default function VolunteersPage() {
             <div className="mt-3 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 lg:grid-cols-[1fr_1fr_auto]">
               <select
                 value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as VolunteerStatus | "all")
-                }
+                onChange={(event) => {
+                  setStatusFilter(event.target.value as VolunteerStatus | "all");
+                  setCurrentPage(1);
+                }}
                 className={`${filterControlStyles} appearance-none`}
               >
                 <option value="all">Estado: Todos</option>
@@ -420,9 +420,10 @@ export default function VolunteersPage() {
               </select>
               <select
                 value={typeFilter}
-                onChange={(event) =>
-                  setTypeFilter(event.target.value as VolunteerType | "all")
-                }
+                onChange={(event) => {
+                  setTypeFilter(event.target.value as VolunteerType | "all");
+                  setCurrentPage(1);
+                }}
                 className={`${filterControlStyles} appearance-none`}
               >
                 <option value="all">Tipo: Todos</option>
@@ -434,6 +435,7 @@ export default function VolunteersPage() {
                 onClick={() => {
                   setStatusFilter("all");
                   setTypeFilter("all");
+                  setCurrentPage(1);
                 }}
                 className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
               >

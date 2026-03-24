@@ -52,6 +52,7 @@ export default function VolunteerRecordPage() {
     useState<VolunteerProfileType>("member");
   const [selectedId, setSelectedId] = useState("");
   const [search, setSearch] = useState("");
+  const [ignorePreselected, setIgnorePreselected] = useState(false);
   const [activityDate, setActivityDate] = useState(
     toInputDate(new Date().toISOString())
   );
@@ -67,45 +68,60 @@ export default function VolunteerRecordPage() {
     loadEvents();
   }, [loadContacts, loadActivities, loadEvents]);
 
-  useEffect(() => {
-    if (!preselectedId) return;
-    setSelectedId(preselectedId);
-    const contact = contacts.find((c) => c.id === preselectedId);
-    if (contact) {
-      setSearch(getDisplayName(contact));
-      setProfileType(contact.types.includes("member") ? "member" : "contact");
-    }
-  }, [preselectedId, contacts]);
+  const preselectedContact = useMemo(
+    () => contacts.find((contact) => contact.id === preselectedId) ?? null,
+    [contacts, preselectedId]
+  );
+  const preselectedProfileType: VolunteerProfileType =
+    preselectedContact?.types.includes("member") ? "member" : "contact";
+  const usingPreselectedContact =
+    !ignorePreselected && !selectedId && Boolean(preselectedContact);
+  const effectiveProfileType = usingPreselectedContact
+    ? preselectedProfileType
+    : profileType;
+  const currentSelectedId = usingPreselectedContact
+    ? preselectedId ?? ""
+    : selectedId;
+  const searchValue =
+    usingPreselectedContact && !search && preselectedContact
+      ? getDisplayName(preselectedContact)
+      : search;
 
   const contactPool = useMemo(() => {
-    if (profileType === "member") {
+    if (effectiveProfileType === "member") {
       return contacts.filter((contact) =>
         contact.types.includes("member")
       );
     }
     return contacts.filter((contact) => !contact.types.includes("member"));
-  }, [contacts, profileType]);
+  }, [contacts, effectiveProfileType]);
 
   const filteredContacts = contactPool.filter((contact) => {
-    if (!search.trim()) return true;
+    if (!searchValue.trim()) return true;
     const name = getDisplayName(contact).toLowerCase();
     const dni = contact.dni?.toLowerCase() ?? "";
     return (
-      name.includes(search.toLowerCase()) ||
-      dni.includes(search.toLowerCase())
+      name.includes(searchValue.toLowerCase()) ||
+      dni.includes(searchValue.toLowerCase())
     );
   });
 
-  const selectedContact = contacts.find((contact) => contact.id === selectedId) ?? null;
+  const selectedContact =
+    contacts.find((contact) => contact.id === currentSelectedId) ?? null;
 
   const handleSelectContact = (contact: Contact) => {
+    const nextProfileType: VolunteerProfileType = contact.types.includes("member")
+      ? "member"
+      : "contact";
     setSelectedId(contact.id);
     setSearch(getDisplayName(contact));
+    setProfileType(nextProfileType);
+    setIgnorePreselected(true);
   };
 
   const handleSave = async () => {
     setError(null);
-    if (!selectedId) {
+    if (!currentSelectedId) {
       setError("Selecciona un voluntario.");
       return;
     }
@@ -118,8 +134,8 @@ export default function VolunteerRecordPage() {
     setSaving(true);
     const activity = {
       id: buildId(),
-      contactId: selectedId,
-      profileType,
+      contactId: currentSelectedId,
+      profileType: effectiveProfileType,
       date: toIsoDate(activityDate),
       hours: numericHours,
       eventId: eventId || undefined,
@@ -133,7 +149,7 @@ export default function VolunteerRecordPage() {
   };
 
   const recentActivityCount = activities.filter(
-    (activity) => activity.contactId === selectedId
+    (activity) => activity.contactId === currentSelectedId
   ).length;
 
   return (
@@ -167,7 +183,12 @@ export default function VolunteerRecordPage() {
                   <button
                     key={item.value}
                     type="button"
-                    onClick={() => setProfileType(item.value as VolunteerProfileType)}
+                    onClick={() => {
+                      setProfileType(item.value as VolunteerProfileType);
+                      setSelectedId("");
+                      setSearch("");
+                      setIgnorePreselected(true);
+                    }}
                     className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
                       profileType === item.value
                         ? "bg-white text-primary shadow"
@@ -191,10 +212,11 @@ export default function VolunteerRecordPage() {
                   </span>
                 </span>
                 <input
-                  value={search}
+                  value={searchValue}
                   onChange={(event) => {
                     setSearch(event.target.value);
                     setSelectedId("");
+                    setIgnorePreselected(true);
                   }}
                   placeholder="Buscar por nombre o DNI..."
                   className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"

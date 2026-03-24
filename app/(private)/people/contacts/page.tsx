@@ -101,10 +101,6 @@ export default function PeopleContactsPage() {
     void loadContacts();
   }, [loadContacts]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [query, typeFilter, kindFilter]);
-
   const contactPool = useMemo(() => contacts.filter(isContact), [contacts]);
   const providers = useMemo(
     () => contactPool.filter((contact) => contact.types.includes("provider")),
@@ -249,7 +245,10 @@ export default function PeopleContactsPage() {
               <input
                 type="text"
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Buscar contacto por nombre o email..."
                 className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/70 py-2.5 pl-10 pr-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               />
@@ -280,9 +279,10 @@ export default function PeopleContactsPage() {
             <div className="mt-3 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 lg:grid-cols-[1fr_1fr_auto]">
               <select
                 value={typeFilter}
-                onChange={(event) =>
-                  setTypeFilter(event.target.value as "all" | ContactType)
-                }
+                onChange={(event) => {
+                  setTypeFilter(event.target.value as "all" | ContactType);
+                  setCurrentPage(1);
+                }}
                 className={`${filterControlStyles} appearance-none`}
               >
                 {CONTACT_TYPE_FILTERS.map((filter) => (
@@ -293,9 +293,10 @@ export default function PeopleContactsPage() {
               </select>
               <select
                 value={kindFilter}
-                onChange={(event) =>
-                  setKindFilter(event.target.value as "all" | ContactKind)
-                }
+                onChange={(event) => {
+                  setKindFilter(event.target.value as "all" | ContactKind);
+                  setCurrentPage(1);
+                }}
                 className={`${filterControlStyles} appearance-none`}
               >
                 {CONTACT_KIND_FILTERS.map((filter) => (
@@ -309,6 +310,7 @@ export default function PeopleContactsPage() {
                 onClick={() => {
                   setTypeFilter("all");
                   setKindFilter("all");
+                  setCurrentPage(1);
                 }}
                 className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
               >

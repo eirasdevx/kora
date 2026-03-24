@@ -75,10 +75,19 @@ export default function DashboardPage() {
     void loadTemplates();
   }, [loadTemplates]);
 
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+  const now = useMemo(() => new Date(), []);
+  const startOfMonth = useMemo(
+    () => new Date(now.getFullYear(), now.getMonth(), 1),
+    [now]
+  );
+  const startOfPrevMonth = useMemo(
+    () => new Date(now.getFullYear(), now.getMonth() - 1, 1),
+    [now]
+  );
+  const endOfPrevMonth = useMemo(
+    () => new Date(now.getFullYear(), now.getMonth(), 0),
+    [now]
+  );
 
   const {
     balance,

@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kora
 
-## Getting Started
+Aplicación de gestión para asociaciones construida con Next.js, React, Prisma y Zustand.
 
-First, run the development server:
+## Stack
+
+- Next.js 16
+- React 19
+- TypeScript
+- Prisma
+- Zustand
+- Tailwind CSS
+
+## Requisitos
+
+- Node.js 20 o superior
+- npm
+- Una base de datos PostgreSQL accesible desde local
+
+## Puesta en marcha
+
+1. Instala dependencias:
+
+```bash
+npm install
+```
+
+2. Crea tu archivo de entorno a partir del ejemplo:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+o en bash:
+
+```bash
+cp .env.example .env
+```
+
+3. Rellena al menos `LOCAL_DATABASE_URL` en `.env`.
+
+4. Genera el cliente de Prisma y arranca la app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La aplicación queda disponible en `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variables de entorno
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `LOCAL_DATABASE_URL`: conexión principal para desarrollo local.
+- `DATABASE_URL`: conexión a la base publicada o al entorno de hosting.
+- `KORA_LOG_DATABASE_TARGET`: activa logs del destino de Prisma cuando vale `1`.
 
-## Learn More
+La lógica de resolución de la conexión está en `lib/database-url.ts`.
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts útiles
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run dev
+npm run lint
+npm run build
+npm run migrate:deploy
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Estado del repositorio
 
-## Deploy on Vercel
+- `.env`, `.next`, `node_modules`, `generated` y otros artefactos locales están ignorados por git.
+- `npm run lint` debe quedar sin errores antes de publicar cambios.
+- `npm run build` verifica la compilación de producción.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Notas
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- El proyecto no incluye una suite de tests automatizados todavía.
+- Si vas a publicar el repositorio, revisa que tu `.env` local no salga del equipo y rota credenciales si alguna vez se expusieron fuera de git.

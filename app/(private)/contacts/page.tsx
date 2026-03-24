@@ -79,6 +79,19 @@ function getContactTypesLabel(contact: Contact) {
         .join(", ");
 }
 
+function parseContactTypeFilter(value: string | null): ContactType | "all" {
+    if (
+        value === "member" ||
+        value === "collaborator" ||
+        value === "provider" ||
+        value === "sponsor" ||
+        value === "other"
+    ) {
+        return value;
+    }
+    return "all";
+}
+
 function formatDate(value: string | undefined, locale: string) {
     if (!value) return "-";
     const date = new Date(value);
@@ -137,15 +150,17 @@ function buildContactExportData(contact: Contact, locale: string) {
 
 export default function ContactsPage() {
     const { formatLocale } = useLocale();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const typeParam = searchParams.get("type");
     const contacts = useContactsStore((state) => state.contacts);
     const loadContacts = useContactsStore((state) => state.loadContacts);
     const removeContact = useContactsStore((state) => state.removeContact);
     const isLoading = useContactsStore((state) => state.isLoading);
     const isSaving = useContactsStore((state) => state.isSaving);
 
-    const [typeFilter, setTypeFilter] = useState<ContactType | "all">("all");
     const [search, setSearch] = useState("");
-    const [selected, setSelected] = useState<Contact | null>(null);
+    const [selectedId, setSelectedId] = useState("");
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [registeredFrom, setRegisteredFrom] = useState("");
     const [registeredTo, setRegisteredTo] = useState("");
@@ -157,35 +172,26 @@ export default function ContactsPage() {
         direction: "asc",
     });
 
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const typeParam = searchParams.get("type");
-
     const [confirmDelete, setConfirmDelete] =
         useState<Contact | null>(null);
     const [confirmDeleteFinal, setConfirmDeleteFinal] =
         useState<Contact | null>(null);
+    const typeFilter = parseContactTypeFilter(typeParam);
 
     useEffect(() => {
         void loadContacts();
     }, [loadContacts]);
 
-    useEffect(() => {
-        if (!typeParam) return;
-        if (typeParam === "all") {
-            setTypeFilter("all");
-            return;
+    const updateTypeFilter = (next: ContactType | "all") => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (next === "all") {
+            params.delete("type");
+        } else {
+            params.set("type", next);
         }
-        if (
-            typeParam === "member" ||
-            typeParam === "collaborator" ||
-            typeParam === "provider" ||
-            typeParam === "sponsor" ||
-            typeParam === "other"
-        ) {
-            setTypeFilter(typeParam);
-        }
-    }, [typeParam]);
+        const query = params.toString();
+        router.replace(query ? `/contacts?${query}` : "/contacts");
+    };
 
     const filteredContacts = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -312,7 +318,7 @@ export default function ContactsPage() {
                 data.deactivatedAt || "-",
             ];
         });
-    }, [filteredContacts]);
+    }, [filteredContacts, formatLocale]);
 
     const exportRowsPdf = useMemo(() => {
         return filteredContacts.flatMap((contact) => {
@@ -342,7 +348,7 @@ export default function ContactsPage() {
                 ["", ""],
             ];
         });
-    }, [filteredContacts]);
+    }, [filteredContacts, formatLocale]);
 
     const pageSize = 10;
 
@@ -356,29 +362,12 @@ export default function ContactsPage() {
         return sortedContacts.slice(start, start + pageSize);
     }, [currentPageSafe, pageSize, sortedContacts]);
 
-    useEffect(() => {
-        if (currentPage !== currentPageSafe) {
-            setCurrentPage(currentPageSafe);
-        }
-    }, [currentPage, currentPageSafe]);
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [
-        search,
-        typeFilter,
-        registeredFrom,
-        registeredTo,
-        deactivatedFrom,
-        deactivatedTo,
-    ]);
-
     const pageNumbers = useMemo(() => {
         if (totalPages <= 3) {
             return Array.from({ length: totalPages }, (_, i) => i + 1);
         }
         let start = Math.max(1, currentPageSafe - 1);
-        let end = Math.min(totalPages, start + 2);
+        const end = Math.min(totalPages, start + 2);
         if (end - start < 2) {
             start = Math.max(1, end - 2);
         }
@@ -430,12 +419,8 @@ export default function ContactsPage() {
         );
     };
 
-    useEffect(() => {
-        if (!selected) return;
-        if (!filteredContacts.some((c) => c.id === selected.id)) {
-            setSelected(null);
-        }
-    }, [filteredContacts, selected]);
+    const selected =
+        filteredContacts.find((contact) => contact.id === selectedId) ?? null;
 
     const confirmDeleteName = confirmDelete
         ? `${confirmDelete.firstName} ${confirmDelete.lastName}`.trim() ||
@@ -490,7 +475,10 @@ export default function ContactsPage() {
                                         type="text"
                                         placeholder="Buscar contactos por nombre o email..."
                                         value={search}
-                                        onChange={(e) => setSearch(e.target.value)}
+                                        onChange={(e) => {
+                                            setSearch(e.target.value);
+                                            setCurrentPage(1);
+                                        }}
                                         className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                                     />
                                 </div>
@@ -519,13 +507,14 @@ export default function ContactsPage() {
                                                     </label>
                                                     <select
                                                         value={typeFilter}
-                                                        onChange={(e) =>
-                                                            setTypeFilter(
+                                                        onChange={(e) => {
+                                                            updateTypeFilter(
                                                                 e.target.value as
                                                                     | ContactType
                                                                     | "all"
-                                                            )
-                                                        }
+                                                            );
+                                                            setCurrentPage(1);
+                                                        }}
                                                         className="mt-2 w-full appearance-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                                                     >
                                                         <option value="all">Todos</option>
@@ -545,22 +534,24 @@ export default function ContactsPage() {
                                                         <input
                                                             type="date"
                                                             value={registeredFrom}
-                                                            onChange={(e) =>
+                                                            onChange={(e) => {
                                                                 setRegisteredFrom(
                                                                     e.target.value
-                                                                )
-                                                            }
+                                                                );
+                                                                setCurrentPage(1);
+                                                            }}
                                                             className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                                                             aria-label="Registro desde"
                                                         />
                                                         <input
                                                             type="date"
                                                             value={registeredTo}
-                                                            onChange={(e) =>
+                                                            onChange={(e) => {
                                                                 setRegisteredTo(
                                                                     e.target.value
-                                                                )
-                                                            }
+                                                                );
+                                                                setCurrentPage(1);
+                                                            }}
                                                             className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                                                             aria-label="Registro hasta"
                                                         />
@@ -575,22 +566,24 @@ export default function ContactsPage() {
                                                         <input
                                                             type="date"
                                                             value={deactivatedFrom}
-                                                            onChange={(e) =>
+                                                            onChange={(e) => {
                                                                 setDeactivatedFrom(
                                                                     e.target.value
-                                                                )
-                                                            }
+                                                                );
+                                                                setCurrentPage(1);
+                                                            }}
                                                             className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                                                             aria-label="Baja desde"
                                                         />
                                                         <input
                                                             type="date"
                                                             value={deactivatedTo}
-                                                            onChange={(e) =>
+                                                            onChange={(e) => {
                                                                 setDeactivatedTo(
                                                                     e.target.value
-                                                                )
-                                                            }
+                                                                );
+                                                                setCurrentPage(1);
+                                                            }}
                                                             className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                                                             aria-label="Baja hasta"
                                                         />
@@ -601,11 +594,12 @@ export default function ContactsPage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => {
-                                                            setTypeFilter("all");
+                                                            updateTypeFilter("all");
                                                             setRegisteredFrom("");
                                                             setRegisteredTo("");
                                                             setDeactivatedFrom("");
                                                             setDeactivatedTo("");
+                                                            setCurrentPage(1);
                                                         }}
                                                         className="text-xs font-semibold text-gray-500 hover:text-gray-700"
                                                     >
@@ -660,8 +654,8 @@ export default function ContactsPage() {
                             ) : (
                                 <ContactsTable
                                     contacts={pagedContacts}
-                                    selectedId={selected?.id}
-                                    onSelect={setSelected}
+                                    selectedId={selectedId}
+                                    onSelect={(contact) => setSelectedId(contact.id)}
                                     sortState={sortState}
                                     onSortChange={(key) =>
                                         setSortState((current) => toggleSort(current, key))
@@ -736,7 +730,7 @@ export default function ContactsPage() {
                                 router.push(`/contacts/${c.id}/edit`);
                             }}
                             onDelete={(c) => setConfirmDelete(c)}
-                            onClose={() => setSelected(null)}
+                            onClose={() => setSelectedId("")}
                         />
                     </div>
                 )}
@@ -796,7 +790,7 @@ export default function ContactsPage() {
                                 await removeContact(confirmDeleteFinal.id);
                             }
                             setConfirmDeleteFinal(null);
-                            setSelected(null);
+                            setSelectedId("");
                         }}
                         disabled={isSaving}
                         className="px-4 py-2 bg-red-700 text-white rounded-lg"

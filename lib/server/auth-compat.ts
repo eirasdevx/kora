@@ -28,19 +28,6 @@ type AssociationUserPermission = {
   canDelete: boolean;
 };
 
-type PrismaAuthCompatClient = {
-  session?: {
-    findUnique: (args: unknown) => Promise<any>;
-    delete: (args: unknown) => Promise<any>;
-  };
-  associationUser?: {
-    findUnique: (args: unknown) => Promise<any>;
-    findFirst: (args: unknown) => Promise<any>;
-  };
-};
-
-const prismaAuthCompat = prisma as unknown as PrismaAuthCompatClient;
-
 export type LegacyPermissions = {
   modules: {
     accounting: boolean;
@@ -326,6 +313,33 @@ export const mapAssociationUserPayload = (associationUser: {
     timestamp: event.createdAt.toISOString(),
   })),
 });
+
+type PrismaAssociationRecord = Parameters<typeof mapAssociationPayload>[0];
+type PrismaAssociationUserRecord = Parameters<typeof mapAssociationUserPayload>[0] & {
+  association: PrismaAssociationRecord;
+};
+type PrismaSessionRecord = {
+  id: string;
+  userId: string;
+  activeAssociationId: string | null;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  user: PrismaAssociationUserRecord["user"];
+  activeAssociation: PrismaAssociationRecord | null;
+};
+
+type PrismaAuthCompatClient = {
+  session?: {
+    findUnique: (args: unknown) => Promise<PrismaSessionRecord | null>;
+    delete: (args: unknown) => Promise<PrismaSessionRecord>;
+  };
+  associationUser?: {
+    findUnique: (args: unknown) => Promise<PrismaAssociationUserRecord | null>;
+    findFirst: (args: unknown) => Promise<PrismaAssociationUserRecord | null>;
+  };
+};
+
+const prismaAuthCompat = prisma as unknown as PrismaAuthCompatClient;
 
 export const getSessionContext = async () => {
   const token = await getSessionToken();

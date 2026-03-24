@@ -15,8 +15,6 @@ type SettingsPageHeaderProps = {
 export default function SettingsPageHeader({
   title,
   subtitle,
-  section: _section,
-  eyebrow: _eyebrow,
   actions,
   backHref = "/settings",
   backLabel = "Volver a configuraci\u00f3n",

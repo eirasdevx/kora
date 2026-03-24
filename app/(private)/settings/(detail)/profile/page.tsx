@@ -604,12 +604,6 @@ function UserProfileCard({
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
-    setForm(getUserFormState(user));
-    setFormError(null);
-    setLastSavedAt(null);
-  }, [user?.id]);
-
   const updatePreferences = (
     updater: (prev: UserPreferences) => UserPreferences,
     persist = false
@@ -1092,6 +1086,58 @@ function UserProfileCard({
   );
 }
 
+function ProfileSettingsWorkspace({
+  activeUser,
+  users,
+}: {
+  activeUser: UserAccount | null;
+  users: UserAccount[];
+}) {
+  const [preferences, setPreferences] = useState<UserPreferences>(() =>
+    resolvePreferences(activeUser?.preferences)
+  );
+  const locale = resolveLocale(preferences.language);
+  const copy = COPY[locale];
+  const dateLocale = LOCALE_DATE_FORMATS[locale];
+
+  return (
+    <UserProfileCard
+      user={activeUser}
+      users={users}
+      preferences={preferences}
+      copy={copy}
+      dateLocale={dateLocale}
+      onPreferencesChange={setPreferences}
+      onResetPreferences={() =>
+        setPreferences(resolvePreferences(activeUser?.preferences))
+      }
+      onSave={async (updates) => {
+        if (!activeUser) return;
+
+        const response = await fetch("/api/account/profile", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            firstName: updates.firstName,
+            lastName: updates.lastName,
+            phone: updates.phone,
+            photoUrl: updates.photoUrl,
+            dni: updates.dni,
+            email: updates.email,
+            passwordDigest: updates.passwordDigest,
+            preferences: updates.preferences,
+          }),
+        });
+
+        const session = await parseApiResponse<SessionBootstrapPayload>(response);
+        applySessionPayload(session);
+      }}
+    />
+  );
+}
+
 export default function ProfileSettingsPage() {
   const hydrated = useSessionStore((s) => s.hydrated);
   const mode = useSessionStore((s) => s.mode);
@@ -1100,20 +1146,9 @@ export default function ProfileSettingsPage() {
   const activeUserId = useSessionStore((s) => s.activeUserId);
   const users = useUsersStore((s) => s.users);
   const ensureSeed = useUsersStore((s) => s.ensureSeed);
-  const updateUser = useUsersStore((s) => s.updateUser);
   const activeUser = users.find((user) => user.id === activeUserId) ?? null;
-
-  const [preferences, setPreferences] = useState<UserPreferences>(() =>
-    resolvePreferences(activeUser?.preferences)
-  );
-
-  const locale = resolveLocale(preferences.language);
-  const copy = COPY[locale];
-  const dateLocale = LOCALE_DATE_FORMATS[locale];
-
-  useEffect(() => {
-    setPreferences(resolvePreferences(activeUser?.preferences));
-  }, [activeUser?.id]);
+  const fallbackCopy =
+    COPY[resolveLocale(resolvePreferences(activeUser?.preferences).language)];
 
 
   useEffect(() => {
@@ -1142,9 +1177,11 @@ export default function ProfileSettingsPage() {
             <span className="material-symbols-outlined text-[24px]">info</span>
           </div>
           <h2 className="mt-4 text-lg font-semibold text-gray-900">
-            {copy.guestTitle}
+            {fallbackCopy.guestTitle}
           </h2>
-          <p className="mt-2 text-sm text-gray-500">{copy.guestMessage}</p>
+          <p className="mt-2 text-sm text-gray-500">
+            {fallbackCopy.guestMessage}
+          </p>
         </div>
       </div>
     );
@@ -1161,39 +1198,10 @@ export default function ProfileSettingsPage() {
         backLabel={"Volver a configuraci\u00f3n"}
       />
 
-      <UserProfileCard
-        user={activeUser}
+      <ProfileSettingsWorkspace
+        key={activeUser?.id ?? "profile-workspace"}
+        activeUser={activeUser}
         users={users}
-        preferences={preferences}
-        copy={copy}
-        dateLocale={dateLocale}
-        onPreferencesChange={setPreferences}
-        onResetPreferences={() =>
-          setPreferences(resolvePreferences(activeUser?.preferences))
-        }
-        onSave={async (updates) => {
-          if (!activeUser) return;
-
-          const response = await fetch("/api/account/profile", {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              firstName: updates.firstName,
-              lastName: updates.lastName,
-              phone: updates.phone,
-              photoUrl: updates.photoUrl,
-              dni: updates.dni,
-              email: updates.email,
-              passwordDigest: updates.passwordDigest,
-              preferences: updates.preferences,
-            }),
-          });
-
-          const session = await parseApiResponse<SessionBootstrapPayload>(response);
-          applySessionPayload(session);
-        }}
       />
     </div>
   );

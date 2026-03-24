@@ -76,15 +76,6 @@ type KoraExportPayload = {
 };
 
 const EVENT_STATUSES: EventStatus[] = ["draft", "published"];
-const TRANSACTION_TYPES: TransactionType[] = ["income", "expense"];
-const TRANSACTION_CATEGORIES: TransactionCategory[] = [
-  "membership",
-  "installations",
-  "events",
-  "subsidies",
-  "other",
-];
-const TRANSACTION_STATUSES: TransactionStatus[] = ["completed", "pending"];
 const DOCUMENT_CATEGORIES: DocumentCategory[] = [
   "PDF",
   "Imagenes",

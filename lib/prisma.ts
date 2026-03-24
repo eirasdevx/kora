@@ -27,7 +27,11 @@ if (
   global.koraDatabaseConfigWarningShown = true;
 }
 
-if (databaseUrl.isProduction && !global.koraDatabaseTargetShown) {
+const shouldLogDatabaseTarget =
+  process.env.NODE_ENV !== "production" ||
+  process.env.KORA_LOG_DATABASE_TARGET === "1";
+
+if (shouldLogDatabaseTarget && !global.koraDatabaseTargetShown) {
   console.info(
     `[kora] Prisma target ${formatDatabaseTargetForLogs(databaseDiagnostics)}`
   );

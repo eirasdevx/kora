@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useSessionStore } from "@/core/session/session.store";
 import Sidebar from "@/components/Sidebar";
 
@@ -11,7 +11,6 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   const mode = useSessionStore((s) => s.mode);
   const hydrated = useSessionStore((s) => s.hydrated);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -20,10 +19,6 @@ export default function AppLayout({
     if (!hydrated) return;
     if (!mode) router.replace("/login");
   }, [hydrated, mode, router]);
-
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
 
   if (!hydrated || !mode) {
     return (

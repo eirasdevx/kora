@@ -240,6 +240,18 @@ export default function DocumentsPage() {
     loadDocuments();
   }, [loadDocuments]);
 
+  const selectDocument = (doc: DocumentItem) => {
+    setSelectedId(doc.id);
+    setNameDraft(doc.name);
+    setEditingName(false);
+  };
+
+  const clearSelectedDocument = () => {
+    setSelectedId("");
+    setNameDraft("");
+    setEditingName(false);
+  };
+
   const filteredDocuments = useMemo(() => {
     const q = search.trim().toLowerCase();
     return documents.filter((doc) => {
@@ -287,33 +299,16 @@ export default function DocumentsPage() {
     return sortedDocuments.slice(start, start + pageSize);
   }, [currentPageSafe, pageSize, sortedDocuments]);
 
-  useEffect(() => {
-    if (currentPage !== currentPageSafe) {
-      setCurrentPage(currentPageSafe);
-    }
-  }, [currentPage, currentPageSafe]);
-
   const quickAccess = useMemo(() => {
     return [...documents]
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .slice(0, 4);
   }, [documents]);
 
-  useEffect(() => {
-    if (!selectedId) return;
-    if (!filteredDocuments.some((doc) => doc.id === selectedId)) {
-      setSelectedId("");
-    }
-  }, [filteredDocuments, selectedId]);
-
-  const selectedDoc = documents.find((doc) => doc.id === selectedId);
+  const selectedDoc =
+    filteredDocuments.find((doc) => doc.id === selectedId) ?? null;
   const confirmDeleteLabel =
     confirmDelete?.name?.trim() || "este documento";
-
-  useEffect(() => {
-    setNameDraft(selectedDoc?.name ?? "");
-    setEditingName(false);
-  }, [selectedDoc?.id]);
 
   const closeUpload = () => {
     setUploadOpen(false);
@@ -330,7 +325,11 @@ export default function DocumentsPage() {
     );
     await upsertDocuments(docs);
     setPendingFiles(files);
-    setSelectedId(docs[0]?.id ?? "");
+    if (docs[0]) {
+      selectDocument(docs[0]);
+    } else {
+      clearSelectedDocument();
+    }
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -354,7 +353,7 @@ export default function DocumentsPage() {
   const handleDelete = async (doc: DocumentItem) => {
     await deleteDocument(doc.id);
     if (selectedId === doc.id) {
-      setSelectedId("");
+      clearSelectedDocument();
     }
   };
 
@@ -406,7 +405,7 @@ export default function DocumentsPage() {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
     let start = Math.max(1, currentPageSafe - 1);
-    let end = Math.min(totalPages, start + 2);
+    const end = Math.min(totalPages, start + 2);
     if (end - start < 2) {
       start = Math.max(1, end - 2);
     }
@@ -478,7 +477,7 @@ export default function DocumentsPage() {
                       key={doc.id}
                       type="button"
                       onClick={() => {
-                        setSelectedId(doc.id);
+                        selectDocument(doc);
                         setFilter("Todos");
                       }}
                       className="group relative rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-primary/40"
@@ -661,7 +660,7 @@ export default function DocumentsPage() {
                           <tr
                             key={doc.id}
                             onClick={() => {
-                              setSelectedId(doc.id);
+                              selectDocument(doc);
                             }}
                             className={cx(
                               `cursor-pointer transition ${tableRowStyles}`,
@@ -739,7 +738,7 @@ export default function DocumentsPage() {
                         key={doc.id}
                         type="button"
                         onClick={() => {
-                          setSelectedId(doc.id);
+                          selectDocument(doc);
                         }}
                         className={cx(
                           "rounded-2xl border p-4 text-left shadow-sm transition",
@@ -856,7 +855,7 @@ export default function DocumentsPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSelectedId("")}
+                  onClick={clearSelectedDocument}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50"
                   aria-label="Cerrar panel"
                 >
