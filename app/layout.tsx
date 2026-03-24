@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora } from "next/font/google";
 import AppearanceSync from "@/components/AppearanceSync";
+import GlobalRequestOverlay from "@/components/GlobalRequestOverlay";
 import LocaleSync from "@/components/LocaleSync";
 import PwaRegister from "@/components/PwaRegister";
 import SessionBootstrap from "@/components/SessionBootstrap";
@@ -60,6 +61,7 @@ export default function RootLayout({
         />
       </head>
       <body>
+        <GlobalRequestOverlay />
         <SessionBootstrap />
         <AppearanceSync />
         <LocaleSync />

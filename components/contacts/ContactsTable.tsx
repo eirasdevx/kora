@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import SortableHeader from "@/components/shared/SortableHeader";
 import {
   tableBodyStyles,
@@ -9,28 +8,24 @@ import {
   tableRowStyles,
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
-import {
-  applySortDirection,
-  compareDate,
-  compareText,
-  SortState,
-  toggleSort,
-} from "@/lib/table-sorting";
+import { type SortState } from "@/lib/table-sorting";
 import { Contact } from "@/modules/contacts/contact.types";
 
-interface Props {
-  contacts: Contact[];
-  selectedId?: string;
-  onSelect: (contact: Contact) => void;
-}
-
-type ContactsSortKey =
+export type ContactsSortKey =
   | "firstName"
   | "lastName"
   | "birthDate"
   | "dni"
   | "phone"
   | "email";
+
+interface Props {
+  contacts: Contact[];
+  selectedId?: string;
+  onSelect: (contact: Contact) => void;
+  sortState: SortState<ContactsSortKey>;
+  onSortChange: (key: ContactsSortKey) => void;
+}
 
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
@@ -63,66 +58,10 @@ export default function ContactsTable({
   contacts,
   selectedId,
   onSelect,
+  sortState,
+  onSortChange,
 }: Props) {
   const { formatLocale } = useLocale();
-  const [sortState, setSortState] = useState<SortState<ContactsSortKey>>({
-    key: "firstName",
-    direction: "asc",
-  });
-
-  const sortedContacts = useMemo(() => {
-    return [...contacts].sort((left, right) => {
-      const leftDisplayName = getDisplayName(left);
-      const rightDisplayName = getDisplayName(right);
-      const leftFallbackParts = leftDisplayName.split(" ").filter(Boolean);
-      const rightFallbackParts = rightDisplayName.split(" ").filter(Boolean);
-      const leftFirstName =
-        left.firstName?.trim() || leftFallbackParts[0] || "Sin nombre";
-      const rightFirstName =
-        right.firstName?.trim() || rightFallbackParts[0] || "Sin nombre";
-      const leftLastName =
-        left.lastName?.trim() || leftFallbackParts.slice(1).join(" ") || "-";
-      const rightLastName =
-        right.lastName?.trim() || rightFallbackParts.slice(1).join(" ") || "-";
-      const leftPhone = left.phone?.trim() || left.secondaryPhone?.trim() || "-";
-      const rightPhone =
-        right.phone?.trim() || right.secondaryPhone?.trim() || "-";
-
-      switch (sortState.key) {
-        case "lastName":
-          return applySortDirection(
-            compareText(leftLastName, rightLastName, formatLocale),
-            sortState.direction
-          );
-        case "birthDate":
-          return applySortDirection(
-            compareDate(left.birthDate, right.birthDate),
-            sortState.direction
-          );
-        case "dni":
-          return applySortDirection(
-            compareText(left.dni, right.dni, formatLocale),
-            sortState.direction
-          );
-        case "phone":
-          return applySortDirection(
-            compareText(leftPhone, rightPhone, formatLocale),
-            sortState.direction
-          );
-        case "email":
-          return applySortDirection(
-            compareText(left.email, right.email, formatLocale),
-            sortState.direction
-          );
-        case "firstName":
-        default:
-          return applySortDirection(
-            compareText(leftFirstName, rightFirstName, formatLocale),
-            sortState.direction
-          );
-      }
-    });
-  }, [contacts, formatLocale, sortState]);
 
   if (contacts.length === 0) {
     return (
@@ -141,59 +80,49 @@ export default function ContactsTable({
             label="Nombre"
             active={sortState.key === "firstName"}
             direction={sortState.direction}
-            onClick={() =>
-              setSortState((current) => toggleSort(current, "firstName"))
-            }
+            onClick={() => onSortChange("firstName")}
             className={tableHeadCellStyles}
           />
           <SortableHeader
             label="Apellidos"
             active={sortState.key === "lastName"}
             direction={sortState.direction}
-            onClick={() =>
-              setSortState((current) => toggleSort(current, "lastName"))
-            }
+            onClick={() => onSortChange("lastName")}
             className={tableHeadCellStyles}
           />
           <SortableHeader
             label="Fecha nacimiento"
             active={sortState.key === "birthDate"}
             direction={sortState.direction}
-            onClick={() =>
-              setSortState((current) => toggleSort(current, "birthDate"))
-            }
+            onClick={() => onSortChange("birthDate")}
             className={tableHeadCellStyles}
           />
           <SortableHeader
             label="DNI"
             active={sortState.key === "dni"}
             direction={sortState.direction}
-            onClick={() => setSortState((current) => toggleSort(current, "dni"))}
+            onClick={() => onSortChange("dni")}
             className={tableHeadCellStyles}
           />
           <SortableHeader
-            label="Teléfono"
+            label="Telefono"
             active={sortState.key === "phone"}
             direction={sortState.direction}
-            onClick={() =>
-              setSortState((current) => toggleSort(current, "phone"))
-            }
+            onClick={() => onSortChange("phone")}
             className={tableHeadCellStyles}
           />
           <SortableHeader
             label="Correo"
             active={sortState.key === "email"}
             direction={sortState.direction}
-            onClick={() =>
-              setSortState((current) => toggleSort(current, "email"))
-            }
+            onClick={() => onSortChange("email")}
             className={tableHeadCellStyles}
           />
         </tr>
       </thead>
 
       <tbody className={tableBodyStyles}>
-        {sortedContacts.map((contact) => {
+        {contacts.map((contact) => {
           const displayName = getDisplayName(contact);
           const fallbackParts = displayName.split(" ").filter(Boolean);
           const firstName =

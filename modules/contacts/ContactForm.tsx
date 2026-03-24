@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import {
   Contact,
   ContactKind,
@@ -136,11 +137,13 @@ export default function ContactForm({
   const association = useSessionStore((state) => state.association);
   const contacts = useContactsStore((state) => state.contacts);
   const loadContacts = useContactsStore((state) => state.loadContacts);
+  const isLoadingContacts = useContactsStore((state) => state.isLoading);
+  const isSavingContact = useContactsStore((state) => state.isSaving);
   const membershipSettings = getAssociationMembershipSettings(association);
   const defaultMembershipPlan = getDefaultMembershipPlan(membershipSettings);
 
   useEffect(() => {
-    loadContacts();
+    void loadContacts();
   }, [loadContacts]);
 
   const [contactKind, setContactKind] = useState<ContactKind>(
@@ -227,12 +230,18 @@ export default function ContactForm({
 
   const [errors, setErrors] = useState<{
     firstName?: string;
-    lastName?: string;
-    dni?: string;
-    types?: string;
-    representativeFirstName?: string;
-    representativeLastName?: string;
   }>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const showLoadingOverlay = isLoadingContacts && contacts.length === 0;
+  const showSavingOverlay = isSubmitting || isSavingContact;
+  const showOverlay = showLoadingOverlay || showSavingOverlay;
+  const overlayLabel = showSavingOverlay
+    ? isEditing
+      ? "Guardando cambios..."
+      : "Guardando contacto..."
+    : "Cargando datos...";
 
   const handleContactKindChange = (nextKind: ContactKind) => {
     setContactKind(nextKind);
@@ -273,30 +282,18 @@ export default function ContactForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
 
     const trimmedFirst = firstName.trim();
     const trimmedLast = lastName.trim();
     const trimmedDni = dni.trim();
-    const trimmedRepFirst = representativeFirstName.trim();
-    const trimmedRepLast = representativeLastName.trim();
     const nextErrors: typeof errors = {};
 
     if (!trimmedFirst) nextErrors.firstName = "Requerido";
-    if (!isEntity && !trimmedLast) nextErrors.lastName = "Requerido";
-    if (!trimmedDni) nextErrors.dni = "Requerido";
-    if (isEntity && !trimmedRepFirst) {
-      nextErrors.representativeFirstName = "Requerido";
-    }
-    if (isEntity && !trimmedRepLast) {
-      nextErrors.representativeLastName = "Requerido";
-    }
 
     const normalizedTypes = types.filter((t) =>
       allowedTypes.includes(t)
     );
-    if (normalizedTypes.length === 0) {
-      nextErrors.types = "Selecciona al menos un tipo.";
-    }
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -317,10 +314,10 @@ export default function ContactForm({
       dni: trimmedDni,
       birthDate: isEntity ? undefined : fromInputDate(birthDate),
       representativeFirstName: isEntity
-        ? trimmedRepFirst || undefined
+        ? representativeFirstName.trim() || undefined
         : undefined,
       representativeLastName: isEntity
-        ? trimmedRepLast || undefined
+        ? representativeLastName.trim() || undefined
         : undefined,
       types: normalizedTypes,
       membershipPlanId: normalizedTypes.includes("member")
@@ -340,7 +337,18 @@ export default function ContactForm({
       deactivatedAt,
     };
 
-    await onSubmit(contact);
+    try {
+      setIsSubmitting(true);
+      await onSubmit(contact);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo guardar el contacto. Intentalo de nuevo."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const primaryLabel = isEditing
@@ -349,9 +357,22 @@ export default function ContactForm({
   const footerLabel = isEditing
     ? "Guardar cambios"
     : "Finalizar y Guardar";
+  const submitLabel = showSavingOverlay ? "Guardando..." : primaryLabel;
+  const footerSubmitLabel = showSavingOverlay ? "Guardando..." : footerLabel;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="relative">
+      {showOverlay ? (
+        <LoadingSpinner
+          overlay
+          label={overlayLabel}
+          description="La ruleta desaparece automaticamente al terminar."
+        />
+      ) : null}
+      <form
+        onSubmit={handleSubmit}
+        className={`space-y-6 ${showOverlay ? "opacity-70" : ""}`}
+      >
       <PageHeader
         title={isEditing ? "Editar contacto" : "Crear nuevo contacto"}
         subtitle={"Informaci\u00f3n detallada y notas internas"}
@@ -363,6 +384,7 @@ export default function ContactForm({
               <button
                 type="button"
                 onClick={onCancel}
+                disabled={showOverlay}
                 className={moduleTopbarButtonStyles.secondary}
               >
                 Cancelar
@@ -370,12 +392,19 @@ export default function ContactForm({
             ) : null}
             <button
               type="submit"
-              className={moduleTopbarButtonStyles.primary}
+              disabled={showOverlay}
+              className={`${moduleTopbarButtonStyles.primary} ${
+                showOverlay ? "cursor-not-allowed opacity-60" : ""
+              }`}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                save
+              <span
+                className={`material-symbols-outlined text-[18px] ${
+                  showSavingOverlay ? "animate-spin" : ""
+                }`}
+              >
+                {showSavingOverlay ? "progress_activity" : "save"}
               </span>
-              {primaryLabel}
+              {submitLabel}
             </button>
           </>
         }
@@ -400,6 +429,7 @@ export default function ContactForm({
             <button
               type="button"
               onClick={onCancel}
+              disabled={showOverlay}
               className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm"
             >
               Cancelar
@@ -407,12 +437,19 @@ export default function ContactForm({
           )}
           <button
             type="submit"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
+            disabled={showOverlay}
+            className={`inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/90 ${
+              showOverlay ? "cursor-not-allowed opacity-60" : ""
+            }`}
           >
-            <span className="material-symbols-outlined text-[16px]">
-              save
+            <span
+              className={`material-symbols-outlined text-[16px] ${
+                showSavingOverlay ? "animate-spin" : ""
+              }`}
+            >
+              {showSavingOverlay ? "progress_activity" : "save"}
             </span>
-            {primaryLabel}
+            {submitLabel}
           </button>
         </div>
       </header>
@@ -526,11 +563,6 @@ export default function ContactForm({
                 );
               })}
             </div>
-            {errors.types && (
-              <p className="mt-3 text-xs font-semibold text-red-600">
-                {errors.types}
-              </p>
-            )}
             <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-600">
                 Cuenta contable automatica
@@ -541,7 +573,8 @@ export default function ContactForm({
               </p>
               <p className="mt-1 text-xs text-slate-600">
                 Se asigna automaticamente segun el tipo principal del contacto y el plan
-                contable base.
+                contable base. Si no eliges ninguno, se usara la categoria
+                &quot;Otro&quot;.
               </p>
             </div>
             {!isEntity && types.includes("member") ? (
@@ -695,18 +728,12 @@ export default function ContactForm({
                       placeholder={
                         isEntity ? "Ej: La Plaza" : "Ej: Pérez García"
                       }
-                      required={!isEntity}
                     />
-                    {errors.lastName && (
-                      <p className="mt-2 text-xs font-semibold text-red-600">
-                        {errors.lastName}
-                      </p>
-                    )}
                   </div>
                 </div>
                 {isEntity && (
                   <p className="mt-2 text-xs text-gray-400">
-                    Segundo campo opcional para nombre comercial.
+                    Segundo campo opcional para nombre comercial o detalle.
                   </p>
                 )}
               </div>
@@ -719,13 +746,7 @@ export default function ContactForm({
                   onChange={(e) => setDni(e.target.value)}
                   className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                   placeholder={isEntity ? "B12345678" : "00000000X"}
-                  required
                 />
-                {errors.dni && (
-                  <p className="mt-2 text-xs font-semibold text-red-600">
-                    {errors.dni}
-                  </p>
-                )}
               </div>
               {!isEntity && (
                 <div>
@@ -754,13 +775,7 @@ export default function ContactForm({
                         }
                         className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                         placeholder="Nombre del representante"
-                        required={isEntity}
                       />
-                      {errors.representativeFirstName && (
-                        <p className="mt-2 text-xs font-semibold text-red-600">
-                          {errors.representativeFirstName}
-                        </p>
-                      )}
                     </div>
                     <div>
                       <input
@@ -770,13 +785,7 @@ export default function ContactForm({
                         }
                         className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                         placeholder="Apellidos del representante"
-                        required={isEntity}
                       />
-                      {errors.representativeLastName && (
-                        <p className="mt-2 text-xs font-semibold text-red-600">
-                          {errors.representativeLastName}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -955,6 +964,12 @@ export default function ContactForm({
         </div>
       </div>
 
+      {submitError ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {submitError}
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 border-t border-gray-100 pt-4 text-sm text-gray-400 sm:flex-row sm:items-center sm:justify-between">
         <span>Última revisión del formulario: Hoy</span>
         <div className="flex items-center gap-3">
@@ -962,19 +977,26 @@ export default function ContactForm({
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-xl px-4 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50"
+              disabled={showOverlay}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 ${
+                showOverlay ? "cursor-not-allowed opacity-60" : ""
+              }`}
             >
               Descartar
             </button>
           )}
           <button
             type="submit"
-            className="rounded-xl bg-primary px-6 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
+            disabled={showOverlay}
+            className={`rounded-xl bg-primary px-6 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/90 ${
+              showOverlay ? "cursor-not-allowed opacity-60" : ""
+            }`}
           >
-            {footerLabel}
+            {footerSubmitLabel}
           </button>
         </div>
       </div>
-    </form>
+      </form>
+    </div>
   );
 }

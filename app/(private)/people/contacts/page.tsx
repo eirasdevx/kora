@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/shared/PageHeader";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import SortableHeader from "@/components/shared/SortableHeader";
 import StatCard from "@/components/shared/StatCard";
 import {
@@ -83,7 +84,9 @@ function isContact(contact: Contact) {
 
 export default function PeopleContactsPage() {
   const { formatLocale } = useLocale();
-  const { contacts, loadContacts } = useContactsStore();
+  const contacts = useContactsStore((state) => state.contacts);
+  const loadContacts = useContactsStore((state) => state.loadContacts);
+  const isLoading = useContactsStore((state) => state.isLoading);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | ContactType>("all");
   const [kindFilter, setKindFilter] = useState<"all" | ContactKind>("all");
@@ -95,7 +98,7 @@ export default function PeopleContactsPage() {
   });
 
   useEffect(() => {
-    loadContacts();
+    void loadContacts();
   }, [loadContacts]);
 
   useEffect(() => {
@@ -182,6 +185,8 @@ export default function PeopleContactsPage() {
     if (kindFilter !== "all") total += 1;
     return total;
   }, [kindFilter, typeFilter]);
+  const showInitialLoader = isLoading && contacts.length === 0;
+  const showBusyOverlay = isLoading && contacts.length > 0;
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -225,7 +230,14 @@ export default function PeopleContactsPage() {
         />
       </section>
 
-      <section className={contactsTableSectionStyles}>
+      <section className={`relative ${contactsTableSectionStyles}`}>
+        {showBusyOverlay ? (
+          <LoadingSpinner
+            overlay
+            label="Cargando contactos..."
+            description="La tabla se actualizara automaticamente al terminar."
+          />
+        ) : null}
         <div className="border-b border-slate-100 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="relative min-w-[260px] flex-1">
@@ -307,6 +319,13 @@ export default function PeopleContactsPage() {
         </div>
 
         <div className={tableWrapperStyles}>
+          {showInitialLoader ? (
+            <LoadingSpinner
+              fullHeight
+              label="Cargando contactos..."
+              description="La tabla estara disponible en cuanto termine la carga."
+            />
+          ) : (
           <table className="w-full text-left text-sm">
             <thead className={tableHeadStyles}>
               <tr>
@@ -419,6 +438,7 @@ export default function PeopleContactsPage() {
               )}
             </tbody>
           </table>
+          )}
         </div>
 
         <div className={tableFooterStyles}>

@@ -12,13 +12,23 @@ import {
 } from "@/modules/contacts/contact.types";
 
 import ContactsHeader from "@/components/contacts/ContactsHeader";
-import ContactsTable from "@/components/contacts/ContactsTable";
+import ContactsTable, {
+    type ContactsSortKey,
+} from "@/components/contacts/ContactsTable";
 import ContactDetailPanel from "@/components/contacts/ContactDetailPanel";
 import PageTopbar from "@/components/PageTopbar";
 import BackLink from "@/components/shared/BackLink";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
 
 import Modal from "@/components/Modal";
 import { downloadPdf, downloadXlsx } from "@/lib/exporters";
+import {
+    applySortDirection,
+    compareDate,
+    compareText,
+    type SortState,
+    toggleSort,
+} from "@/lib/table-sorting";
 
 function cx(...classes: Array<string | undefined | null | false>) {
     return classes.filter(Boolean).join(" ");
@@ -127,8 +137,11 @@ function buildContactExportData(contact: Contact, locale: string) {
 
 export default function ContactsPage() {
     const { formatLocale } = useLocale();
-    const { contacts, loadContacts, removeContact } =
-        useContactsStore();
+    const contacts = useContactsStore((state) => state.contacts);
+    const loadContacts = useContactsStore((state) => state.loadContacts);
+    const removeContact = useContactsStore((state) => state.removeContact);
+    const isLoading = useContactsStore((state) => state.isLoading);
+    const isSaving = useContactsStore((state) => state.isSaving);
 
     const [typeFilter, setTypeFilter] = useState<ContactType | "all">("all");
     const [search, setSearch] = useState("");
@@ -139,6 +152,10 @@ export default function ContactsPage() {
     const [deactivatedFrom, setDeactivatedFrom] = useState("");
     const [deactivatedTo, setDeactivatedTo] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+    const [sortState, setSortState] = useState<SortState<ContactsSortKey>>({
+        key: "firstName",
+        direction: "asc",
+    });
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -150,7 +167,7 @@ export default function ContactsPage() {
         useState<Contact | null>(null);
 
     useEffect(() => {
-        loadContacts();
+        void loadContacts();
     }, [loadContacts]);
 
     useEffect(() => {
@@ -214,6 +231,61 @@ export default function ContactsPage() {
         deactivatedTo,
     ]);
 
+    const sortedContacts = useMemo(() => {
+        return [...filteredContacts].sort((left, right) => {
+            const leftDisplayName = getContactDisplayName(left);
+            const rightDisplayName = getContactDisplayName(right);
+            const leftFallbackParts = leftDisplayName.split(" ").filter(Boolean);
+            const rightFallbackParts = rightDisplayName.split(" ").filter(Boolean);
+            const leftFirstName =
+                left.firstName?.trim() || leftFallbackParts[0] || "Sin nombre";
+            const rightFirstName =
+                right.firstName?.trim() || rightFallbackParts[0] || "Sin nombre";
+            const leftLastName =
+                left.lastName?.trim() || leftFallbackParts.slice(1).join(" ") || "-";
+            const rightLastName =
+                right.lastName?.trim() || rightFallbackParts.slice(1).join(" ") || "-";
+            const leftPhone =
+                left.phone?.trim() || left.secondaryPhone?.trim() || "-";
+            const rightPhone =
+                right.phone?.trim() || right.secondaryPhone?.trim() || "-";
+
+            switch (sortState.key) {
+                case "lastName":
+                    return applySortDirection(
+                        compareText(leftLastName, rightLastName, formatLocale),
+                        sortState.direction
+                    );
+                case "birthDate":
+                    return applySortDirection(
+                        compareDate(left.birthDate, right.birthDate),
+                        sortState.direction
+                    );
+                case "dni":
+                    return applySortDirection(
+                        compareText(left.dni, right.dni, formatLocale),
+                        sortState.direction
+                    );
+                case "phone":
+                    return applySortDirection(
+                        compareText(leftPhone, rightPhone, formatLocale),
+                        sortState.direction
+                    );
+                case "email":
+                    return applySortDirection(
+                        compareText(left.email, right.email, formatLocale),
+                        sortState.direction
+                    );
+                case "firstName":
+                default:
+                    return applySortDirection(
+                        compareText(leftFirstName, rightFirstName, formatLocale),
+                        sortState.direction
+                    );
+            }
+        });
+    }, [filteredContacts, formatLocale, sortState]);
+
     const exportRowsXlsx = useMemo(() => {
         return filteredContacts.map((contact) => {
             const data = buildContactExportData(contact, formatLocale);
@@ -275,14 +347,14 @@ export default function ContactsPage() {
     const pageSize = 10;
 
     const totalPages = useMemo(
-        () => Math.max(1, Math.ceil(filteredContacts.length / pageSize)),
-        [filteredContacts.length, pageSize]
+        () => Math.max(1, Math.ceil(sortedContacts.length / pageSize)),
+        [pageSize, sortedContacts.length]
     );
     const currentPageSafe = Math.min(currentPage, totalPages);
     const pagedContacts = useMemo(() => {
         const start = (currentPageSafe - 1) * pageSize;
-        return filteredContacts.slice(start, start + pageSize);
-    }, [filteredContacts, currentPageSafe, pageSize]);
+        return sortedContacts.slice(start, start + pageSize);
+    }, [currentPageSafe, pageSize, sortedContacts]);
 
     useEffect(() => {
         if (currentPage !== currentPageSafe) {
@@ -370,6 +442,8 @@ export default function ContactsPage() {
           confirmDelete.fullName ||
           "este contacto"
         : "este contacto";
+    const showInitialLoader = isLoading && contacts.length === 0;
+    const showBusyOverlay = (isLoading && contacts.length > 0) || isSaving;
 
     return (
         <div className="flex flex-col gap-6">
@@ -392,7 +466,18 @@ export default function ContactsPage() {
                         selected ? "xl:col-span-8" : "xl:col-span-12"
                     )}
                 >
-                    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+                    <div className="relative rounded-2xl border border-gray-200 bg-white shadow-sm">
+                        {showBusyOverlay ? (
+                            <LoadingSpinner
+                                overlay
+                                label={
+                                    isSaving
+                                        ? "Guardando cambios..."
+                                        : "Cargando contactos..."
+                                }
+                                description="La ruleta desaparecera automaticamente al terminar."
+                            />
+                        ) : null}
                         <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center">
                                 <div className="relative flex-1">
@@ -566,11 +651,23 @@ export default function ContactsPage() {
                         </div>
 
                         <div className="overflow-x-auto">
-                            <ContactsTable
-                                contacts={pagedContacts}
-                                selectedId={selected?.id}
-                                onSelect={setSelected}
-                            />
+                            {showInitialLoader ? (
+                                <LoadingSpinner
+                                    fullHeight
+                                    label="Cargando contactos..."
+                                    description="La tabla se mostrara en cuanto termine la carga."
+                                />
+                            ) : (
+                                <ContactsTable
+                                    contacts={pagedContacts}
+                                    selectedId={selected?.id}
+                                    onSelect={setSelected}
+                                    sortState={sortState}
+                                    onSortChange={(key) =>
+                                        setSortState((current) => toggleSort(current, key))
+                                    }
+                                />
+                            )}
                         </div>
 
                         <div className="flex flex-col gap-3 border-t border-gray-100 px-6 py-4 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
@@ -688,6 +785,7 @@ export default function ContactsPage() {
                 <div className="flex justify-end gap-2">
                     <button
                         onClick={() => setConfirmDeleteFinal(null)}
+                        disabled={isSaving}
                         className="px-4 py-2 border rounded-lg"
                     >
                         Cancelar
@@ -700,9 +798,10 @@ export default function ContactsPage() {
                             setConfirmDeleteFinal(null);
                             setSelected(null);
                         }}
+                        disabled={isSaving}
                         className="px-4 py-2 bg-red-700 text-white rounded-lg"
                     >
-                        Eliminar definitivamente
+                        {isSaving ? "Eliminando..." : "Eliminar definitivamente"}
                     </button>
                 </div>
             </Modal>

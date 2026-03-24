@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
 import { normalizeAssociationAccountingSettings } from "@/core/session/accounting-settings";
 import { normalizeAssociationMembershipSettings } from "@/core/session/membership-settings";
@@ -17,7 +18,7 @@ import {
 } from "@/lib/client/session-client";
 import {
   listAssociationModuleRecords,
-  saveAssociationModuleRecords,
+  saveAssociationModuleRecordsInBatches,
 } from "@/lib/client/association-data-client";
 import type {
   Contact,
@@ -74,13 +75,6 @@ type KoraExportPayload = {
   messagingTemplates: MessageTemplate[];
 };
 
-const CONTACT_TYPES: ContactType[] = [
-  "member",
-  "provider",
-  "collaborator",
-  "sponsor",
-  "other",
-];
 const EVENT_STATUSES: EventStatus[] = ["draft", "published"];
 const TRANSACTION_TYPES: TransactionType[] = ["income", "expense"];
 const TRANSACTION_CATEGORIES: TransactionCategory[] = [
@@ -121,6 +115,17 @@ const INVENTORY_STATUSES: InventoryStatus[] = [
 const VOLUNTEER_PROFILE_TYPES: VolunteerProfileType[] = [
   "member",
   "contact",
+];
+const TRANSACTION_IMPORT_KEYS = [
+  "transactions",
+  "movements",
+  "movement",
+  "accounting",
+  "entries",
+  "gastos",
+  "expenses",
+  "ingresos",
+  "income",
 ];
 
 const DATA_SCOPE_OPTIONS: Array<{
@@ -435,9 +440,227 @@ function splitList(value: unknown): string[] {
   const raw = safeString(value).trim();
   if (!raw) return [];
   return raw
-    .split(";")
+    .split(/[;,\n]/)
     .map((v) => v.trim())
     .filter(Boolean);
+}
+
+function normalizeOptionalText(value: unknown): string | undefined {
+  const normalized = safeString(value).trim();
+  return normalized || undefined;
+}
+
+function normalizeContactKindValue(value: unknown): ContactKind | null {
+  const raw = safeString(value).trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === "entity" || raw === "entidad" || raw === "empresa") {
+    return "entity";
+  }
+  if (raw === "person" || raw === "persona") {
+    return "person";
+  }
+  return null;
+}
+
+function normalizeContactTypeValue(value: unknown): ContactType | null {
+  const raw = safeString(value).trim().toLowerCase();
+  if (!raw) return null;
+
+  if (raw === "member" || raw === "miembro" || raw === "socio") {
+    return "member";
+  }
+  if (raw === "provider" || raw === "proveedor") {
+    return "provider";
+  }
+  if (raw === "collaborator" || raw === "colaborador") {
+    return "collaborator";
+  }
+  if (
+    raw === "sponsor" ||
+    raw === "patrocinador" ||
+    raw === "patrocinio"
+  ) {
+    return "sponsor";
+  }
+  if (raw === "other" || raw === "otro" || raw === "contacto") {
+    return "other";
+  }
+
+  return null;
+}
+
+function normalizeDateString(value: unknown): string | undefined {
+  const raw = safeString(value).trim();
+  if (!raw) return undefined;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toISOString();
+}
+
+function padDatePart(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function normalizeIsoDateOnly(value: unknown): string | undefined {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    const excelDate = new Date(Date.UTC(1899, 11, 30));
+    excelDate.setUTCDate(excelDate.getUTCDate() + Math.floor(value));
+    return excelDate.toISOString().slice(0, 10);
+  }
+
+  const raw = safeString(value).trim();
+  if (!raw) return undefined;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+
+  const dayFirstMatch = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (dayFirstMatch) {
+    const day = Number(dayFirstMatch[1]);
+    const month = Number(dayFirstMatch[2]);
+    const year = Number(dayFirstMatch[3]);
+
+    if (
+      Number.isInteger(day) &&
+      Number.isInteger(month) &&
+      Number.isInteger(year) &&
+      day >= 1 &&
+      day <= 31 &&
+      month >= 1 &&
+      month <= 12
+    ) {
+      return `${year}-${padDatePart(month)}-${padDatePart(day)}`;
+    }
+  }
+
+  if (/^\d+(\.\d+)?$/.test(raw)) {
+    const serial = Number(raw);
+    if (Number.isFinite(serial) && serial > 0) {
+      const excelDate = new Date(Date.UTC(1899, 11, 30));
+      excelDate.setUTCDate(excelDate.getUTCDate() + Math.floor(serial));
+      return excelDate.toISOString().slice(0, 10);
+    }
+  }
+
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toISOString().slice(0, 10);
+}
+
+function normalizeTransactionTypeValue(value: unknown): TransactionType | null {
+  const raw = safeString(value).trim().toLowerCase();
+  if (!raw) return null;
+
+  if (
+    raw === "income" ||
+    raw === "ingreso" ||
+    raw === "ingresos" ||
+    raw === "entrada" ||
+    raw === "cobro"
+  ) {
+    return "income";
+  }
+
+  if (
+    raw === "expense" ||
+    raw === "gasto" ||
+    raw === "gastos" ||
+    raw === "salida" ||
+    raw === "compra" ||
+    raw === "coste" ||
+    raw === "cost"
+  ) {
+    return "expense";
+  }
+
+  return null;
+}
+
+function normalizeTransactionCategoryValue(
+  value: unknown
+): TransactionCategory | null {
+  const raw = safeString(value).trim().toLowerCase();
+  if (!raw) return null;
+
+  if (
+    raw === "membership" ||
+    raw === "membresia" ||
+    raw === "membresía" ||
+    raw === "cuota" ||
+    raw === "cuotas" ||
+    raw === "socio" ||
+    raw === "socios"
+  ) {
+    return "membership";
+  }
+
+  if (raw === "installations" || raw === "instalaciones") {
+    return "installations";
+  }
+
+  if (
+    raw === "events" ||
+    raw === "event" ||
+    raw === "evento" ||
+    raw === "eventos"
+  ) {
+    return "events";
+  }
+
+  if (
+    raw === "subsidies" ||
+    raw === "subsidy" ||
+    raw === "subvencion" ||
+    raw === "subvención" ||
+    raw === "subvenciones"
+  ) {
+    return "subsidies";
+  }
+
+  if (raw === "other" || raw === "otro" || raw === "otros" || raw === "general") {
+    return "other";
+  }
+
+  return null;
+}
+
+function normalizeTransactionStatusValue(
+  value: unknown
+): TransactionStatus | null {
+  const raw = safeString(value).trim().toLowerCase();
+  if (!raw) return null;
+
+  if (raw === "completed" || raw === "completado" || raw === "pagado") {
+    return "completed";
+  }
+
+  if (raw === "pending" || raw === "pendiente") {
+    return "pending";
+  }
+
+  return null;
+}
+
+function normalizeAddress(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") {
+    return normalizeOptionalText(value);
+  }
+
+  const address = value as Record<string, unknown>;
+  const street = normalizeOptionalText(address.street);
+  const line1 = normalizeOptionalText(address.line1);
+  const line2 = normalizeOptionalText(address.line2);
+  const postalCode = normalizeOptionalText(address.postalCode);
+  const city = normalizeOptionalText(address.city);
+  const region = normalizeOptionalText(address.region);
+  const country = normalizeOptionalText(address.country);
+
+  const parts = [street, line1, line2, postalCode, city, region, country].filter(
+    Boolean
+  );
+
+  return parts.length ? parts.join(", ") : undefined;
 }
 
 function parseNumber(value: unknown): number | undefined {
@@ -590,10 +813,22 @@ function normalizeContact(value: unknown): Contact | null {
   if (!value || typeof value !== "object") return null;
   const obj = value as Record<string, unknown>;
 
-  const fullNameRaw = safeString(obj.fullName).trim() || safeString(obj.name).trim();
+  const fullNameRaw =
+    safeString(obj.fullName).trim() ||
+    safeString(obj.name).trim() ||
+    safeString(obj.contactName).trim() ||
+    safeString(obj.companyName).trim() ||
+    safeString(obj.businessName).trim() ||
+    safeString(obj.legalName).trim();
 
-  let firstName = safeString(obj.firstName).trim();
-  let lastName = safeString(obj.lastName).trim();
+  let firstName =
+    safeString(obj.firstName).trim() ||
+    safeString(obj.givenName).trim() ||
+    safeString(obj.nombre).trim();
+  let lastName =
+    safeString(obj.lastName).trim() ||
+    safeString(obj.familyName).trim() ||
+    safeString(obj.apellidos).trim();
 
   if ((!firstName || !lastName) && fullNameRaw) {
     const parts = fullNameRaw.split(" ").filter(Boolean);
@@ -601,35 +836,42 @@ function normalizeContact(value: unknown): Contact | null {
     if (!lastName) lastName = parts.slice(1).join(" ");
   }
 
+  if (!firstName && lastName) {
+    firstName = lastName;
+    lastName = "";
+  }
+
+  if (!firstName) {
+    return null;
+  }
+
   const dni =
     safeString(obj.dni).trim() ||
     safeString(obj.nationalId).trim() ||
-    safeString(obj.document).trim();
+    safeString(obj.document).trim() ||
+    safeString(obj.nif).trim() ||
+    safeString(obj.cif).trim();
 
-  const kindRaw = safeString(obj.kind).trim().toLowerCase();
-  const contactKindRaw = safeString(obj.contactKind).trim().toLowerCase();
+  const kindRaw = normalizeContactKindValue(obj.kind);
+  const contactKindRaw = normalizeContactKindValue(obj.contactKind);
   const isEntityFlag =
     kindRaw === "entity" ||
     contactKindRaw === "entity" ||
     safeString(obj.isEntity).trim().toLowerCase() === "true";
   const kind: ContactKind = isEntityFlag ? "entity" : "person";
 
-  const types = splitList(obj.types).filter((t): t is ContactType =>
-    CONTACT_TYPES.includes(t as ContactType)
-  );
+  const types = splitList(obj.types)
+    .map((entry) => normalizeContactTypeValue(entry))
+    .filter((entry): entry is ContactType => !!entry);
 
   const role = safeString(obj.role).trim().toLowerCase();
-  const inferredType = CONTACT_TYPES.includes(role as ContactType)
-    ? (role as ContactType)
-    : undefined;
-  const normalizedTypes: ContactType[] =
-    types.length > 0
-      ? types
-      : inferredType
-        ? [inferredType]
-        : role
-          ? ["member"]
-          : [];
+  const inferredType =
+    normalizeContactTypeValue(role) ??
+    normalizeContactTypeValue(obj.contactType) ??
+    normalizeContactTypeValue(obj.profileType);
+  const normalizedTypes = Array.from(
+    new Set<ContactType>(types.length > 0 ? types : inferredType ? [inferredType] : [])
+  );
 
   const tagsFromInput =
     obj.tags == null
@@ -652,33 +894,44 @@ function normalizeContact(value: unknown): Contact | null {
     firstName,
     lastName,
     representativeFirstName:
-      safeString(obj.representativeFirstName).trim() || undefined,
+      normalizeOptionalText(obj.representativeFirstName) ??
+      normalizeOptionalText(obj.representativeName),
     representativeLastName:
-      safeString(obj.representativeLastName).trim() || undefined,
+      normalizeOptionalText(obj.representativeLastName),
     dni,
-    fullName: fullNameRaw || undefined,
-    email: safeString(obj.email) || undefined,
-    phone: safeString(obj.phone) || undefined,
-    secondaryPhone: safeString(obj.secondaryPhone) || undefined,
-    website: safeString(obj.website) || undefined,
-    postalCode: safeString(obj.postalCode) || undefined,
-    address: safeString(obj.address) || undefined,
-    city: safeString(obj.city) || undefined,
-    region: safeString(obj.region) || undefined,
-    photoUrl: safeString(obj.photoUrl) || undefined,
+    fullName: fullNameRaw || `${firstName} ${lastName}`.trim() || undefined,
+    email:
+      normalizeOptionalText(obj.email) ??
+      normalizeOptionalText(obj.emailAddress),
+    phone:
+      normalizeOptionalText(obj.phone) ??
+      normalizeOptionalText(obj.mobile) ??
+      normalizeOptionalText(obj.telephone),
+    secondaryPhone:
+      normalizeOptionalText(obj.secondaryPhone) ??
+      normalizeOptionalText(obj.phone2),
+    website:
+      normalizeOptionalText(obj.website) ??
+      normalizeOptionalText(obj.web),
+    postalCode:
+      normalizeOptionalText(obj.postalCode) ??
+      normalizeOptionalText(obj.zipCode),
+    address: normalizeAddress(obj.address),
+    city: normalizeOptionalText(obj.city),
+    region: normalizeOptionalText(obj.region),
+    birthDate:
+      normalizeDateString(obj.birthDate) ??
+      normalizeDateString(obj.dateOfBirth),
+    photoUrl: normalizeOptionalText(obj.photoUrl),
     types: normalizedTypes,
     membershipPlanId:
-      safeString(obj.membershipPlanId) ||
-      safeString(obj.feePlanId) ||
-      safeString(obj.membershipTypeId) ||
-      undefined,
-    accountingAccountType: CONTACT_TYPES.includes(
-      safeString(obj.accountingAccountType) as ContactType
-    )
-      ? (safeString(obj.accountingAccountType) as ContactType)
-      : undefined,
-    accountingAccountCode: safeString(obj.accountingAccountCode) || undefined,
-    accountingAccountLabel: safeString(obj.accountingAccountLabel) || undefined,
+      normalizeOptionalText(obj.membershipPlanId) ??
+      normalizeOptionalText(obj.feePlanId) ??
+      normalizeOptionalText(obj.membershipTypeId),
+    accountingAccountType:
+      normalizeContactTypeValue(obj.accountingAccountType) ?? undefined,
+    accountingAccountCode: normalizeOptionalText(obj.accountingAccountCode),
+    accountingAccountLabel: normalizeOptionalText(obj.accountingAccountLabel),
     privacyPermissions: normalizeContactPrivacyPermissions({
       image:
         parseBoolean(
@@ -710,15 +963,21 @@ function normalizeContact(value: unknown): Contact | null {
         ) ?? undefined,
     }),
     privacyUpdatedAt:
-      safeString(obj.privacyUpdatedAt) ||
-      safeString(obj.consentUpdatedAt) ||
-      undefined,
+      normalizeDateString(obj.privacyUpdatedAt) ??
+      normalizeDateString(obj.consentUpdatedAt),
     consentDocumentIds: consentDocumentIds.length
       ? consentDocumentIds
       : undefined,
     tags: tags.length ? tags : undefined,
-    notes: safeString(obj.notes) || undefined,
-    createdAt: safeString(obj.createdAt) || safeString(obj.joinedAt) || nowIso(),
+    notes: normalizeOptionalText(obj.notes),
+    createdAt:
+      normalizeDateString(obj.createdAt) ??
+      normalizeDateString(obj.joinedAt) ??
+      nowIso(),
+    deactivatedAt:
+      normalizeDateString(obj.deactivatedAt) ??
+      normalizeDateString(obj.archivedAt) ??
+      normalizeDateString(obj.inactiveAt),
   };
 }
 
@@ -774,36 +1033,79 @@ function normalizeEvent(value: unknown): Event | null {
 function normalizeTransaction(value: unknown): Transaction | null {
   if (!value || typeof value !== "object") return null;
   const obj = value as Record<string, unknown>;
+  const contactIds = splitList(obj.contactIds ?? obj.relatedContactIds);
 
-  const typeRaw = safeString(obj.type).trim();
-  const type: TransactionType = TRANSACTION_TYPES.includes(
-    typeRaw as TransactionType
-  )
-    ? (typeRaw as TransactionType)
-    : "income";
+  const amountSource =
+    obj.amount ??
+    obj.importe ??
+    obj.importeTotal ??
+    obj.precio ??
+    obj.price ??
+    obj.cuantia ??
+    obj.cantidad ??
+    obj.total ??
+    obj.value;
+  const rawAmount = parseNumber(amountSource) ?? 0;
+  const amount = Math.abs(rawAmount);
+  const explicitType = normalizeTransactionTypeValue(
+    obj.type ??
+      obj.transactionType ??
+      obj.tipo ??
+      obj.kind ??
+      obj.movementType
+  );
+  const type: TransactionType =
+    explicitType ??
+    (rawAmount < 0 ||
+    "precio" in obj ||
+    "price" in obj ||
+    "cost" in obj ||
+    "coste" in obj ||
+    "gasto" in obj ||
+    "especificaciones" in obj
+      ? "expense"
+      : "income");
 
-  const amount = parseNumber(obj.amount) ?? 0;
-  const date = safeString(obj.date).trim();
+  const date =
+    normalizeIsoDateOnly(
+      obj.date ??
+        obj.fecha ??
+        obj.transactionDate ??
+        obj.paidAt ??
+        obj.createdAt
+    ) ?? "";
   const concept =
     safeString(obj.concept).trim() ||
+    safeString(obj.concepto).trim() ||
     safeString(obj.title).trim() ||
+    safeString(obj.name).trim() ||
+    safeString(obj.nombre).trim() ||
+    safeString(obj.entity).trim() ||
+    safeString(obj.entidad).trim() ||
+    safeString(obj.contactName).trim() ||
     safeString(obj.description).trim();
 
-  const categoryRaw = safeString(obj.category).trim();
-  const category: TransactionCategory = TRANSACTION_CATEGORIES.includes(
-    categoryRaw as TransactionCategory
-  )
-    ? (categoryRaw as TransactionCategory)
-    : "other";
+  const description =
+    safeString(obj.description).trim() ||
+    safeString(obj.descripcion).trim() ||
+    safeString(obj.especificaciones).trim() ||
+    safeString(obj.details).trim() ||
+    undefined;
 
-  const statusRaw = safeString(obj.status).trim();
-  const status: TransactionStatus = TRANSACTION_STATUSES.includes(
-    statusRaw as TransactionStatus
-  )
-    ? (statusRaw as TransactionStatus)
-    : "completed";
+  const category =
+    normalizeTransactionCategoryValue(
+      obj.category ?? obj.categoria ?? obj.categoryName
+    ) ??
+    normalizeTransactionCategoryValue(concept) ??
+    normalizeTransactionCategoryValue(description) ??
+    "other";
 
-  if (!date || !concept) return null;
+  const status =
+    normalizeTransactionStatusValue(
+      obj.status ?? obj.estado ?? obj.paymentStatus
+    ) ?? "completed";
+
+  if (!date || !concept || amount <= 0) return null;
 
   return {
     id: ensureId(obj.id),
@@ -811,14 +1113,22 @@ function normalizeTransaction(value: unknown): Transaction | null {
     amount,
     date,
     concept,
-    description: safeString(obj.description) || undefined,
-    paymentMethod: safeString(obj.paymentMethod) || undefined,
+    description,
+    paymentMethod:
+      safeString(obj.paymentMethod).trim() ||
+      safeString(obj.metodoPago).trim() ||
+      safeString(obj.formaPago).trim() ||
+      undefined,
     category,
     status,
     eventId:
       safeString(obj.eventId) || safeString(obj.relatedEventId) || undefined,
     contactId:
-      safeString(obj.contactId) || safeString(obj.relatedContactId) || undefined,
+      safeString(obj.contactId) ||
+      safeString(obj.relatedContactId) ||
+      contactIds[0] ||
+      undefined,
+    contactIds: contactIds.length ? contactIds : undefined,
     membershipPlanId: safeString(obj.membershipPlanId) || undefined,
     membershipPlanName: safeString(obj.membershipPlanName) || undefined,
     accountingAccountKey:
@@ -1037,6 +1347,45 @@ function normalizeMessageTemplate(value: unknown): MessageTemplate | null {
       safeString(obj.createdAt).trim() ||
       nowIso(),
   };
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function extractImportArray(data: unknown, keys: string[]) {
+  const candidates: unknown[] = [data];
+
+  if (isObjectRecord(data)) {
+    candidates.push(data.data, data.payload, data.export, data.result);
+  }
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate;
+    }
+
+    if (!isObjectRecord(candidate)) {
+      continue;
+    }
+
+    for (const key of keys) {
+      const value = candidate[key];
+      if (Array.isArray(value)) {
+        return value;
+      }
+      if (isObjectRecord(value)) {
+        if (Array.isArray(value.records)) return value.records;
+        if (Array.isArray(value.items)) return value.items;
+        if (Array.isArray(value.data)) return value.data;
+      }
+    }
+
+    if (Array.isArray(candidate.records)) return candidate.records;
+    if (Array.isArray(candidate.items)) return candidate.items;
+  }
+
+  return [];
 }
 
 
@@ -1368,7 +1717,7 @@ export default function MigrationSettingsPage() {
 
     if (importScope === "all" || importScope === "contacts") {
       tasks.push(
-        saveAssociationModuleRecords<Contact>(
+        saveAssociationModuleRecordsInBatches<Contact>(
           "contacts",
           contacts,
           importMode
@@ -1378,13 +1727,17 @@ export default function MigrationSettingsPage() {
 
     if (importScope === "all" || importScope === "events") {
       tasks.push(
-        saveAssociationModuleRecords<Event>("events", events, importMode)
+        saveAssociationModuleRecordsInBatches<Event>(
+          "events",
+          events,
+          importMode
+        )
       );
     }
 
     if (importScope === "all" || importScope === "transactions") {
       tasks.push(
-        saveAssociationModuleRecords<Transaction>(
+        saveAssociationModuleRecordsInBatches<Transaction>(
           "transactions",
           transactions,
           importMode
@@ -1394,7 +1747,7 @@ export default function MigrationSettingsPage() {
 
     if (importScope === "all" || importScope === "documents") {
       tasks.push(
-        saveAssociationModuleRecords<DocumentItem>(
+        saveAssociationModuleRecordsInBatches<DocumentItem>(
           "documents",
           documents,
           importMode
@@ -1404,7 +1757,7 @@ export default function MigrationSettingsPage() {
 
     if (importScope === "all" || importScope === "inventory") {
       tasks.push(
-        saveAssociationModuleRecords<InventoryItem>(
+        saveAssociationModuleRecordsInBatches<InventoryItem>(
           "inventory",
           inventory,
           importMode
@@ -1414,7 +1767,7 @@ export default function MigrationSettingsPage() {
 
     if (importScope === "all" || importScope === "volunteerActivities") {
       tasks.push(
-        saveAssociationModuleRecords<VolunteerActivity>(
+        saveAssociationModuleRecordsInBatches<VolunteerActivity>(
           "volunteerActivities",
           volunteerActivities,
           importMode
@@ -1424,7 +1777,7 @@ export default function MigrationSettingsPage() {
 
     if (importScope === "all" || importScope === "messagingTemplates") {
       tasks.push(
-        saveAssociationModuleRecords<MessageTemplate>(
+        saveAssociationModuleRecordsInBatches<MessageTemplate>(
           "messagingTemplates",
           messagingTemplates,
           importMode
@@ -1463,33 +1816,19 @@ export default function MigrationSettingsPage() {
         associationProfile: (obj.associationProfile ??
           obj.association ??
           null) as AssociationProfile | null,
-        contacts: Array.isArray(obj.contacts)
-          ? (obj.contacts as Contact[])
-          : Array.isArray(obj.members)
-            ? (obj.members as Contact[])
-            : [],
-        events: Array.isArray(obj.events) ? (obj.events as Event[]) : [],
-        transactions: Array.isArray(obj.transactions)
-          ? (obj.transactions as Transaction[])
-          : [],
-        documents: Array.isArray(obj.documents)
-          ? (obj.documents as DocumentItem[])
-          : [],
-        inventory: Array.isArray(obj.inventory)
-          ? (obj.inventory as InventoryItem[])
-          : Array.isArray(obj.resources)
-            ? (obj.resources as InventoryItem[])
-            : [],
-        volunteerActivities: Array.isArray(obj.volunteerActivities)
-          ? (obj.volunteerActivities as VolunteerActivity[])
-          : Array.isArray(obj.activities)
-            ? (obj.activities as VolunteerActivity[])
-            : [],
-        messagingTemplates: Array.isArray(obj.messagingTemplates)
-          ? (obj.messagingTemplates as MessageTemplate[])
-          : Array.isArray(obj.templates)
-            ? (obj.templates as MessageTemplate[])
-            : [],
+        contacts: extractImportArray(data, ["contacts", "members", "people"]) as Contact[],
+        events: extractImportArray(data, ["events"]) as Event[],
+        transactions: extractImportArray(data, TRANSACTION_IMPORT_KEYS) as Transaction[],
+        documents: extractImportArray(data, ["documents"]) as DocumentItem[],
+        inventory: extractImportArray(data, ["inventory", "resources"]) as InventoryItem[],
+        volunteerActivities: extractImportArray(data, [
+          "volunteerActivities",
+          "activities",
+        ]) as VolunteerActivity[],
+        messagingTemplates: extractImportArray(data, [
+          "messagingTemplates",
+          "templates",
+        ]) as MessageTemplate[],
       });
     }
 
@@ -1504,73 +1843,53 @@ export default function MigrationSettingsPage() {
     }
 
     if (importScope === "contacts") {
-      const contacts = Array.isArray(obj.contacts)
-        ? (obj.contacts as Contact[])
-        : Array.isArray(obj.members)
-          ? (obj.members as Contact[])
-          : Array.isArray(data)
-            ? (data as Contact[])
-            : [];
+      const contacts = extractImportArray(data, [
+        "contacts",
+        "members",
+        "people",
+      ]) as Contact[];
       return applyImport({ contacts });
     }
 
     if (importScope === "events") {
-      const events = Array.isArray(obj.events)
-        ? (obj.events as Event[])
-        : Array.isArray(data)
-          ? (data as Event[])
-          : [];
+      const events = extractImportArray(data, ["events"]) as Event[];
       return applyImport({ events });
     }
 
     if (importScope === "transactions") {
-      const transactions = Array.isArray(obj.transactions)
-        ? (obj.transactions as Transaction[])
-        : Array.isArray(data)
-          ? (data as Transaction[])
-          : [];
+      const transactions = extractImportArray(
+        data,
+        TRANSACTION_IMPORT_KEYS
+      ) as Transaction[];
       return applyImport({ transactions });
     }
 
     if (importScope === "documents") {
-      const documents = Array.isArray(obj.documents)
-        ? (obj.documents as DocumentItem[])
-        : Array.isArray(data)
-          ? (data as DocumentItem[])
-          : [];
+      const documents = extractImportArray(data, ["documents"]) as DocumentItem[];
       return applyImport({ documents });
     }
 
     if (importScope === "inventory") {
-      const inventory = Array.isArray(obj.inventory)
-        ? (obj.inventory as InventoryItem[])
-        : Array.isArray(obj.resources)
-          ? (obj.resources as InventoryItem[])
-          : Array.isArray(data)
-            ? (data as InventoryItem[])
-            : [];
+      const inventory = extractImportArray(data, [
+        "inventory",
+        "resources",
+      ]) as InventoryItem[];
       return applyImport({ inventory });
     }
 
     if (importScope === "volunteerActivities") {
-      const volunteerActivities = Array.isArray(obj.volunteerActivities)
-        ? (obj.volunteerActivities as VolunteerActivity[])
-        : Array.isArray(obj.activities)
-          ? (obj.activities as VolunteerActivity[])
-          : Array.isArray(data)
-            ? (data as VolunteerActivity[])
-            : [];
+      const volunteerActivities = extractImportArray(data, [
+        "volunteerActivities",
+        "activities",
+      ]) as VolunteerActivity[];
       return applyImport({ volunteerActivities });
     }
 
     if (importScope === "messagingTemplates") {
-      const messagingTemplates = Array.isArray(obj.messagingTemplates)
-        ? (obj.messagingTemplates as MessageTemplate[])
-        : Array.isArray(obj.templates)
-          ? (obj.templates as MessageTemplate[])
-          : Array.isArray(data)
-            ? (data as MessageTemplate[])
-            : [];
+      const messagingTemplates = extractImportArray(data, [
+        "messagingTemplates",
+        "templates",
+      ]) as MessageTemplate[];
       return applyImport({ messagingTemplates });
     }
 
@@ -1611,7 +1930,14 @@ export default function MigrationSettingsPage() {
   };
 
   if (!hydrated) {
-    return <div className="min-h-screen bg-background-light" aria-busy="true" />;
+    return (
+      <LoadingSpinner
+        fullHeight
+        label="Cargando migracion..."
+        description="La configuracion de importacion y exportacion estara disponible enseguida."
+        className="min-h-screen border-0 bg-background-light shadow-none"
+      />
+    );
   }
 
   return (
@@ -1624,7 +1950,7 @@ export default function MigrationSettingsPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
+      <div className="relative grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
         <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(17,82,212,0.12),_transparent_42%),linear-gradient(180deg,#ffffff,rgba(248,250,252,0.95))] p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">

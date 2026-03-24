@@ -11,6 +11,8 @@ type AssociationRecordsResponse<T> = {
   records: T[];
 };
 
+const DEFAULT_BATCH_SIZE = 100;
+
 const parseResponse = async <T>(response: Response): Promise<T> => {
   const payload = (await response.json().catch(() => null)) as
     | T
@@ -58,6 +60,35 @@ export async function saveAssociationModuleRecords<T>(
   const payload =
     await parseResponse<AssociationRecordsResponse<T>>(response);
   return payload.records;
+}
+
+export async function saveAssociationModuleRecordsInBatches<T>(
+  module: AssociationDataModule,
+  records: T[],
+  mode: AssociationDataMutationMode = "merge",
+  batchSize = DEFAULT_BATCH_SIZE
+) {
+  if (records.length === 0) {
+    if (mode === "replace") {
+      return saveAssociationModuleRecords<T>(module, [], "replace");
+    }
+    return [];
+  }
+
+  let currentMode = mode;
+  let lastResponse: T[] = [];
+
+  for (let index = 0; index < records.length; index += batchSize) {
+    const batch = records.slice(index, index + batchSize);
+    lastResponse = await saveAssociationModuleRecords<T>(
+      module,
+      batch,
+      currentMode
+    );
+    currentMode = "merge";
+  }
+
+  return lastResponse;
 }
 
 export async function upsertAssociationModuleRecord<T>(
