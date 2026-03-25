@@ -420,6 +420,7 @@ export default function AssociationProfilePage() {
             setAssociationModalOpen(false);
             resetAssociationForm();
           }}
+          size="lg"
           title="Nueva asociación"
         >
           <form onSubmit={handleCreateAssociation} className="space-y-4">
@@ -1245,6 +1246,7 @@ export default function AssociationProfilePage() {
           setAssociationModalOpen(false);
           resetAssociationForm();
         }}
+        size="lg"
         title="Nueva asociación"
       >
         <form onSubmit={handleCreateAssociation} className="space-y-4">

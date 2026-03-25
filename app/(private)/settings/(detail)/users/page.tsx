@@ -5,6 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import Modal from "@/components/Modal";
+import {
+  moduleTopbarButtonIconStyles,
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 import SettingsPageHeader from "@/components/shared/SettingsPageHeader";
 import type { SessionBootstrapPayload } from "@/core/session/session-payload";
 import { useSessionStore } from "@/core/session/session.store";
@@ -762,10 +766,12 @@ export default function UsersSettingsPage() {
                 setPanelMode("create");
                 setSelectedId(null);
               }}
-              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
+              className={moduleTopbarButtonStyles.primary}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                person_add
+              <span className={moduleTopbarButtonIconStyles.add}>
+                <span className="material-symbols-outlined text-[16px]">
+                  add
+                </span>
               </span>
               Añadir usuario
             </button>
@@ -816,10 +822,12 @@ export default function UsersSettingsPage() {
                   setPanelMode("create");
                   setSelectedId(null);
                 }}
-                className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow"
+                className={moduleTopbarButtonStyles.primary}
               >
-                <span className="material-symbols-outlined text-[18px]">
-                  person_add
+                <span className={moduleTopbarButtonIconStyles.add}>
+                  <span className="material-symbols-outlined text-[16px]">
+                    add
+                  </span>
                 </span>
                 Añadir Usuario
               </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Icon from "@/components/shared/Icon";
 
 type StatCardProps = {
   title: string;
@@ -52,9 +53,7 @@ export default function StatCard({
               accentClassName ?? "bg-primary/10 text-primary"
             )}
           >
-            <span className="material-symbols-outlined text-[18px]">
-              {icon}
-            </span>
+            <Icon name={icon} className="text-[18px]" />
           </span>
         ) : null}
       </div>
@@ -65,9 +64,7 @@ export default function StatCard({
       {href ? (
         <div className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-primary">
           Ver detalle
-          <span className="material-symbols-outlined text-[14px]">
-            arrow_forward
-          </span>
+          <Icon name="arrow_forward" className="text-[14px]" />
         </div>
       ) : null}
     </div>

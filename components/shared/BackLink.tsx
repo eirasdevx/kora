@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Icon from "@/components/shared/Icon";
 
 type BackLinkProps = {
   href: string;
@@ -27,9 +28,11 @@ export default function BackLink({
       aria-label={label}
     >
       <span className="flex h-5 w-4 items-center justify-center">
-        <span className="material-symbols-rounded -translate-y-px text-[18px] leading-none transition-transform duration-200 group-hover:-translate-x-0.5">
-          chevron_left
-        </span>
+        <Icon
+          name="chevron_left"
+          variant="rounded"
+          className="-translate-y-px text-[18px] transition-transform duration-200 group-hover:-translate-x-0.5"
+        />
       </span>
       <span className="inline-flex min-w-0 items-center truncate leading-none">
         {label}

@@ -17,17 +17,23 @@ const themeOptions = [
   {
     id: "light",
     label: "Tema Claro",
-    previewClass: "bg-white",
+    previewStyle: {
+      backgroundColor: "#ffffff",
+    },
   },
   {
     id: "dark",
     label: "Tema Oscuro",
-    previewClass: "bg-gray-900",
+    previewStyle: {
+      backgroundColor: "#111827",
+    },
   },
   {
     id: "system",
     label: "Tema del Sistema",
-    previewClass: "bg-gradient-to-br from-white to-gray-900",
+    previewStyle: {
+      backgroundImage: "linear-gradient(135deg, #ffffff, #111827)",
+    },
   },
 ] as const;
 
@@ -187,9 +193,7 @@ export default function AppearanceSettingsPage() {
                     : "border-gray-200 hover:border-gray-300"
                 }`}
               >
-                <div
-                  className={`h-28 rounded-xl shadow-sm ${option.previewClass}`}
-                />
+                <div className="h-28 rounded-xl shadow-sm" style={option.previewStyle} />
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-sm font-semibold text-gray-900">
                     {option.label}

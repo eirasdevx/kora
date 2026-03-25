@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageTopbar from "@/components/PageTopbar";
+import Icon from "@/components/shared/Icon";
 import { useLocale } from "@/core/i18n/use-locale";
 import { useSessionStore } from "@/core/session/session.store";
 import { useTransactionsStore } from "@/modules/accounting/transactions.store";
@@ -49,14 +50,7 @@ function UiIcon({
     group: "group",
   } as const;
 
-  return (
-    <span
-      aria-hidden="true"
-      className={`material-symbols-outlined leading-none ${className}`}
-    >
-      {iconNames[kind]}
-    </span>
-  );
+  return <Icon name={iconNames[kind]} className={className} />;
 }
 
 
@@ -345,7 +339,7 @@ export default function DashboardPage() {
       </PageTopbar>
 
       <section className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
-        <div className="relative overflow-hidden rounded-3xl border border-gray-200 bg-gradient-to-br from-white via-slate-50 to-indigo-50 p-6 shadow-sm">
+        <div className="dashboard-hero-surface relative overflow-hidden rounded-3xl border border-gray-200 p-6 shadow-sm">
           <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-primary/10 blur-2xl" />
           <div className="absolute -left-16 bottom-0 h-32 w-32 rounded-full bg-emerald-100/70 blur-2xl" />
           <div className="relative z-10 flex flex-col gap-6">
@@ -857,9 +851,7 @@ export default function DashboardPage() {
                     className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-primary"
                   >
                     Configurar mensajería
-                    <span className="material-symbols-outlined text-[14px]">
-                      arrow_forward
-                    </span>
+                    <Icon name="arrow_forward" className="text-[14px]" />
                   </Link>
                 ) : null}
               </div>

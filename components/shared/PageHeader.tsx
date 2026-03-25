@@ -26,7 +26,7 @@ export default function PageHeader({
 }: PageHeaderProps) {
   const hasBackLink = Boolean(backHref && backLabel);
   const headerActions = actions ? (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
       {actions}
     </div>
   ) : null;

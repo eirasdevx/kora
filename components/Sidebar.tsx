@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import Icon from "@/components/shared/Icon";
 import { useSessionStore } from "@/core/session/session.store";
 import { type UserRole, useUsersStore } from "@/core/users/users.store";
 import { clearClientSession } from "@/lib/client/session-client";
@@ -36,11 +36,7 @@ function SidebarIcon({ icon }: { icon: NavItem["icon"] }) {
     mail: "mail",
   } as const;
 
-  return (
-    <span className="material-symbols-outlined text-[20px] leading-none">
-      {iconNames[icon]}
-    </span>
-  );
+  return <Icon name={iconNames[icon]} className="text-[20px]" />;
 }
 
 export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
@@ -159,7 +155,14 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         <div className="border-b px-6 py-6">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Image src="/icon.svg" alt="Logo de Kora" width={28} height={28} />
+              <span className="kora-logo" aria-hidden="true">
+                <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+                  <path
+                    d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </span>
               <div>
                 <p className="font-heading text-lg font-extrabold text-slate-900">
                   Kora
@@ -176,9 +179,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                 aria-label="Cerrar menú"
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 lg:hidden"
               >
-                <span className="material-symbols-outlined text-[16px]">
-                  close
-                </span>
+                <Icon name="close" className="text-[16px]" />
               </button>
             ) : null}
           </div>
@@ -219,9 +220,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                 : "text-slate-700 hover:bg-slate-50"
             )}
           >
-            <span className="material-symbols-outlined text-[20px]">
-              settings
-            </span>
+            <Icon name="settings" className="text-[20px]" />
             Configuración
           </Link>
 

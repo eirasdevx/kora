@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import ModuleTopbar, {
+  moduleTopbarButtonIconStyles,
   moduleTopbarButtonStyles,
 } from "@/components/shared/ModuleTopbar";
 import SectionBlock from "@/components/shared/SectionBlock";
@@ -83,6 +84,11 @@ export default function FinancePage() {
             href="/accounting/new"
             className={moduleTopbarButtonStyles.primary}
           >
+            <span className={moduleTopbarButtonIconStyles.add}>
+              <span className="material-symbols-outlined text-[16px]">
+                add
+              </span>
+            </span>
             Nueva transacción
           </Link>
         }

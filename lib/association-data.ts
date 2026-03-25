@@ -5,6 +5,8 @@ export const ASSOCIATION_DATA_MODULES = [
   "documents",
   "inventory",
   "volunteerActivities",
+  "memberPointRewards",
+  "memberPointRedemptions",
   "messagingTemplates",
 ] as const;
 

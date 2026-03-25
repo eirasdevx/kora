@@ -10,6 +10,7 @@ import { useDocumentsStore } from "@/modules/documents/documents.store";
 import { useEventsStore } from "@/modules/events/events.store";
 import { useInventoryStore } from "@/modules/resources/inventory.store";
 import { useMessagingStore } from "@/modules/messaging/messaging.store";
+import { useMemberPointsStore } from "@/modules/people/member-points.store";
 import { useVolunteerActivitiesStore } from "@/modules/volunteers/volunteer-activities.store";
 
 type ApiErrorShape = {
@@ -32,6 +33,7 @@ export async function reloadAssociationScopedStores() {
   useTransactionsStore.getState().resetTransactions();
   useInventoryStore.getState().resetItems();
   useVolunteerActivitiesStore.getState().resetActivities();
+  useMemberPointsStore.getState().resetPointsData();
   useMessagingStore.getState().resetTemplates();
 
   await Promise.all([
@@ -41,6 +43,7 @@ export async function reloadAssociationScopedStores() {
     useTransactionsStore.getState().loadTransactions(),
     useInventoryStore.getState().loadItems(),
     useVolunteerActivitiesStore.getState().loadActivities(),
+    useMemberPointsStore.getState().loadPointsData(),
     useMessagingStore.getState().loadTemplates(),
   ]);
 }
@@ -53,6 +56,7 @@ export function clearClientSession() {
   useTransactionsStore.getState().resetTransactions();
   useInventoryStore.getState().resetItems();
   useVolunteerActivitiesStore.getState().resetActivities();
+  useMemberPointsStore.getState().resetPointsData();
   useMessagingStore.getState().resetTemplates();
   useUsersStore.getState().resetUsers();
   useSessionStore.getState().logout();

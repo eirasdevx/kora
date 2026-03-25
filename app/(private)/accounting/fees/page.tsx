@@ -32,6 +32,27 @@ import { Contact } from "@/modules/contacts/contact.types";
 
 type FeesSortKey = "member" | "plan" | "status" | "debt" | "lastCompleted";
 
+const OPERATIONS_PAGE_SIZE = 10;
+const OPERATIONS_TABLE_SECTION_STYLES =
+  "overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_24px_-18px_rgba(15,23,42,0.2)]";
+const OPERATIONS_TABLE_HEAD_STYLES =
+  "border-y border-slate-100 bg-slate-50/90 text-[11px] uppercase tracking-[0.12em] text-slate-400";
+const OPERATIONS_TABLE_HEAD_CELL_STYLES = "px-6 py-4 font-semibold";
+const OPERATIONS_TABLE_BODY_STYLES = "divide-y divide-slate-100 text-slate-700";
+const OPERATIONS_TABLE_ROW_STYLES = "transition-colors hover:bg-slate-50/70";
+const OPERATIONS_TABLE_FOOTER_STYLES =
+  "flex flex-col gap-3 border-t border-slate-100 px-6 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between";
+const OPERATIONS_TABLE_PAGER_BUTTON_STYLES =
+  "rounded-xl border px-4 py-1.5 text-xs font-semibold shadow-sm transition";
+const OPERATIONS_TABLE_PAGER_BUTTON_ENABLED_STYLES =
+  "border-slate-200 bg-white text-slate-600 hover:bg-slate-50";
+const OPERATIONS_TABLE_PAGER_BUTTON_DISABLED_STYLES =
+  "border-slate-100 bg-slate-50 text-slate-300 shadow-none";
+const OPERATIONS_TABLE_PAGER_NUMBER_STYLES =
+  "flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50";
+const OPERATIONS_TABLE_PAGER_CURRENT_STYLES =
+  "flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-xs font-semibold text-primary";
+
 function formatCurrency(value: number, locale: string) {
   return new Intl.NumberFormat(locale, {
     style: "currency",
@@ -83,6 +104,7 @@ export default function AccountingFeesPage() {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [notes, setNotes] = useState("");
   const [query, setQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [sortState, setSortState] = useState<SortState<FeesSortKey>>({
     key: "member",
     direction: "asc",
@@ -220,6 +242,34 @@ export default function AccountingFeesPage() {
       }
     });
   }, [filteredRecords, formatLocale, sortState]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(sortedRecords.length / OPERATIONS_PAGE_SIZE)),
+    [sortedRecords.length]
+  );
+  const currentPageSafe = Math.min(currentPage, totalPages);
+  const pagedRecords = useMemo(() => {
+    const start = (currentPageSafe - 1) * OPERATIONS_PAGE_SIZE;
+    return sortedRecords.slice(start, start + OPERATIONS_PAGE_SIZE);
+  }, [currentPageSafe, sortedRecords]);
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 3) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    let start = Math.max(1, currentPageSafe - 1);
+    const end = Math.min(totalPages, start + 2);
+    if (end - start < 2) {
+      start = Math.max(1, end - 2);
+    }
+
+    return Array.from(
+      { length: end - start + 1 },
+      (_, index) => start + index
+    );
+  }, [currentPageSafe, totalPages]);
+  const canPrev = currentPageSafe > 1;
+  const canNext = currentPageSafe < totalPages;
 
   const currentMonthRevenue = useMemo(() => {
     const start = startOfMonth(new Date());
@@ -529,170 +579,240 @@ export default function AccountingFeesPage() {
           title="Operativa por socio"
           subtitle="Genera cuotas pendientes o regulariza cobros desde una sola vista."
         >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar socio por nombre, email o plan..."
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-            />
-            <div className="flex items-center gap-3">
-              <select
-                value={`${sortState.key}:${sortState.direction}`}
-                onChange={(event) => {
-                  const [key, direction] = event.target.value.split(":") as [
-                    FeesSortKey,
-                    "asc" | "desc",
-                  ];
-                  setSortState({ key, direction });
-                }}
-                className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-600 shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                aria-label="Ordenar operativa por socio"
-              >
-                <option value="member:asc">Socio A-Z</option>
-                <option value="member:desc">Socio Z-A</option>
-                <option value="plan:asc">Plan A-Z</option>
-                <option value="status:asc">Estado A-Z</option>
-                <option value="debt:desc">Mayor deuda</option>
-                <option value="debt:asc">Menor deuda</option>
-                <option value="lastCompleted:desc">Último cobro reciente</option>
-                <option value="lastCompleted:asc">Último cobro antiguo</option>
-              </select>
-              <p className="text-sm text-gray-500">
-                {sortedRecords.length} socios visibles
-              </p>
-            </div>
-          </div>
-
           {members.length === 0 ? (
             <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-500">
               No hay socios dados de alta todavía.
             </div>
           ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[860px] text-left text-sm">
-                <thead className="border-y border-gray-100 bg-gray-50 text-[11px] uppercase tracking-[0.12em] text-gray-400">
-                  <tr>
-                    <SortableHeader
-                      label="Socio"
-                      active={sortState.key === "member"}
-                      direction={sortState.direction}
-                      onClick={() =>
-                        setSortState((current) => toggleSort(current, "member"))
-                      }
-                      className="px-5 py-4 font-semibold"
-                    />
-                    <SortableHeader
-                      label="Plan"
-                      active={sortState.key === "plan"}
-                      direction={sortState.direction}
-                      onClick={() =>
-                        setSortState((current) => toggleSort(current, "plan"))
-                      }
-                      className="px-5 py-4 font-semibold"
-                    />
-                    <SortableHeader
-                      label="Estado"
-                      active={sortState.key === "status"}
-                      direction={sortState.direction}
-                      onClick={() =>
-                        setSortState((current) => toggleSort(current, "status"))
-                      }
-                      className="px-5 py-4 font-semibold"
-                    />
-                    <SortableHeader
-                      label="Deuda"
-                      active={sortState.key === "debt"}
-                      direction={sortState.direction}
-                      onClick={() =>
-                        setSortState((current) =>
-                          toggleSort(current, "debt", "desc")
-                        )
-                      }
-                      className="px-5 py-4 font-semibold text-right"
-                      align="right"
-                    />
-                    <th className="px-5 py-4 font-semibold">Último cobro</th>
-                    <th className="px-5 py-4 font-semibold text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 text-gray-700">
-                  {sortedRecords.map((record) => {
-                    const displayName = getContactDisplayName(record.member);
-                    const statusTone =
-                      record.pendingCount > 0
-                        ? "bg-amber-50 text-amber-700"
-                        : record.completedCount > 0
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-slate-100 text-slate-600";
+            <div className={`mt-4 ${OPERATIONS_TABLE_SECTION_STYLES}`}>
+              <div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="relative w-full max-w-2xl flex-1">
+                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+                    <span className="material-symbols-outlined text-[18px] leading-none">
+                      search
+                    </span>
+                  </span>
+                  <input
+                    value={query}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Buscar socio por nombre, email o plan..."
+                    className="h-11 w-full rounded-2xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                  />
+                </div>
+                <p className="text-sm text-slate-500">
+                  {sortedRecords.length} socios visibles
+                </p>
+              </div>
 
-                    return (
-                      <tr key={record.member.id} className="hover:bg-gray-50/70">
-                        <td className="px-5 py-4">
-                          <div className="font-semibold text-gray-900">
-                            {displayName}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {record.member.email || "Sin correo"}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="font-semibold text-gray-900">
-                            {record.plan.name}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {formatCurrency(record.plan.amount, formatLocale)} ·{" "}
-                            {record.cycle}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${statusTone}`}
-                          >
-                            {record.pendingCount > 0
-                              ? `${record.pendingCount} pendiente(s)`
-                              : record.completedCount > 0
-                                ? "Al día"
-                                : "Sin cobros"}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 text-right font-semibold text-gray-900">
-                          {formatCurrency(record.pendingAmount, formatLocale)}
-                        </td>
-                        <td className="px-5 py-4 text-gray-600">
-                          {formatDate(record.lastCompleted, formatLocale)}
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <div className="inline-flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleGeneratePendingFee(record.member)}
-                              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
-                            >
-                              Generar cuota
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleCollectFee(record)}
-                              className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
-                            >
-                              {record.pendingCount > 0
-                                ? "Cobrar pendiente"
-                                : "Registrar cobro"}
-                            </button>
-                            <Link
-                              href={`/people/members/${record.member.id}`}
-                              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
-                            >
-                              Ver socio
-                            </Link>
-                          </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[920px] text-left text-sm">
+                  <thead className={OPERATIONS_TABLE_HEAD_STYLES}>
+                    <tr>
+                      <SortableHeader
+                        label="Socio"
+                        active={sortState.key === "member"}
+                        direction={sortState.direction}
+                        onClick={() => {
+                          setCurrentPage(1);
+                          setSortState((current) => toggleSort(current, "member"));
+                        }}
+                        className={OPERATIONS_TABLE_HEAD_CELL_STYLES}
+                      />
+                      <SortableHeader
+                        label="Plan"
+                        active={sortState.key === "plan"}
+                        direction={sortState.direction}
+                        onClick={() => {
+                          setCurrentPage(1);
+                          setSortState((current) => toggleSort(current, "plan"));
+                        }}
+                        className={OPERATIONS_TABLE_HEAD_CELL_STYLES}
+                      />
+                      <SortableHeader
+                        label="Estado"
+                        active={sortState.key === "status"}
+                        direction={sortState.direction}
+                        onClick={() => {
+                          setCurrentPage(1);
+                          setSortState((current) => toggleSort(current, "status"));
+                        }}
+                        className={OPERATIONS_TABLE_HEAD_CELL_STYLES}
+                      />
+                      <SortableHeader
+                        label="Deuda"
+                        active={sortState.key === "debt"}
+                        direction={sortState.direction}
+                        onClick={() => {
+                          setCurrentPage(1);
+                          setSortState((current) =>
+                            toggleSort(current, "debt", "desc")
+                          );
+                        }}
+                        className={`${OPERATIONS_TABLE_HEAD_CELL_STYLES} text-right`}
+                        align="right"
+                      />
+                      <SortableHeader
+                        label="Ultimo cobro"
+                        active={sortState.key === "lastCompleted"}
+                        direction={sortState.direction}
+                        onClick={() => {
+                          setCurrentPage(1);
+                          setSortState((current) =>
+                            toggleSort(current, "lastCompleted", "desc")
+                          );
+                        }}
+                        className={OPERATIONS_TABLE_HEAD_CELL_STYLES}
+                      />
+                      <th className={`${OPERATIONS_TABLE_HEAD_CELL_STYLES} text-right`}>
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className={OPERATIONS_TABLE_BODY_STYLES}>
+                    {pagedRecords.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="px-6 py-10 text-center text-sm text-slate-500"
+                        >
+                          No hay resultados para la busqueda actual.
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    ) : (
+                      pagedRecords.map((record) => {
+                        const displayName = getContactDisplayName(record.member);
+                        const statusTone =
+                          record.pendingCount > 0
+                            ? "bg-amber-50 text-amber-700"
+                            : record.completedCount > 0
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-slate-100 text-slate-600";
+
+                        return (
+                          <tr
+                            key={record.member.id}
+                            className={OPERATIONS_TABLE_ROW_STYLES}
+                          >
+                            <td className="px-6 py-5">
+                              <div className="font-semibold text-slate-900">
+                                {displayName}
+                              </div>
+                              <div className="mt-1 text-xs text-slate-500">
+                                {record.member.email || "Sin correo"}
+                              </div>
+                            </td>
+                            <td className="px-6 py-5">
+                              <div className="font-semibold text-slate-900">
+                                {record.plan.name}
+                              </div>
+                              <div className="mt-1 text-xs text-slate-500">
+                                {formatCurrency(record.plan.amount, formatLocale)} ·{" "}
+                                {record.cycle}
+                              </div>
+                            </td>
+                            <td className="px-6 py-5">
+                              <span
+                                className={`rounded-full px-3 py-1 text-xs font-semibold ${statusTone}`}
+                              >
+                                {record.pendingCount > 0
+                                  ? `${record.pendingCount} pendiente(s)`
+                                  : record.completedCount > 0
+                                    ? "Al dia"
+                                    : "Sin cobros"}
+                              </span>
+                            </td>
+                            <td className="px-6 py-5 text-right font-semibold text-slate-900">
+                              {formatCurrency(record.pendingAmount, formatLocale)}
+                            </td>
+                            <td className="px-6 py-5 text-slate-600">
+                              {formatDate(record.lastCompleted, formatLocale)}
+                            </td>
+                            <td className="px-6 py-5 text-right">
+                              <div className="inline-flex flex-wrap items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleGeneratePendingFee(record.member)
+                                  }
+                                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+                                >
+                                  Generar cuota
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCollectFee(record)}
+                                  className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-100"
+                                >
+                                  {record.pendingCount > 0
+                                    ? "Cobrar pendiente"
+                                    : "Registrar cobro"}
+                                </button>
+                                <Link
+                                  href={`/people/members/${record.member.id}`}
+                                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+                                >
+                                  Ver socio
+                                </Link>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className={OPERATIONS_TABLE_FOOTER_STYLES}>
+                <span>
+                  Mostrando {pagedRecords.length} de {sortedRecords.length} socios
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(Math.max(1, currentPageSafe - 1))}
+                    disabled={!canPrev}
+                    className={`${OPERATIONS_TABLE_PAGER_BUTTON_STYLES} ${
+                      canPrev
+                        ? OPERATIONS_TABLE_PAGER_BUTTON_ENABLED_STYLES
+                        : OPERATIONS_TABLE_PAGER_BUTTON_DISABLED_STYLES
+                    }`}
+                  >
+                    Anterior
+                  </button>
+                  {pageNumbers.map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={
+                        page === currentPageSafe
+                          ? OPERATIONS_TABLE_PAGER_CURRENT_STYLES
+                          : OPERATIONS_TABLE_PAGER_NUMBER_STYLES
+                      }
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage(Math.min(totalPages, currentPageSafe + 1))
+                    }
+                    disabled={!canNext}
+                    className={`${OPERATIONS_TABLE_PAGER_BUTTON_STYLES} ${
+                      canNext
+                        ? OPERATIONS_TABLE_PAGER_BUTTON_ENABLED_STYLES
+                        : OPERATIONS_TABLE_PAGER_BUTTON_DISABLED_STYLES
+                    }`}
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </SectionBlock>

@@ -775,6 +775,7 @@ export default function TransactionForm({
       <Modal
         isOpen={contactsOpen}
         onClose={() => setContactsOpen(false)}
+        size="lg"
         title="Contactos asociados"
       >
         <div className="space-y-4">

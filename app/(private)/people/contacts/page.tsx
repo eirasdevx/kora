@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/shared/PageHeader";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
+import {
+  moduleTopbarButtonIconStyles,
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 import SortableHeader from "@/components/shared/SortableHeader";
 import StatCard from "@/components/shared/StatCard";
 import {
@@ -194,9 +198,13 @@ export default function PeopleContactsPage() {
         actions={
           <Link
             href="/contacts/new"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
+            className={moduleTopbarButtonStyles.primary}
           >
-            <span className="material-symbols-outlined text-[18px]">add</span>
+            <span className={moduleTopbarButtonIconStyles.add}>
+              <span className="material-symbols-outlined text-[16px]">
+                add
+              </span>
+            </span>
             Nuevo contacto
           </Link>
         }

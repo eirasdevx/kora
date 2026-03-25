@@ -6,9 +6,11 @@ import { useParams } from "next/navigation";
 import PageTopbar from "@/components/PageTopbar";
 import BackLink from "@/components/shared/BackLink";
 import SectionBlock from "@/components/shared/SectionBlock";
+import SortableHeader from "@/components/shared/SortableHeader";
 import {
   tableBodyStyles,
   tableEmptyCellStyles,
+  tableFooterStyles,
   tableHeadCellStyles,
   tableHeadStyles,
   tableIconActionStyles,
@@ -22,6 +24,7 @@ import {
   compareNumber,
   compareText,
   SortState,
+  toggleSort,
 } from "@/lib/table-sorting";
 import {
   getContactMembershipPlan,
@@ -50,6 +53,10 @@ import {
   formatMemberId,
   resolveMemberTier,
 } from "@/modules/people/people.utils";
+import {
+  buildFixedWidthReportLines,
+  downloadLinesAsPdf,
+} from "@/modules/accounting/accounting-reports";
 
 type PaymentStatus = "Pagado" | "Pendiente";
 type MemberPaymentsSortKey = "date" | "category" | "amount" | "status";
@@ -58,6 +65,9 @@ const PAYMENT_STYLES: Record<PaymentStatus, string> = {
   Pagado: "bg-emerald-50 text-emerald-700",
   Pendiente: "bg-amber-50 text-amber-700",
 };
+
+const PAYMENTS_TABLE_SECTION_STYLES =
+  "overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm";
 
 const CONSENT_FILE_ACCEPT =
   "application/pdf,image/*,.doc,.docx,.odt,.png,.jpg,.jpeg,.webp";
@@ -168,6 +178,19 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+}
+
+function getPaymentStatus(status: string): PaymentStatus {
+  return status === "completed" ? "Pagado" : "Pendiente";
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function createId() {
@@ -288,20 +311,8 @@ export default function MemberDetailPageView() {
     );
   }, [transactions, memberId]);
 
-  const paymentHistory = useMemo(
-    () =>
-      [...membershipTransactions]
-        .filter((tx) => tx.status === "completed")
-        .sort(
-          (left, right) =>
-            new Date(right.date).getTime() - new Date(left.date).getTime()
-        )
-        .slice(0, 4),
-    [membershipTransactions]
-  );
-
   const sortedPaymentHistory = useMemo(() => {
-    return [...paymentHistory].sort((left, right) => {
+    return [...membershipTransactions].sort((left, right) => {
       switch (paymentsSortState.key) {
         case "category":
           return applySortDirection(
@@ -320,8 +331,8 @@ export default function MemberDetailPageView() {
         case "status":
           return applySortDirection(
             compareText(
-              left.status === "completed" ? "Pagado" : "Pendiente",
-              right.status === "completed" ? "Pagado" : "Pendiente",
+              getPaymentStatus(left.status),
+              getPaymentStatus(right.status),
               formatLocale
             ),
             paymentsSortState.direction
@@ -334,7 +345,7 @@ export default function MemberDetailPageView() {
           );
       }
     });
-  }, [feePlan.name, formatLocale, paymentHistory, paymentsSortState]);
+  }, [feePlan.name, formatLocale, membershipTransactions, paymentsSortState]);
 
   const pendingAmount = useMemo(
     () =>
@@ -411,6 +422,10 @@ export default function MemberDetailPageView() {
     permissionDraft,
     storedPermissions
   );
+  const memberStatusLabel = member.deactivatedAt ? "Inactivo" : "Activo";
+  const memberSheetFileName = `ficha-socio-${memberIdLabel
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .toLowerCase()}.pdf`;
 
   const persistMember = async (updates: Partial<Contact>) => {
     await addContact({
@@ -490,6 +505,125 @@ export default function MemberDetailPageView() {
     }
   };
 
+  const buildMemberSheetLines = () => {
+    const contactLines = [
+      `Nombre: ${displayName}`,
+      `ID socio: ${memberIdLabel}`,
+      `Estado: ${memberStatusLabel}`,
+      `Nivel: ${tier}`,
+      `DNI: ${member.dni?.trim() || "-"}`,
+      `Email: ${member.email?.trim() || "-"}`,
+      `Telefono principal: ${member.phone?.trim() || "-"}`,
+      `Telefono secundario: ${member.secondaryPhone?.trim() || "-"}`,
+      `Direccion: ${member.address?.trim() || "-"}`,
+      `Ciudad: ${member.city?.trim() || "-"}`,
+      `Provincia/Region: ${member.region?.trim() || "-"}`,
+      `Codigo postal: ${member.postalCode?.trim() || "-"}`,
+      `Alta como socio: ${memberSince}`,
+      `Fecha de nacimiento: ${formatDate(member.birthDate, formatLocale)}`,
+      `Plan asignado: ${feePlan.name}`,
+      `Cuota: ${formatCurrency(feePlan.amount, formatLocale)}`,
+      `Periodicidad: ${getMembershipExecutionLabel(feePlan)}`,
+      `Proximo cobro: ${formatMonthDay(nextChargeDate, formatLocale)}`,
+      `Saldo actual: ${formatCurrency(pendingAmount, formatLocale)} (${currentBalanceLabel})`,
+      `Permiso imagen: ${storedPermissions.image ? "Autorizado" : "No autorizado"}`,
+      `Permiso voz: ${storedPermissions.voice ? "Autorizado" : "No autorizado"}`,
+      `Permiso comunicaciones: ${
+        storedPermissions.communications ? "Autorizado" : "No autorizado"
+      }`,
+      `Permiso servicios: ${storedPermissions.services ? "Autorizado" : "No autorizado"}`,
+    ];
+
+    const paymentRows = sortedPaymentHistory.map((tx) => [
+      formatDate(tx.date, formatLocale),
+      tx.membershipPlanName ?? feePlan.name,
+      getPaymentStatus(tx.status),
+      formatCurrency(tx.amount, formatLocale),
+    ]);
+
+    return [
+      "Ficha de socio",
+      "",
+      `Asociacion: ${association?.name || "Kora"}`,
+      `Emitido: ${formatDateTime(new Date().toISOString(), formatLocale)}`,
+      "",
+      "Datos generales",
+      ...contactLines,
+      "",
+      ...buildFixedWidthReportLines(
+        "Historial de pagos",
+        [
+          { label: "Fecha", width: 14 },
+          { label: "Concepto", width: 30 },
+          { label: "Estado", width: 14 },
+          { label: "Importe", width: 14 },
+        ],
+        paymentRows
+      ),
+    ];
+  };
+
+  const handlePreviewMemberSheet = () => {
+    const previewWindow = window.open("", "_blank");
+    if (!previewWindow) return;
+
+    const lines = buildMemberSheetLines();
+    const html = `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ficha de socio ${escapeHtml(displayName)}</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f8fafc;
+        color: #0f172a;
+        font-family: "Segoe UI", sans-serif;
+      }
+      .sheet {
+        max-width: 960px;
+        margin: 32px auto;
+        padding: 32px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 24px;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      p {
+        margin: 0 0 20px;
+        color: #475569;
+      }
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font: 14px/1.6 Consolas, "Courier New", monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="sheet">
+      <h1>Ficha de socio</h1>
+      <p>${escapeHtml(displayName)} · ${escapeHtml(memberIdLabel)}</p>
+      <pre>${escapeHtml(lines.join("\n"))}</pre>
+    </main>
+  </body>
+</html>`;
+
+    previewWindow.document.open();
+    previewWindow.document.write(html);
+    previewWindow.document.close();
+    previewWindow.focus();
+  };
+
+  const handleDownloadMemberSheet = () => {
+    downloadLinesAsPdf(memberSheetFileName, buildMemberSheetLines());
+  };
+
   return (
     <div className="space-y-6 lg:space-y-8">
       <PageTopbar>
@@ -552,8 +686,14 @@ export default function MemberDetailPageView() {
                 <h2 className="text-2xl font-semibold text-gray-900">
                   {displayName}
                 </h2>
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  ACTIVO
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    member.deactivatedAt
+                      ? "bg-slate-100 text-slate-600"
+                      : "bg-emerald-50 text-emerald-700"
+                  }`}
+                >
+                  {memberStatusLabel.toUpperCase()}
                 </span>
                 <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
                   {tier.toUpperCase()}
@@ -587,6 +727,17 @@ export default function MemberDetailPageView() {
               </Link>
               <button
                 type="button"
+                onClick={handlePreviewMemberSheet}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  visibility
+                </span>
+                Ver Ficha
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadMemberSheet}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
               >
                 <span className="material-symbols-outlined text-[18px]">
@@ -678,46 +829,73 @@ export default function MemberDetailPageView() {
             </div>
           </div>
 
-          <SectionBlock
-            title="Historial de Pagos Recientes"
-            subtitle="Últimos movimientos de cuota"
-            actions={
-              <div className="flex items-center gap-3">
-                <select
-                  value={`${paymentsSortState.key}:${paymentsSortState.direction}`}
-                  onChange={(event) => {
-                    const [key, direction] = event.target.value.split(":") as [
-                      MemberPaymentsSortKey,
-                      "asc" | "desc",
-                    ];
-                    setPaymentsSortState({ key, direction });
-                  }}
-                  className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                  aria-label="Ordenar pagos"
-                >
-                  <option value="date:desc">Pagos más recientes</option>
-                  <option value="date:asc">Pagos más antiguos</option>
-                  <option value="amount:desc">Mayor importe</option>
-                  <option value="amount:asc">Menor importe</option>
-                  <option value="category:asc">Categoría A-Z</option>
-                  <option value="status:asc">Estado A-Z</option>
-                </select>
+          <section className={PAYMENTS_TABLE_SECTION_STYLES}>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Historial de Pagos Recientes
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Ultimos movimientos de cuota del socio.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
                 <Link href="/finance" className="text-xs font-semibold text-primary">
                   Ver todo
                 </Link>
               </div>
-            }
-          >
+            </div>
+
             <div className={tableWrapperStyles}>
               <table className="w-full text-left text-sm">
                 <thead className={tableHeadStyles}>
                   <tr>
-                    <th className={tableHeadCellStyles}>Fecha</th>
-                    <th className={tableHeadCellStyles}>Categoría</th>
-                    <th className={tableHeadCellStyles}>Importe</th>
-                    <th className={tableHeadCellStyles}>Estado</th>
+                    <SortableHeader
+                      label="Fecha"
+                      active={paymentsSortState.key === "date"}
+                      direction={paymentsSortState.direction}
+                      onClick={() =>
+                        setPaymentsSortState((current) =>
+                          toggleSort(current, "date")
+                        )
+                      }
+                      className={tableHeadCellStyles}
+                    />
+                    <SortableHeader
+                      label="Categoria"
+                      active={paymentsSortState.key === "category"}
+                      direction={paymentsSortState.direction}
+                      onClick={() =>
+                        setPaymentsSortState((current) =>
+                          toggleSort(current, "category")
+                        )
+                      }
+                      className={tableHeadCellStyles}
+                    />
+                    <SortableHeader
+                      label="Importe"
+                      active={paymentsSortState.key === "amount"}
+                      direction={paymentsSortState.direction}
+                      onClick={() =>
+                        setPaymentsSortState((current) =>
+                          toggleSort(current, "amount")
+                        )
+                      }
+                      className={tableHeadCellStyles}
+                    />
+                    <SortableHeader
+                      label="Estado"
+                      active={paymentsSortState.key === "status"}
+                      direction={paymentsSortState.direction}
+                      onClick={() =>
+                        setPaymentsSortState((current) =>
+                          toggleSort(current, "status")
+                        )
+                      }
+                      className={tableHeadCellStyles}
+                    />
                     <th className={`${tableHeadCellStyles} text-right`}>
-                      Acción
+                      Accion
                     </th>
                   </tr>
                 </thead>
@@ -748,20 +926,17 @@ export default function MemberDetailPageView() {
                         <td className="px-6 py-4">
                           <span
                             className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                              PAYMENT_STYLES[
-                                tx.status === "completed"
-                                  ? "Pagado"
-                                  : "Pendiente"
-                              ]
+                              PAYMENT_STYLES[getPaymentStatus(tx.status)]
                             }`}
                           >
-                            {tx.status === "completed" ? "Pagado" : "Pendiente"}
+                            {getPaymentStatus(tx.status)}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button
                             type="button"
                             className={tableIconActionStyles}
+                            aria-label={`Ver detalle del movimiento ${tx.id}`}
                           >
                             <span className="material-symbols-outlined text-[18px]">
                               receipt_long
@@ -774,7 +949,14 @@ export default function MemberDetailPageView() {
                 </tbody>
               </table>
             </div>
-          </SectionBlock>
+
+            <div className={tableFooterStyles}>
+              <span>
+                {sortedPaymentHistory.length} movimientos registrados en la ficha
+                del socio
+              </span>
+            </div>
+          </section>
         </div>
 
         <SectionBlock

@@ -1157,7 +1157,12 @@ export default function DocumentsPage() {
         </div>
       </Modal>
 
-      <Modal isOpen={uploadOpen} onClose={closeUpload} title="Subir Archivo">
+      <Modal
+        isOpen={uploadOpen}
+        onClose={closeUpload}
+        size="lg"
+        title="Subir Archivo"
+      >
         <div className="space-y-6">
           <input
             ref={fileInputRef}
@@ -1293,6 +1298,7 @@ export default function DocumentsPage() {
       <Modal
         isOpen={permissionsOpen}
         onClose={() => setPermissionsOpen(false)}
+        size="lg"
         title="Gestionar permisos"
       >
         {!selectedDoc ? (

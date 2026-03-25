@@ -1,4 +1,5 @@
 import type { SortDirection } from "@/lib/table-sorting";
+import Icon from "@/components/shared/Icon";
 
 interface SortableHeaderProps {
   label: string;
@@ -35,13 +36,12 @@ export default function SortableHeader({
         }`}
       >
         <span>{label}</span>
-        <span
-          className={`material-symbols-outlined text-[16px] ${
+        <Icon
+          name={iconName}
+          className={`text-[16px] ${
             active ? "opacity-100" : "opacity-50"
           }`}
-        >
-          {iconName}
-        </span>
+        />
       </button>
     </th>
   );

@@ -11,9 +11,9 @@ type ModuleTopbarProps = {
 
 export const moduleTopbarButtonStyles = {
   secondary:
-    "group inline-flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto sm:min-w-[158px]",
+    "group inline-flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto sm:min-w-[170px]",
   primary:
-    "group inline-flex h-11 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-3.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90 sm:w-auto sm:min-w-[158px]",
+    "group inline-flex h-12 w-full items-center justify-center gap-3 rounded-2xl bg-primary px-4 text-sm font-semibold text-white shadow-[0_12px_24px_-14px_rgba(37,99,235,0.9)] transition hover:bg-primary/90 sm:w-auto sm:min-w-[170px]",
 };
 
 export const moduleTopbarButtonIconStyles = {
@@ -22,7 +22,7 @@ export const moduleTopbarButtonIconStyles = {
   primary:
     "flex h-4 w-4 shrink-0 items-center justify-center text-white transition",
   add:
-    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/10 transition group-hover:bg-white/20",
+    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/10 transition group-hover:bg-white/20",
 };
 
 export default function ModuleTopbar({

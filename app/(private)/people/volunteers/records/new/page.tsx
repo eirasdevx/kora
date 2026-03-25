@@ -10,6 +10,7 @@ import { useVolunteerActivitiesStore } from "@/modules/volunteers/volunteer-acti
 import { useEventsStore } from "@/modules/events/events.store";
 import { Contact } from "@/modules/contacts/contact.types";
 import { VolunteerProfileType } from "@/modules/volunteers/volunteer-activity.types";
+import { calculateVolunteerPoints } from "@/modules/people/member-points.utils";
 
 function getDisplayName(contact: Contact) {
   const composed = `${contact.firstName} ${contact.lastName}`.trim();
@@ -151,6 +152,10 @@ export default function VolunteerRecordPage() {
   const recentActivityCount = activities.filter(
     (activity) => activity.contactId === currentSelectedId
   ).length;
+  const projectedPoints =
+    effectiveProfileType === "member"
+      ? calculateVolunteerPoints(Number(hours))
+      : 0;
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -298,6 +303,15 @@ export default function VolunteerRecordPage() {
                     Horas
                   </span>
                 </div>
+                {effectiveProfileType === "member" ? (
+                  <p className="mt-2 text-xs font-medium text-blue-600">
+                    Este registro generara {projectedPoints} puntos para el socio.
+                  </p>
+                ) : (
+                  <p className="mt-2 text-xs text-gray-400">
+                    Los puntos solo se generan en perfiles marcados como socios.
+                  </p>
+                )}
               </div>
             </div>
           </div>

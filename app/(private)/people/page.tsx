@@ -237,6 +237,17 @@ export default function PeoplePage() {
               Total personas
             </Link>
             <Link
+              href="/people/members/points"
+              className={moduleTopbarButtonStyles.secondary}
+            >
+              <span className={moduleTopbarButtonIconStyles.secondary}>
+                <span className="material-symbols-outlined text-[16px]">
+                  redeem
+                </span>
+              </span>
+              Marketplace socios
+            </Link>
+            <Link
               href="/contacts/new"
               className={moduleTopbarButtonStyles.primary}
             >

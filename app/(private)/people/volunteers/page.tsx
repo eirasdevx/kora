@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageTopbar from "@/components/PageTopbar";
 import BackLink from "@/components/shared/BackLink";
+import {
+  moduleTopbarButtonIconStyles,
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
 import SortableHeader from "@/components/shared/SortableHeader";
 import {
   tableBodyStyles,
@@ -281,19 +285,23 @@ export default function VolunteersPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/people/volunteers/records/new"
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+              className={moduleTopbarButtonStyles.secondary}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                post_add
+              <span className={moduleTopbarButtonIconStyles.secondary}>
+                <span className="material-symbols-outlined text-[16px]">
+                  post_add
+                </span>
               </span>
               Registrar actividad
             </Link>
             <Link
               href="/contacts/new"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
+              className={moduleTopbarButtonStyles.primary}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                add
+              <span className={moduleTopbarButtonIconStyles.add}>
+                <span className="material-symbols-outlined text-[16px]">
+                  add
+                </span>
               </span>
               Nuevo Voluntario
             </Link>

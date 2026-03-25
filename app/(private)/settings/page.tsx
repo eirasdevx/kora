@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import PageTopbar from "@/components/PageTopbar";
+import Icon from "@/components/shared/Icon";
 import { useSessionStore } from "@/core/session/session.store";
 import { type UserRole, useUsersStore } from "@/core/users/users.store";
 
@@ -13,7 +14,7 @@ const cards = [
       "Actualiza tu información personal, credenciales y preferencias de cuenta.",
     href: "/settings/profile",
     tone: "bg-blue-50 text-blue-600",
-    icon: <span className="material-symbols-outlined text-[20px]">person</span>,
+    icon: "person",
   },
   {
     title: "Perfil de asociación",
@@ -21,9 +22,7 @@ const cards = [
       "Información legal, contacto y configuración de cuotas, importes y periodicidades de socios.",
     href: "/settings/association",
     tone: "bg-indigo-50 text-indigo-600",
-    icon: (
-      <span className="material-symbols-outlined text-[20px]">apartment</span>
-    ),
+    icon: "apartment",
   },
   {
     title: "Gestión de usuarios",
@@ -31,7 +30,7 @@ const cards = [
       "Administra los accesos del equipo, define roles, permisos y monitoriza la actividad.",
     href: "/settings/users",
     tone: "bg-purple-50 text-purple-600",
-    icon: <span className="material-symbols-outlined text-[20px]">group</span>,
+    icon: "group",
   },
   {
     title: "Notificaciones",
@@ -39,11 +38,7 @@ const cards = [
       "Revisa el centro de notificaciones con cambios, pagos y eventos clave.",
     href: "/settings/notifications",
     tone: "bg-amber-50 text-amber-600",
-    icon: (
-      <span className="material-symbols-outlined text-[20px]">
-        notifications
-      </span>
-    ),
+    icon: "notifications",
   },
   {
     title: "Mensajería",
@@ -51,7 +46,7 @@ const cards = [
       "Guarda credenciales de correo y números para envíos masivos.",
     href: "/settings/messaging",
     tone: "bg-sky-50 text-sky-600",
-    icon: <span className="material-symbols-outlined text-[20px]">mail</span>,
+    icon: "mail",
   },
   {
     title: "Seguridad",
@@ -59,9 +54,7 @@ const cards = [
       "Ajustes de 2FA, políticas de contraseñas, sesiones activas y logs de seguridad.",
     href: "/settings/security",
     tone: "bg-rose-50 text-rose-600",
-    icon: (
-      <span className="material-symbols-outlined text-[20px]">security</span>
-    ),
+    icon: "security",
   },
   {
     title: "Apariencia",
@@ -69,9 +62,7 @@ const cards = [
       "Personaliza los colores corporativos, temas claros/oscuros y la tipografía.",
     href: "/settings/appearance",
     tone: "bg-emerald-50 text-emerald-600",
-    icon: (
-      <span className="material-symbols-outlined text-[20px]">palette</span>
-    ),
+    icon: "palette",
   },
   {
     title: "Migración",
@@ -79,11 +70,7 @@ const cards = [
       "Exporta e importa los datos de tu asociación en formato JSON o CSV.",
     href: "/settings/migration",
     tone: "bg-sky-50 text-sky-600",
-    icon: (
-      <span className="material-symbols-outlined text-[20px]">
-        cloud_download
-      </span>
-    ),
+    icon: "cloud_download",
   },
 ] as const;
 
@@ -159,9 +146,7 @@ export default function SettingsPage() {
           <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center xl:w-auto xl:justify-end">
             <div className="relative w-full sm:w-72">
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                <span className="material-symbols-outlined text-[16px] leading-none">
-                  search
-                </span>
+                <Icon name="search" className="text-[16px]" />
               </span>
               <input
                 value={search}
@@ -212,7 +197,7 @@ export default function SettingsPage() {
                 <div
                   className={`flex h-12 w-12 items-center justify-center rounded-2xl transition ${card.tone} group-hover:scale-[1.03]`}
                 >
-                  {card.icon}
+                  <Icon name={card.icon} className="text-[20px]" />
                 </div>
                 <h3 className="mt-5 text-lg font-semibold text-gray-900">
                   {card.title}

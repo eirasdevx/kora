@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  moduleTopbarButtonIconStyles,
+  moduleTopbarButtonStyles,
+} from "@/components/shared/ModuleTopbar";
+import Icon from "@/components/shared/Icon";
+
 interface Props {
   onAdd: () => void;
 }
@@ -19,12 +25,10 @@ export default function ContactsHeader({ onAdd }: Props) {
 
         <button
           onClick={onAdd}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
+          className={moduleTopbarButtonStyles.primary}
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-            <span className="material-symbols-outlined text-[16px]">
-              add
-            </span>
+          <span className={moduleTopbarButtonIconStyles.add}>
+            <Icon name="add" className="text-[16px]" />
           </span>
           Nuevo contacto
         </button>

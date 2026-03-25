@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Icon from "@/components/shared/Icon";
 import { useSessionStore } from "@/core/session/session.store";
 import Sidebar from "@/components/Sidebar";
 
@@ -41,9 +42,7 @@ export default function AppLayout({
             aria-label="Abrir menú"
             className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50"
           >
-            <span className="material-symbols-outlined text-[20px]">
-              menu
-            </span>
+            <Icon name="menu" className="text-[20px]" />
           </button>
           <span className="text-sm font-semibold text-gray-600">Menú</span>
         </div>
