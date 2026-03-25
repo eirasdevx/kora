@@ -108,7 +108,7 @@ const COPY_ES: Copy = {
   breadcrumb: "Configuración > Perfil",
   pageTitle: "Configuración del perfil",
   pageSubtitle: "Gestiona tu información personal y preferencias de cuenta.",
-  backToSettings: "← Volver a configuración",
+  backToSettings: "Volver a configuración",
   guestNotice: "Esta sección solo está disponible en cuentas autenticadas.",
   guestTitle: "Perfil no disponible en modo invitado",
   guestMessage: "Inicia sesión para gestionar tu información y preferencias.",
@@ -179,7 +179,7 @@ const COPY: Record<LocaleCode, Copy> = {
     pageTitle: "Configuración do perfil",
     pageSubtitle:
       "Xestiona a túa información persoal e as preferencias da conta.",
-    backToSettings: "← Volver á configuración",
+    backToSettings: "Volver á configuración",
     guestNotice: "Esta sección só está dispoñible en contas autenticadas.",
     guestTitle: "Perfil non dispoñible en modo convidado",
     guestMessage: "Inicia sesión para xestionar a túa información e preferencias.",
@@ -243,7 +243,7 @@ const COPY: Record<LocaleCode, Copy> = {
     pageTitle: "Profilaren ezarpenak",
     pageSubtitle:
       "Kudeatu zure informazio pertsonala eta kontuaren hobespenak.",
-    backToSettings: "← Itzuli ezarpenetara",
+    backToSettings: "Itzuli ezarpenetara",
     guestNotice: "Atal hau kontu autentifikatuetan bakarrik dago eskuragarri.",
     guestTitle: "Profila ez dago erabilgarri gonbidatu moduan",
     guestMessage: "Hasi saioa zure informazioa eta hobespenak kudeatzeko.",
@@ -308,7 +308,7 @@ const COPY: Record<LocaleCode, Copy> = {
     pageTitle: "Configuració del perfil",
     pageSubtitle:
       "Gestiona la teva informació personal i les preferències del compte.",
-    backToSettings: "← Torna a la configuració",
+    backToSettings: "Torna a la configuració",
     guestNotice: "Aquesta secció només està disponible en comptes autenticats.",
     guestTitle: "Perfil no disponible en mode convidat",
     guestMessage: "Inicia sessió per gestionar la teva informació i preferències.",
@@ -372,7 +372,7 @@ const COPY: Record<LocaleCode, Copy> = {
     pageTitle: "Configuració del perfil",
     pageSubtitle:
       "Gestiona la teua informació personal i les preferències del compte.",
-    backToSettings: "← Torna a la configuració",
+    backToSettings: "Torna a la configuració",
     guestNotice: "Aquesta secció només està disponible en comptes autenticats.",
     guestTitle: "Perfil no disponible en mode convidat",
     guestMessage: "Inicia sessió per gestionar la teua informació i preferències.",
@@ -435,7 +435,7 @@ const COPY: Record<LocaleCode, Copy> = {
     breadcrumb: "Settings > Profile",
     pageTitle: "Profile settings",
     pageSubtitle: "Manage your personal information and account preferences.",
-    backToSettings: "← Back to settings",
+    backToSettings: "Back to settings",
     guestNotice: "This section is only available for authenticated accounts.",
     guestTitle: "Profile not available in guest mode",
     guestMessage: "Sign in to manage your information and preferences.",

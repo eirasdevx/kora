@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -11,7 +12,7 @@ type NavModule = "accounting" | "events" | "contacts" | "documents";
 type NavItem = {
   label: string;
   href: string;
-  icon: string;
+  icon: "dashboard" | "people" | "finance" | "resources" | "events" | "mail";
   moduleKey?: NavModule;
 };
 
@@ -22,6 +23,24 @@ interface SidebarProps {
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
+}
+
+
+function SidebarIcon({ icon }: { icon: NavItem["icon"] }) {
+  const iconNames = {
+    dashboard: "space_dashboard",
+    people: "groups",
+    finance: "receipt_long",
+    resources: "inventory_2",
+    events: "event",
+    mail: "mail",
+  } as const;
+
+  return (
+    <span className="material-symbols-outlined text-[20px] leading-none">
+      {iconNames[icon]}
+    </span>
+  );
 }
 
 export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
@@ -39,26 +58,26 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const moduleAccess = activeUser?.permissions?.modules;
 
   const mainItems: NavItem[] = [
-    { label: "Panel de control", href: "/dashboard", icon: "space_dashboard" },
+    { label: "Panel de control", href: "/dashboard", icon: "dashboard" },
     {
       label: "Personas",
       href: "/people",
-      icon: "groups",
+      icon: "people",
       moduleKey: "contacts",
     },
     {
       label: "Finanzas",
       href: "/finance",
-      icon: "receipt_long",
+      icon: "finance",
       moduleKey: "accounting",
     },
     {
       label: "Recursos",
       href: "/resources",
-      icon: "inventory_2",
+      icon: "resources",
       moduleKey: "documents",
     },
-    { label: "Eventos", href: "/events", icon: "event", moduleKey: "events" },
+    { label: "Eventos", href: "/events", icon: "events", moduleKey: "events" },
     { label: "Mensajería", href: "/messaging", icon: "mail" },
   ];
 
@@ -139,18 +158,22 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       >
         <div className="border-b px-6 py-6">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-heading text-lg font-extrabold text-slate-900">
-                Kora
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Gestión de asociaciones
-              </p>
+            <div className="flex items-center gap-3">
+              <Image src="/icon.svg" alt="Logo de Kora" width={28} height={28} />
+              <div>
+                <p className="font-heading text-lg font-extrabold text-slate-900">
+                  Kora
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Gestión de asociaciones
+                </p>
+              </div>
             </div>
             {onClose ? (
               <button
                 type="button"
                 onClick={closeSidebar}
+                aria-label="Cerrar menú"
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 lg:hidden"
               >
                 <span className="material-symbols-outlined text-[16px]">
@@ -175,8 +198,8 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                       : "text-slate-700 hover:bg-slate-50"
                   )}
                 >
-                  <span className="material-symbols-outlined text-[20px]">
-                    {item.icon}
+                  <span className="inline-flex h-5 w-5 items-center justify-center" aria-hidden="true">
+                    <SidebarIcon icon={item.icon} />
                   </span>
                   {item.label}
                 </Link>

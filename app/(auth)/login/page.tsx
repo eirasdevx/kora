@@ -24,6 +24,15 @@ const normalizeLoginCredentials = (
   companyCode: credentials.companyCode?.trim().toUpperCase() ?? "",
 });
 
+
+function EyeIcon({ open }: { open: boolean }) {
+  return (
+    <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+      {open ? "visibility" : "visibility_off"}
+    </span>
+  );
+}
+
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -268,9 +277,7 @@ function LoginPageContent() {
                         : "Mostrar contraseña"
                     }
                   >
-                    <span className="material-symbols-outlined text-[18px]">
-                      {showPassword ? "visibility" : "visibility_off"}
-                    </span>
+                    <EyeIcon open={showPassword} />
                   </button>
                 </div>
               </div>

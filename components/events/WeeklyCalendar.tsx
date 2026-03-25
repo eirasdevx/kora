@@ -50,15 +50,21 @@ export default function WeeklyCalendar({
         <div className="flex gap-2">
           <button
             onClick={onPrevWeek}
+            aria-label="Semana anterior"
             className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50"
           >
-            ←
+            <span className="material-symbols-outlined text-[18px] leading-none">
+              chevron_left
+            </span>
           </button>
           <button
             onClick={onNextWeek}
+            aria-label="Semana siguiente"
             className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50"
           >
-            →
+            <span className="material-symbols-outlined text-[18px] leading-none">
+              chevron_right
+            </span>
           </button>
         </div>
       </div>

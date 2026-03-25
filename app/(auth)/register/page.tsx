@@ -49,6 +49,15 @@ const STEP_LABELS: Record<Step, string> = {
   success: "Código",
 };
 
+
+function EyeIcon({ open }: { open: boolean }) {
+  return (
+    <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+      {open ? "visibility" : "visibility_off"}
+    </span>
+  );
+}
+
 export default function RegisterPage() {
   const [step, setStep] = useState<Step>("admin");
   const [pendingAdmin, setPendingAdmin] = useState<AdminAccount | null>(null);
@@ -362,9 +371,7 @@ export default function RegisterPage() {
                             : "Mostrar contraseña"
                         }
                       >
-                        <span className="material-symbols-outlined text-[18px]">
-                          {showPassword ? "visibility" : "visibility_off"}
-                        </span>
+                        <EyeIcon open={showPassword} />
                       </button>
                     </div>
                     <p className="text-xs text-slate-400">
@@ -393,9 +400,7 @@ export default function RegisterPage() {
                             : "Mostrar contraseña"
                         }
                       >
-                        <span className="material-symbols-outlined text-[18px]">
-                          {showRepeat ? "visibility" : "visibility_off"}
-                        </span>
+                        <EyeIcon open={showRepeat} />
                       </button>
                     </div>
                   </div>

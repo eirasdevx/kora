@@ -23,6 +23,43 @@ const CATEGORY_LABELS: Record<string, string> = {
 const MONTH_OPTIONS = [3, 4, 5, 6];
 
 
+function UiIcon({
+  kind,
+  className = "text-[18px]",
+}: {
+  kind:
+    | "personAdd"
+    | "event"
+    | "upload"
+    | "mail"
+    | "balance"
+    | "trendUp"
+    | "trendDown"
+    | "group";
+  className?: string;
+}) {
+  const iconNames = {
+    personAdd: "person_add",
+    event: "event",
+    upload: "upload_file",
+    mail: "mail",
+    balance: "account_balance",
+    trendUp: "trending_up",
+    trendDown: "trending_down",
+    group: "group",
+  } as const;
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`material-symbols-outlined leading-none ${className}`}
+    >
+      {iconNames[kind]}
+    </span>
+  );
+}
+
+
 const formatCurrency = (value: number, locale: string) =>
   new Intl.NumberFormat(locale, {
     style: "currency",
@@ -329,9 +366,7 @@ export default function DashboardPage() {
                 className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                  <span className="material-symbols-outlined text-[18px]">
-                    person_add
-                  </span>
+                  <UiIcon kind="personAdd" />
                 </span>
                 Nuevo socio
               </Link>
@@ -340,9 +375,7 @@ export default function DashboardPage() {
                 className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-                  <span className="material-symbols-outlined text-[18px]">
-                    event
-                  </span>
+                  <UiIcon kind="event" />
                 </span>
                 Nuevo evento
               </Link>
@@ -351,9 +384,7 @@ export default function DashboardPage() {
                 className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-                  <span className="material-symbols-outlined text-[18px]">
-                    upload_file
-                  </span>
+                  <UiIcon kind="upload" />
                 </span>
                 Subir documento
               </Link>
@@ -363,9 +394,7 @@ export default function DashboardPage() {
                   className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
                 >
                   <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                    <span className="material-symbols-outlined text-[18px]">
-                      mail
-                    </span>
+                    <UiIcon kind="mail" />
                   </span>
                   Nueva plantilla
                 </Link>
@@ -392,9 +421,7 @@ export default function DashboardPage() {
                 Saldo total
               </p>
               <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <span className="material-symbols-outlined text-[18px]">
-                  account_balance
-                </span>
+                <UiIcon kind="balance" />
               </span>
             </div>
             <p className="mt-3 text-2xl font-semibold text-gray-900">
@@ -422,9 +449,7 @@ export default function DashboardPage() {
                 Ingresos periodo
               </p>
               <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-                <span className="material-symbols-outlined text-[18px]">
-                  trending_up
-                </span>
+                <UiIcon kind="trendUp" />
               </span>
             </div>
             <p className="mt-3 text-2xl font-semibold text-gray-900">
@@ -441,9 +466,7 @@ export default function DashboardPage() {
                 Gastos periodo
               </p>
               <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
-                <span className="material-symbols-outlined text-[18px]">
-                  trending_down
-                </span>
+                <UiIcon kind="trendDown" />
               </span>
             </div>
             <p className="mt-3 text-2xl font-semibold text-gray-900">
@@ -460,9 +483,7 @@ export default function DashboardPage() {
                 Socios activos
               </p>
               <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                <span className="material-symbols-outlined text-[18px]">
-                  group
-                </span>
+                <UiIcon kind="group" />
               </span>
             </div>
             <p className="mt-3 text-2xl font-semibold text-gray-900">

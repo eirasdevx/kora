@@ -201,7 +201,11 @@ export default function AppearanceSettingsPage() {
                         : "border border-gray-300"
                     }`}
                   >
-                    {active ? "✓" : ""}
+                    {active ? (
+                      <span className="material-symbols-outlined text-[16px] leading-none">
+                        check
+                      </span>
+                    ) : null}
                   </span>
                 </div>
               </button>
