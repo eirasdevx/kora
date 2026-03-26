@@ -31,6 +31,26 @@ const shouldLogDatabaseTarget =
   process.env.NODE_ENV !== "production" ||
   process.env.KORA_LOG_DATABASE_TARGET === "1";
 
+const parsePoolSize = (value?: string) => {
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return null;
+  }
+  return Math.floor(parsed);
+};
+
+const configuredPoolSize = parsePoolSize(process.env.KORA_DATABASE_POOL_MAX);
+const poolMax =
+  configuredPoolSize ??
+  (databaseDiagnostics?.isSupabasePooler
+    ? databaseUrl.isProduction
+      ? 3
+      : 1
+    : databaseUrl.isProduction
+      ? 5
+      : 10);
+
 if (shouldLogDatabaseTarget && !global.koraDatabaseTargetShown) {
   console.info(
     `[kora] Prisma target ${formatDatabaseTargetForLogs(databaseDiagnostics)}`
@@ -49,9 +69,9 @@ const logDatabaseDriverError = (label: string, error: Error) => {
 const adapter = new PrismaPg(
   {
     connectionString,
-    max: databaseUrl.isProduction ? 5 : 10,
+    max: poolMax,
     connectionTimeoutMillis: 15_000,
-    idleTimeoutMillis: 30_000,
+    idleTimeoutMillis: databaseDiagnostics?.isSupabasePooler ? 10_000 : 30_000,
     keepAlive: true,
   },
   {

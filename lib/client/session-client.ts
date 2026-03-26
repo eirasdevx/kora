@@ -17,6 +17,17 @@ type ApiErrorShape = {
   error?: string;
 };
 
+const QUIET_CLIENT_API_ERROR_PATTERNS = [
+  "no se puede conectar con la base de datos",
+  "connection terminated due to connection timeout",
+  "max client connections reached",
+  "connect timeout",
+  "connection timeout",
+  "failed to fetch",
+  "fetch failed",
+  "networkerror",
+] as const;
+
 export function applySessionPayload(payload: SessionBootstrapPayload) {
   useUsersStore.getState().hydrateUsers({
     companyCode: payload.companyCode,
@@ -60,6 +71,28 @@ export function clearClientSession() {
   useMessagingStore.getState().resetTemplates();
   useUsersStore.getState().resetUsers();
   useSessionStore.getState().logout();
+}
+
+export function isQuietClientApiError(error: unknown) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+
+  if (!message) {
+    return false;
+  }
+
+  const normalized = message.trim().toLowerCase();
+  return QUIET_CLIENT_API_ERROR_PATTERNS.some((pattern) =>
+    normalized.includes(pattern)
+  );
+}
+
+export function shouldLogClientApiError(error: unknown) {
+  return !isQuietClientApiError(error);
 }
 
 export async function parseApiResponse<T>(response: Response): Promise<T> {

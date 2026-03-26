@@ -12,6 +12,7 @@ import {
   deleteAssociationModuleRecord,
   listAssociationModuleRecords,
   saveAssociationModuleRecords,
+  shouldLogAssociationDataError,
   upsertAssociationModuleRecord,
 } from "@/lib/client/association-data-client";
 
@@ -63,7 +64,9 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       set({ documents: mergedDocuments });
       return;
     } catch (error) {
-      console.error(error);
+      if (shouldLogAssociationDataError(error)) {
+        console.error(error);
+      }
     }
 
     if (migratedRecords.length > 0) {

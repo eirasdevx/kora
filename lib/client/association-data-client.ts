@@ -12,6 +12,38 @@ type AssociationRecordsResponse<T> = {
 };
 
 const DEFAULT_BATCH_SIZE = 100;
+const CONNECTION_ERROR_PATTERNS = [
+  "no se puede conectar con la base de datos",
+  "connection terminated due to connection timeout",
+  "max client connections reached",
+  "connect timeout",
+  "connection timeout",
+  "failed to fetch",
+  "fetch failed",
+  "networkerror",
+] as const;
+
+export function isAssociationDataConnectionError(error: unknown) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+
+  if (!message) {
+    return false;
+  }
+
+  const normalizedMessage = message.trim().toLowerCase();
+  return CONNECTION_ERROR_PATTERNS.some((pattern) =>
+    normalizedMessage.includes(pattern)
+  );
+}
+
+export function shouldLogAssociationDataError(error: unknown) {
+  return !isAssociationDataConnectionError(error);
+}
 
 const parseResponse = async <T>(response: Response): Promise<T> => {
   const payload = (await response.json().catch(() => null)) as

@@ -11,6 +11,7 @@ import { useNotificationsStore } from "@/core/notifications/notifications.store"
 import {
   deleteAssociationModuleRecord,
   listAssociationModuleRecords,
+  shouldLogAssociationDataError,
   upsertAssociationModuleRecord,
 } from "@/lib/client/association-data-client";
 
@@ -36,7 +37,9 @@ export const useEventsStore = create<EventsState>((set, get) => ({
       set({ events });
       return;
     } catch (error) {
-      console.error(error);
+      if (shouldLogAssociationDataError(error)) {
+        console.error(error);
+      }
     }
 
     const all = await db.events.toArray();

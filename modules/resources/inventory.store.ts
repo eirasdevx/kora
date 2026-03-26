@@ -12,6 +12,7 @@ import {
   deleteAssociationModuleRecord,
   listAssociationModuleRecords,
   saveAssociationModuleRecords,
+  shouldLogAssociationDataError,
   upsertAssociationModuleRecord,
 } from "@/lib/client/association-data-client";
 
@@ -83,7 +84,9 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       set({ items: normalizedPersistedItems });
       return;
     } catch (error) {
-      console.error(error);
+      if (shouldLogAssociationDataError(error)) {
+        console.error(error);
+      }
     }
 
     const normalizedItems = scopedRecords.map((item) => normalizeItem(item));

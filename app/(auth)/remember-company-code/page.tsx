@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { parseApiResponse } from "@/lib/client/session-client";
+import {
+  parseApiResponse,
+  shouldLogClientApiError,
+} from "@/lib/client/session-client";
 
 type CompanyCodeResponse = {
   success: boolean;
@@ -47,7 +50,9 @@ export default function RememberCompanyCodePage() {
       setInfo(payload.message);
       setIdentifier("");
     } catch (requestError) {
-      console.error(requestError);
+      if (shouldLogClientApiError(requestError)) {
+        console.error(requestError);
+      }
       setError(
         requestError instanceof Error
           ? requestError.message

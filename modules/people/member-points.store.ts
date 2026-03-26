@@ -1,5 +1,6 @@
 "use client";
 
+import type { AssociationDataMutationMode } from "@/lib/association-data";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { useNotificationsStore } from "@/core/notifications/notifications.store";
@@ -8,6 +9,7 @@ import {
   deleteAssociationModuleRecord,
   listAssociationModuleRecords,
   saveAssociationModuleRecords,
+  shouldLogAssociationDataError,
   upsertAssociationModuleRecord,
 } from "@/lib/client/association-data-client";
 import {
@@ -28,6 +30,10 @@ interface MemberPointsState {
   addReward: (
     payload: Omit<MemberPointReward, "id" | "createdAt" | "updatedAt">
   ) => Promise<MemberPointReward>;
+  importRewards: (
+    rewards: MemberPointReward[],
+    mode?: AssociationDataMutationMode
+  ) => Promise<MemberPointReward[]>;
   updateReward: (
     id: string,
     updates: Partial<Omit<MemberPointReward, "id" | "createdAt">>
@@ -111,6 +117,17 @@ const sanitizeRedemptions = (records: unknown[]) =>
     .map(normalizeMemberPointRedemption)
     .filter(Boolean) as MemberPointRedemption[];
 
+const mergeRewards = (
+  currentRewards: MemberPointReward[],
+  importedRewards: MemberPointReward[]
+) => {
+  const importedIds = new Set(importedRewards.map((reward) => reward.id));
+  return [
+    ...importedRewards,
+    ...currentRewards.filter((reward) => !importedIds.has(reward.id)),
+  ];
+};
+
 export const useMemberPointsStore = create<MemberPointsState>()(
   persist(
     (set, get) => ({
@@ -168,7 +185,9 @@ export const useMemberPointsStore = create<MemberPointsState>()(
           });
           return;
         } catch (error) {
-          console.error(error);
+          if (shouldLogAssociationDataError(error)) {
+            console.error(error);
+          }
         }
 
         set((state) => ({
@@ -224,6 +243,47 @@ export const useMemberPointsStore = create<MemberPointsState>()(
         });
 
         return reward;
+      },
+
+      importRewards: async (incomingRewards, mode = "merge") => {
+        const rewardsToImport = sanitizeRewards(incomingRewards);
+        let storedRewards = rewardsToImport;
+        const authenticated = isAuthenticated();
+
+        if (authenticated) {
+          storedRewards = sanitizeRewards(
+            await saveAssociationModuleRecords<MemberPointReward>(
+              "memberPointRewards",
+              rewardsToImport,
+              mode
+            )
+          );
+        }
+
+        const nextRewards = authenticated
+          ? storedRewards
+          : mode === "replace"
+            ? rewardsToImport
+            : mergeRewards(get().rewards, rewardsToImport);
+
+        set({
+          rewards: nextRewards,
+        });
+
+        useNotificationsStore.getState().addNotification({
+          category: "members",
+          title: "Importacion de recompensas completada",
+          description:
+            rewardsToImport.length === 1
+              ? "Se importo 1 recompensa en el catalogo de puntos."
+              : `Se importaron ${rewardsToImport.length} recompensas en el catalogo de puntos.`,
+          href: "/people/members/points",
+          actionLabel: "Ver marketplace",
+          icon: "upload_file",
+          tone: "bg-sky-50 text-sky-600",
+        });
+
+        return nextRewards;
       },
 
       updateReward: async (id, updates) => {

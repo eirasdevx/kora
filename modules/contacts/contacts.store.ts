@@ -17,6 +17,7 @@ import { useNotificationsStore } from "@/core/notifications/notifications.store"
 import {
   deleteAssociationModuleRecord,
   listAssociationModuleRecords,
+  shouldLogAssociationDataError,
   upsertAssociationModuleRecord,
 } from "@/lib/client/association-data-client";
 import {
@@ -93,7 +94,9 @@ const hasMembershipTransaction = async (contactId: string) => {
         (tx.contactId === contactId || tx.contactIds?.includes(contactId))
     );
   } catch (error) {
-    console.error(error);
+    if (shouldLogAssociationDataError(error)) {
+      console.error(error);
+    }
     const persisted = await db.transactions.toArray();
     const { scopedRecords } = getAssociationScopedRecords(
       persisted,
@@ -245,7 +248,9 @@ export const useContactsStore = create<ContactsState>((set, get) => ({
         await hydratePersistedContacts(contacts);
         return;
       } catch (error) {
-        console.error(error);
+        if (shouldLogAssociationDataError(error)) {
+          console.error(error);
+        }
       }
 
       const all = await db.contacts.toArray();

@@ -84,7 +84,7 @@ export function normalizeMemberPointReward(
     description: toSafeString(source.description) || undefined,
     category,
     pointsCost,
-    stock: stock && stock > 0 ? stock : undefined,
+    stock: stock === null ? undefined : stock,
     active: source.active !== false,
     createdAt: toSafeString(source.createdAt) || new Date().toISOString(),
     updatedAt: toSafeString(source.updatedAt) || new Date().toISOString(),

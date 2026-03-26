@@ -53,6 +53,16 @@ import {
   formatMemberId,
   resolveMemberTier,
 } from "@/modules/people/people.utils";
+import { useVolunteerActivitiesStore } from "@/modules/volunteers/volunteer-activities.store";
+import {
+  MemberPointRewardCategoryLabels,
+  type MemberPointReward,
+} from "@/modules/people/member-points.types";
+import { useMemberPointsStore } from "@/modules/people/member-points.store";
+import {
+  getMemberPointsSummary,
+  getRewardRemainingStock,
+} from "@/modules/people/member-points.utils";
 import {
   buildFixedWidthReportLines,
   downloadLinesAsPdf,
@@ -68,6 +78,7 @@ const PAYMENT_STYLES: Record<PaymentStatus, string> = {
 
 const PAYMENTS_TABLE_SECTION_STYLES =
   "overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm";
+const MARKETPLACE_PAGE_SIZE = 8;
 
 const CONSENT_FILE_ACCEPT =
   "application/pdf,image/*,.doc,.docx,.odt,.png,.jpg,.jpeg,.webp";
@@ -115,6 +126,17 @@ function formatCurrency(value: number, locale: string) {
     currency: "EUR",
     minimumFractionDigits: 2,
   }).format(value);
+}
+
+function formatNumber(value: number, locale: string, decimals = 0) {
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value);
+}
+
+function formatHours(value: number, locale: string) {
+  return formatNumber(value, locale, Number.isInteger(value) ? 0 : 1);
 }
 
 function formatDate(value: string | undefined, locale: string) {
@@ -182,6 +204,20 @@ function getInitials(name: string) {
 
 function getPaymentStatus(status: string): PaymentStatus {
   return status === "completed" ? "Pagado" : "Pendiente";
+}
+
+function buildPageNumbers(totalPages: number, currentPage: number) {
+  if (totalPages <= 3) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  let start = Math.max(1, currentPage - 1);
+  const end = Math.min(totalPages, start + 2);
+  if (end - start < 2) {
+    start = Math.max(1, end - 2);
+  }
+
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 }
 
 function escapeHtml(value: string) {
@@ -264,6 +300,14 @@ export default function MemberDetailPageView() {
   const memberId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { contacts, loadContacts, addContact } = useContactsStore();
   const { transactions, loadTransactions } = useTransactionsStore();
+  const activities = useVolunteerActivitiesStore((state) => state.activities);
+  const loadActivities = useVolunteerActivitiesStore(
+    (state) => state.loadActivities
+  );
+  const rewards = useMemberPointsStore((state) => state.rewards);
+  const redemptions = useMemberPointsStore((state) => state.redemptions);
+  const loadPointsData = useMemberPointsStore((state) => state.loadPointsData);
+  const pointsHydrated = useMemberPointsStore((state) => state.hydrated);
   const { documents, loadDocuments, upsertDocuments, deleteDocument } =
     useDocumentsStore();
   const association = useSessionStore((state) => state.association);
@@ -275,6 +319,7 @@ export default function MemberDetailPageView() {
   const [isSavingPermissions, setIsSavingPermissions] = useState(false);
   const [isUploadingConsents, setIsUploadingConsents] = useState(false);
   const [deletingConsentId, setDeletingConsentId] = useState("");
+  const [currentRewardsPage, setCurrentRewardsPage] = useState(1);
   const [paymentsSortState, setPaymentsSortState] =
     useState<SortState<MemberPaymentsSortKey>>({
       key: "date",
@@ -285,7 +330,15 @@ export default function MemberDetailPageView() {
     void loadContacts();
     void loadTransactions();
     void loadDocuments();
-  }, [loadContacts, loadTransactions, loadDocuments]);
+    void loadActivities();
+    void loadPointsData();
+  }, [
+    loadActivities,
+    loadContacts,
+    loadDocuments,
+    loadPointsData,
+    loadTransactions,
+  ]);
 
   const member = useMemo(
     () => contacts.find((contact) => contact.id === memberId),
@@ -368,6 +421,79 @@ export default function MemberDetailPageView() {
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   }, [documents, member]);
 
+  const memberPointsSummary = useMemo(
+    () => getMemberPointsSummary(member?.id ?? "", activities, redemptions),
+    [activities, member?.id, redemptions]
+  );
+
+  const rewardRows = useMemo<
+    Array<{
+      reward: MemberPointReward;
+      remainingStock: number | null;
+      affordable: boolean;
+      redeemable: boolean;
+    }>
+  >(() => {
+    return rewards
+      .filter((reward) => reward.active)
+      .map((reward) => {
+        const remainingStock = getRewardRemainingStock(reward, redemptions);
+        const affordable =
+          memberPointsSummary.availablePoints >= reward.pointsCost;
+        const redeemable =
+          affordable && (remainingStock === null || remainingStock > 0);
+
+        return {
+          reward,
+          remainingStock,
+          affordable,
+          redeemable,
+        };
+      })
+      .sort((left, right) => {
+        if (left.redeemable !== right.redeemable) {
+          return left.redeemable ? -1 : 1;
+        }
+
+        const leftOutOfStock = left.remainingStock === 0;
+        const rightOutOfStock = right.remainingStock === 0;
+        if (leftOutOfStock !== rightOutOfStock) {
+          return leftOutOfStock ? 1 : -1;
+        }
+
+        const byCost = compareNumber(
+          left.reward.pointsCost,
+          right.reward.pointsCost
+        );
+        if (byCost !== 0) return byCost;
+
+        return compareText(
+          left.reward.title,
+          right.reward.title,
+          formatLocale
+        );
+      });
+  }, [formatLocale, memberPointsSummary.availablePoints, redemptions, rewards]);
+
+  const totalRewardPages = useMemo(
+    () => Math.max(1, Math.ceil(rewardRows.length / MARKETPLACE_PAGE_SIZE)),
+    [rewardRows.length]
+  );
+  const currentRewardsPageSafe = Math.min(currentRewardsPage, totalRewardPages);
+  const pagedRewardRows = useMemo(() => {
+    const start = (currentRewardsPageSafe - 1) * MARKETPLACE_PAGE_SIZE;
+    return rewardRows.slice(start, start + MARKETPLACE_PAGE_SIZE);
+  }, [currentRewardsPageSafe, rewardRows]);
+  const rewardPageNumbers = useMemo(
+    () => buildPageNumbers(totalRewardPages, currentRewardsPageSafe),
+    [currentRewardsPageSafe, totalRewardPages]
+  );
+  const redeemableRewardsCount = useMemo(
+    () => rewardRows.filter((row) => row.redeemable).length,
+    [rewardRows]
+  );
+  const pointsMarketplaceLoading = !pointsHydrated && rewardRows.length === 0;
+
   useEffect(() => {
     setPermissionDraft({
       image: storedPermissions.image,
@@ -382,6 +508,10 @@ export default function MemberDetailPageView() {
     storedPermissions.communications,
     storedPermissions.services,
   ]);
+
+  useEffect(() => {
+    setCurrentRewardsPage(1);
+  }, [member?.id]);
 
   if (!member) {
     return (
@@ -955,6 +1085,208 @@ export default function MemberDetailPageView() {
                 {sortedPaymentHistory.length} movimientos registrados en la ficha
                 del socio
               </span>
+            </div>
+          </section>
+
+          <section className={PAYMENTS_TABLE_SECTION_STYLES}>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Marketplace de recompensas
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Catalogo activo de recompensas disponible para este socio.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href={`/people/members/points?memberId=${member.id}`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    redeem
+                  </span>
+                  Abrir marketplace
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid gap-4 border-b border-slate-100 p-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-500">
+                  Horas solidarias
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-slate-900">
+                  {formatHours(memberPointsSummary.volunteerHours, formatLocale)}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Equivalen a{" "}
+                  {formatNumber(memberPointsSummary.earnedPoints, formatLocale)}{" "}
+                  puntos generados.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
+                  Puntos disponibles
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-slate-900">
+                  {formatNumber(memberPointsSummary.availablePoints, formatLocale)} pts
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Tras{" "}
+                  {formatNumber(memberPointsSummary.redemptionCount, formatLocale)}{" "}
+                  canjes registrados.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/70 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-600">
+                  Recompensas canjeables
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-slate-900">
+                  {formatNumber(redeemableRewardsCount, formatLocale)}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  De {formatNumber(rewardRows.length, formatLocale)} recompensas
+                  activas en el catalogo.
+                </p>
+              </div>
+            </div>
+
+            <div className={tableWrapperStyles}>
+              <table className="w-full text-left text-sm">
+                <thead className={tableHeadStyles}>
+                  <tr>
+                    <th className={tableHeadCellStyles}>Recompensa</th>
+                    <th className={tableHeadCellStyles}>Categoria</th>
+                    <th className={`${tableHeadCellStyles} text-right`}>
+                      Coste
+                    </th>
+                    <th className={`${tableHeadCellStyles} text-right`}>
+                      Stock
+                    </th>
+                    <th className={`${tableHeadCellStyles} text-right`}>
+                      Estado
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className={tableBodyStyles}>
+                  {pointsMarketplaceLoading ? (
+                    <tr>
+                      <td colSpan={5} className={tableEmptyCellStyles}>
+                        Cargando recompensas del marketplace...
+                      </td>
+                    </tr>
+                  ) : rewardRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className={tableEmptyCellStyles}>
+                        No hay recompensas activas publicadas todavia.
+                      </td>
+                    </tr>
+                  ) : (
+                    pagedRewardRows.map((row) => (
+                      <tr key={row.reward.id} className={tableRowStyles}>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-semibold text-gray-900">
+                            {row.reward.title}
+                          </div>
+                          <div className="mt-1 text-xs text-gray-500">
+                            {row.reward.description?.trim()
+                              ? row.reward.description
+                              : "Sin descripcion adicional."}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {MemberPointRewardCategoryLabels[row.reward.category]}
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold text-gray-900">
+                          {formatNumber(row.reward.pointsCost, formatLocale)} pts
+                        </td>
+                        <td className="px-6 py-4 text-right text-sm text-gray-600">
+                          {row.remainingStock === null
+                            ? "Ilimitado"
+                            : `${formatNumber(row.remainingStock, formatLocale)} uds`}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              row.redeemable
+                                ? "bg-emerald-50 text-emerald-700"
+                                : row.remainingStock === 0
+                                  ? "bg-rose-50 text-rose-600"
+                                  : row.affordable
+                                    ? "bg-slate-100 text-slate-600"
+                                    : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {row.redeemable
+                              ? "Canjeable"
+                              : row.remainingStock === 0
+                                ? "Agotada"
+                                : row.affordable
+                                  ? "No disponible"
+                                  : "Saldo insuficiente"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className={tableFooterStyles}>
+              <span>
+                Mostrando {pagedRewardRows.length} de {rewardRows.length} recompensas
+                activas para este socio
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentRewardsPage(
+                      Math.max(1, currentRewardsPageSafe - 1)
+                    )
+                  }
+                  disabled={currentRewardsPageSafe === 1}
+                  className={`rounded-xl border px-4 py-1.5 text-xs font-semibold shadow-sm transition ${
+                    currentRewardsPageSafe === 1
+                      ? "border-slate-100 bg-slate-50 text-slate-300 shadow-none"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  Anterior
+                </button>
+                {rewardPageNumbers.map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentRewardsPage(page)}
+                    className={
+                      page === currentRewardsPageSafe
+                        ? "flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-xs font-semibold text-primary"
+                        : "flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+                    }
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentRewardsPage(
+                      Math.min(totalRewardPages, currentRewardsPageSafe + 1)
+                    )
+                  }
+                  disabled={currentRewardsPageSafe === totalRewardPages}
+                  className={`rounded-xl border px-4 py-1.5 text-xs font-semibold shadow-sm transition ${
+                    currentRewardsPageSafe === totalRewardPages
+                      ? "border-slate-100 bg-slate-50 text-slate-300 shadow-none"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           </section>
         </div>

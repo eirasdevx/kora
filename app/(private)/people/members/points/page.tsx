@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Modal from "@/components/Modal";
 import PageHeader from "@/components/shared/PageHeader";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { moduleTopbarButtonIconStyles } from "@/components/shared/ModuleTopbar";
 import SortableHeader from "@/components/shared/SortableHeader";
 import { useLocale } from "@/core/i18n/use-locale";
@@ -65,6 +66,7 @@ type MemberBalanceRow = {
   lastRedemptionAt?: string;
 };
 
+const PAGE_SIZE = 8;
 const TOOLBAR_BUTTON_STYLES =
   "inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50";
 const SEARCH_INPUT_STYLES =
@@ -74,6 +76,18 @@ const TABLE_HEAD_STYLES =
 const TABLE_HEAD_CELL_STYLES = "px-6 py-4 font-semibold";
 const TABLE_BODY_STYLES = "divide-y divide-slate-100 text-slate-700";
 const TABLE_ROW_STYLES = "transition-colors hover:bg-slate-50/70";
+const TABLE_FOOTER_STYLES =
+  "flex flex-col gap-3 border-t border-slate-100 px-6 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between";
+const TABLE_PAGER_BUTTON_STYLES =
+  "rounded-xl border px-4 py-1.5 text-xs font-semibold shadow-sm transition";
+const TABLE_PAGER_BUTTON_ENABLED_STYLES =
+  "border-slate-200 bg-white text-slate-600 hover:bg-slate-50";
+const TABLE_PAGER_BUTTON_DISABLED_STYLES =
+  "border-slate-100 bg-slate-50 text-slate-300 shadow-none";
+const TABLE_PAGER_NUMBER_STYLES =
+  "flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50";
+const TABLE_PAGER_CURRENT_STYLES =
+  "flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-xs font-semibold text-primary";
 const FIELD_STYLES =
   "mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10";
 
@@ -126,6 +140,20 @@ function formatDate(value: string | undefined, locale: string) {
   }).format(date);
 }
 
+function buildPageNumbers(totalPages: number, currentPage: number) {
+  if (totalPages <= 3) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  let start = Math.max(1, currentPage - 1);
+  const end = Math.min(totalPages, start + 2);
+  if (end - start < 2) {
+    start = Math.max(1, end - 2);
+  }
+
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+}
+
 export default function MemberPointsPage() {
   const { formatLocale } = useLocale();
   const searchParams = useSearchParams();
@@ -133,7 +161,9 @@ export default function MemberPointsPage() {
   const activeUserId = useSessionStore((state) => state.activeUserId);
   const users = useUsersStore((state) => state.users);
   const contacts = useContactsStore((state) => state.contacts);
+  const contactsLoading = useContactsStore((state) => state.isLoading);
   const activities = useVolunteerActivitiesStore((state) => state.activities);
+  const pointsHydrated = useMemberPointsStore((state) => state.hydrated);
   const rewards = useMemberPointsStore((state) => state.rewards);
   const redemptions = useMemberPointsStore((state) => state.redemptions);
   const addReward = useMemberPointsStore((state) => state.addReward);
@@ -145,6 +175,9 @@ export default function MemberPointsPage() {
   );
   const hasLoadedRef = useRef(false);
   const [memberSearch, setMemberSearch] = useState("");
+  const [currentMembersPage, setCurrentMembersPage] = useState(1);
+  const [currentRewardsPage, setCurrentRewardsPage] = useState(1);
+  const [currentRedemptionsPage, setCurrentRedemptionsPage] = useState(1);
   const [membersSortState, setMembersSortState] =
     useState<SortState<MembersSortKey>>({
       key: "available",
@@ -177,12 +210,8 @@ export default function MemberPointsPage() {
     void useMemberPointsStore.getState().loadPointsData();
   }, []);
 
-  useEffect(() => {
-    if (!preselectedMemberId) return;
-    setRedemptionForm((current) =>
-      current.memberId ? current : emptyRedemptionForm(preselectedMemberId)
-    );
-  }, [preselectedMemberId]);
+  const selectedRedemptionMemberId =
+    redemptionForm.memberId || preselectedMemberId;
 
   const members = useMemo(
     () => contacts.filter((contact) => contact.types.includes("member")),
@@ -194,6 +223,7 @@ export default function MemberPointsPage() {
   );
   const canManageMarketplace =
     activeUser?.role === "Admin" || activeUser?.role === "Gestor";
+  const membersTableLoading = contactsLoading || !pointsHydrated;
 
   const memberBalanceRows = useMemo<MemberBalanceRow[]>(() => {
     return members.map((member) => {
@@ -223,6 +253,17 @@ export default function MemberPointsPage() {
       );
     });
   }, [memberBalanceRows, memberSearch]);
+  const emptyMembersMessage = useMemo(() => {
+    if (memberSearch.trim()) {
+      return "No hay socios que coincidan con la busqueda.";
+    }
+
+    if (contacts.length === 0) {
+      return "No hay datos de socios disponibles en esta sesion. Si la base remota no responde y este navegador no tiene cache local, la tabla quedara vacia hasta recuperar conexion.";
+    }
+
+    return "Todavia no hay socios registrados.";
+  }, [contacts.length, memberSearch]);
 
   const sortedMemberRows = useMemo(() => {
     return [...filteredMemberRows].sort((left, right) => {
@@ -256,6 +297,33 @@ export default function MemberPointsPage() {
       }
     });
   }, [filteredMemberRows, formatLocale, membersSortState]);
+
+  const totalMemberPages = useMemo(
+    () => Math.max(1, Math.ceil(sortedMemberRows.length / PAGE_SIZE)),
+    [sortedMemberRows.length]
+  );
+  const currentMembersPageSafe = Math.min(currentMembersPage, totalMemberPages);
+  const pagedMemberRows = useMemo(() => {
+    const start = (currentMembersPageSafe - 1) * PAGE_SIZE;
+    return sortedMemberRows.slice(start, start + PAGE_SIZE);
+  }, [currentMembersPageSafe, sortedMemberRows]);
+  const memberPageNumbers = useMemo(() => {
+    return buildPageNumbers(totalMemberPages, currentMembersPageSafe);
+  }, [currentMembersPageSafe, totalMemberPages]);
+
+  const totalRewardsPages = useMemo(
+    () => Math.max(1, Math.ceil(rewards.length / PAGE_SIZE)),
+    [rewards.length]
+  );
+  const currentRewardsPageSafe = Math.min(currentRewardsPage, totalRewardsPages);
+  const pagedRewards = useMemo(() => {
+    const start = (currentRewardsPageSafe - 1) * PAGE_SIZE;
+    return rewards.slice(start, start + PAGE_SIZE);
+  }, [currentRewardsPageSafe, rewards]);
+  const rewardsPageNumbers = useMemo(
+    () => buildPageNumbers(totalRewardsPages, currentRewardsPageSafe),
+    [currentRewardsPageSafe, totalRewardsPages]
+  );
 
   const sortedRedemptions = useMemo(() => {
     return [...redemptions].sort((left, right) => {
@@ -293,12 +361,30 @@ export default function MemberPointsPage() {
       }
     });
   }, [formatLocale, members, redemptions, redemptionsSortState]);
+  const totalRedemptionsPages = useMemo(
+    () => Math.max(1, Math.ceil(sortedRedemptions.length / PAGE_SIZE)),
+    [sortedRedemptions.length]
+  );
+  const currentRedemptionsPageSafe = Math.min(
+    currentRedemptionsPage,
+    totalRedemptionsPages
+  );
+  const pagedRedemptions = useMemo(() => {
+    const start = (currentRedemptionsPageSafe - 1) * PAGE_SIZE;
+    return sortedRedemptions.slice(start, start + PAGE_SIZE);
+  }, [currentRedemptionsPageSafe, sortedRedemptions]);
+  const redemptionsPageNumbers = useMemo(
+    () => buildPageNumbers(totalRedemptionsPages, currentRedemptionsPageSafe),
+    [currentRedemptionsPageSafe, totalRedemptionsPages]
+  );
 
   const selectedMemberRow = useMemo(
     () =>
-      memberBalanceRows.find((row) => row.member.id === redemptionForm.memberId) ??
+      memberBalanceRows.find(
+        (row) => row.member.id === selectedRedemptionMemberId
+      ) ??
       null,
-    [memberBalanceRows, redemptionForm.memberId]
+    [memberBalanceRows, selectedRedemptionMemberId]
   );
   const selectedReward = useMemo(
     () => rewards.find((reward) => reward.id === redemptionForm.rewardId) ?? null,
@@ -463,7 +549,7 @@ export default function MemberPointsPage() {
 
   const handleSaveRedemption = async () => {
     setError(null);
-    const memberId = redemptionForm.memberId.trim();
+    const memberId = selectedRedemptionMemberId.trim();
     const quantity = Math.max(1, Math.round(Number(redemptionForm.quantity) || 1));
 
     if (!memberId) {
@@ -533,18 +619,29 @@ export default function MemberPointsPage() {
               Registrar compra
             </button>
             {canManageMarketplace ? (
-              <button
-                type="button"
-                onClick={openCreateRewardModal}
-                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-primary px-4 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
-              >
-                <span className={moduleTopbarButtonIconStyles.add}>
-                  <span className="material-symbols-outlined text-[16px]">
-                    add
+              <>
+                <Link
+                  href="/people/members/points/import"
+                  className={`${TOOLBAR_BUTTON_STYLES} justify-center`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    upload_file
                   </span>
-                </span>
-                Nueva recompensa
-              </button>
+                  Importar catalogo
+                </Link>
+                <button
+                  type="button"
+                  onClick={openCreateRewardModal}
+                  className="inline-flex h-11 items-center gap-2 rounded-2xl bg-primary px-4 text-sm font-semibold text-white shadow transition hover:bg-primary/90"
+                >
+                  <span className={moduleTopbarButtonIconStyles.add}>
+                    <span className="material-symbols-outlined text-[16px]">
+                      add
+                    </span>
+                  </span>
+                  Nueva recompensa
+                </button>
+              </>
             ) : null}
           </div>
         }
@@ -652,6 +749,14 @@ export default function MemberPointsPage() {
             >
               Volver a socios
             </Link>
+            {canManageMarketplace ? (
+              <Link
+                href="/people/members/points/import"
+                className={`${TOOLBAR_BUTTON_STYLES} h-10 px-3 text-xs`}
+              >
+                Importar recompensas
+              </Link>
+            ) : null}
           </div>
         </article>
       </section>
@@ -682,147 +787,221 @@ export default function MemberPointsPage() {
             <input
               type="text"
               value={memberSearch}
-              onChange={(event) => setMemberSearch(event.target.value)}
+              onChange={(event) => {
+                setMemberSearch(event.target.value);
+                setCurrentMembersPage(1);
+              }}
               placeholder="Buscar socio por nombre, ID o correo..."
               className={SEARCH_INPUT_STYLES}
             />
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-[980px] w-full text-left text-sm">
-            <thead className={TABLE_HEAD_STYLES}>
-              <tr>
-                <SortableHeader
-                  label="Socio"
-                  active={membersSortState.key === "member"}
-                  direction={membersSortState.direction}
-                  onClick={() =>
-                    setMembersSortState((current) => toggleSort(current, "member"))
-                  }
-                  className={TABLE_HEAD_CELL_STYLES}
-                />
-                <SortableHeader
-                  label="Horas"
-                  active={membersSortState.key === "hours"}
-                  direction={membersSortState.direction}
-                  onClick={() =>
-                    setMembersSortState((current) =>
-                      toggleSort(current, "hours", "desc")
-                    )
-                  }
-                  className={`${TABLE_HEAD_CELL_STYLES} text-right`}
-                  align="right"
-                />
-                <SortableHeader
-                  label="Ganados"
-                  active={membersSortState.key === "earned"}
-                  direction={membersSortState.direction}
-                  onClick={() =>
-                    setMembersSortState((current) =>
-                      toggleSort(current, "earned", "desc")
-                    )
-                  }
-                  className={`${TABLE_HEAD_CELL_STYLES} text-right`}
-                  align="right"
-                />
-                <SortableHeader
-                  label="Canjeados"
-                  active={membersSortState.key === "spent"}
-                  direction={membersSortState.direction}
-                  onClick={() =>
-                    setMembersSortState((current) =>
-                      toggleSort(current, "spent", "desc")
-                    )
-                  }
-                  className={`${TABLE_HEAD_CELL_STYLES} text-right`}
-                  align="right"
-                />
-                <SortableHeader
-                  label="Disponibles"
-                  active={membersSortState.key === "available"}
-                  direction={membersSortState.direction}
-                  onClick={() =>
-                    setMembersSortState((current) =>
-                      toggleSort(current, "available", "desc")
-                    )
-                  }
-                  className={`${TABLE_HEAD_CELL_STYLES} text-right`}
-                  align="right"
-                />
-                <th className={`${TABLE_HEAD_CELL_STYLES} text-right`}>
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className={TABLE_BODY_STYLES}>
-              {sortedMemberRows.length === 0 ? (
+        {membersTableLoading ? (
+          <LoadingSpinner
+            label="Cargando socios..."
+            description="Estamos recuperando contactos, actividad y saldos para el marketplace."
+            className="rounded-none border-0 shadow-none"
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-[980px] w-full text-left text-sm">
+              <thead className={TABLE_HEAD_STYLES}>
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-sm text-slate-500">
-                    No hay socios que coincidan con la busqueda.
-                  </td>
+                  <SortableHeader
+                    label="Socio"
+                    active={membersSortState.key === "member"}
+                    direction={membersSortState.direction}
+                    onClick={() => {
+                      setCurrentMembersPage(1);
+                      setMembersSortState((current) => toggleSort(current, "member"));
+                    }}
+                    className={TABLE_HEAD_CELL_STYLES}
+                  />
+                  <SortableHeader
+                    label="Horas"
+                    active={membersSortState.key === "hours"}
+                    direction={membersSortState.direction}
+                    onClick={() => {
+                      setCurrentMembersPage(1);
+                      setMembersSortState((current) =>
+                        toggleSort(current, "hours", "desc")
+                      );
+                    }}
+                    className={`${TABLE_HEAD_CELL_STYLES} text-right`}
+                    align="right"
+                  />
+                  <SortableHeader
+                    label="Ganados"
+                    active={membersSortState.key === "earned"}
+                    direction={membersSortState.direction}
+                    onClick={() => {
+                      setCurrentMembersPage(1);
+                      setMembersSortState((current) =>
+                        toggleSort(current, "earned", "desc")
+                      );
+                    }}
+                    className={`${TABLE_HEAD_CELL_STYLES} text-right`}
+                    align="right"
+                  />
+                  <SortableHeader
+                    label="Canjeados"
+                    active={membersSortState.key === "spent"}
+                    direction={membersSortState.direction}
+                    onClick={() => {
+                      setCurrentMembersPage(1);
+                      setMembersSortState((current) =>
+                        toggleSort(current, "spent", "desc")
+                      );
+                    }}
+                    className={`${TABLE_HEAD_CELL_STYLES} text-right`}
+                    align="right"
+                  />
+                  <SortableHeader
+                    label="Disponibles"
+                    active={membersSortState.key === "available"}
+                    direction={membersSortState.direction}
+                    onClick={() => {
+                      setCurrentMembersPage(1);
+                      setMembersSortState((current) =>
+                        toggleSort(current, "available", "desc")
+                      );
+                    }}
+                    className={`${TABLE_HEAD_CELL_STYLES} text-right`}
+                    align="right"
+                  />
+                  <th className={`${TABLE_HEAD_CELL_STYLES} text-right`}>
+                    Acciones
+                  </th>
                 </tr>
-              ) : (
-                sortedMemberRows.map((row) => (
-                  <tr key={row.member.id} className={TABLE_ROW_STYLES}>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                          {row.member.photoUrl ? (
-                            <img
-                              src={row.member.photoUrl}
-                              alt={row.displayName}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            row.initials
-                          )}
-                        </div>
-                        <div>
-                          <div className="text-[15px] font-semibold text-slate-900">
-                            {row.displayName}
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            {formatMemberId(row.member.id)}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-right font-semibold text-slate-900">
-                      {formatNumber(row.volunteerHours, formatLocale, 1)} h
-                    </td>
-                    <td className="px-6 py-5 text-right font-semibold text-slate-900">
-                      {formatNumber(row.earnedPoints, formatLocale)} pts
-                    </td>
-                    <td className="px-6 py-5 text-right font-semibold text-slate-900">
-                      {formatNumber(row.spentPoints, formatLocale)} pts
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <div className="text-[15px] font-semibold text-slate-900">
-                        {formatNumber(row.availablePoints, formatLocale)} pts
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        Ultimo canje: {formatDate(row.lastRedemptionAt, formatLocale)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => openRedemptionModal(row.member.id)}
-                        className="rounded-xl border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
-                      >
-                        Comprar
-                      </button>
+              </thead>
+              <tbody className={TABLE_BODY_STYLES}>
+                {sortedMemberRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-10 text-sm text-slate-500">
+                      {emptyMembersMessage}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  pagedMemberRows.map((row) => (
+                    <tr key={row.member.id} className={TABLE_ROW_STYLES}>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                            {row.member.photoUrl ? (
+                              <img
+                                src={row.member.photoUrl}
+                                alt={row.displayName}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              row.initials
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-[15px] font-semibold text-slate-900">
+                              {row.displayName}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              {formatMemberId(row.member.id)}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-right font-semibold text-slate-900">
+                        {formatNumber(row.volunteerHours, formatLocale, 1)} h
+                      </td>
+                      <td className="px-6 py-5 text-right font-semibold text-slate-900">
+                        {formatNumber(row.earnedPoints, formatLocale)} pts
+                      </td>
+                      <td className="px-6 py-5 text-right font-semibold text-slate-900">
+                        {formatNumber(row.spentPoints, formatLocale)} pts
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <div className="text-[15px] font-semibold text-slate-900">
+                          {formatNumber(row.availablePoints, formatLocale)} pts
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Ultimo canje: {formatDate(row.lastRedemptionAt, formatLocale)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => openRedemptionModal(row.member.id)}
+                          className="rounded-xl border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+                        >
+                          Comprar
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className={TABLE_FOOTER_STYLES}>
+          <span>
+            {membersTableLoading
+              ? "Cargando socios..."
+              : `Mostrando ${pagedMemberRows.length} de ${sortedMemberRows.length} socios`}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentMembersPage(Math.max(1, currentMembersPageSafe - 1))
+              }
+              disabled={membersTableLoading || currentMembersPageSafe === 1}
+              className={`${TABLE_PAGER_BUTTON_STYLES} ${
+                membersTableLoading || currentMembersPageSafe === 1
+                  ? TABLE_PAGER_BUTTON_DISABLED_STYLES
+                  : TABLE_PAGER_BUTTON_ENABLED_STYLES
+              }`}
+            >
+              Anterior
+            </button>
+            {memberPageNumbers.map((page) => (
+              <button
+                key={page}
+                type="button"
+                onClick={() => setCurrentMembersPage(page)}
+                disabled={membersTableLoading}
+                className={
+                  page === currentMembersPageSafe
+                    ? TABLE_PAGER_CURRENT_STYLES
+                    : TABLE_PAGER_NUMBER_STYLES
+                }
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentMembersPage(
+                  Math.min(totalMemberPages, currentMembersPageSafe + 1)
+                )
+              }
+              disabled={
+                membersTableLoading ||
+                currentMembersPageSafe === totalMemberPages
+              }
+              className={`${TABLE_PAGER_BUTTON_STYLES} ${
+                membersTableLoading ||
+                currentMembersPageSafe === totalMemberPages
+                  ? TABLE_PAGER_BUTTON_DISABLED_STYLES
+                  : TABLE_PAGER_BUTTON_ENABLED_STYLES
+              }`}
+            >
+              Siguiente
+            </button>
+          </div>
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1fr_1.15fr]">
+      <section className="grid gap-4 xl:grid-cols-[1fr_1.15fr] xl:items-start">
         <article className="rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
           <div className="border-b border-slate-100 px-6 py-4">
             <p className="text-lg font-semibold text-slate-900">
@@ -838,7 +1017,7 @@ export default function MemberPointsPage() {
                 No hay recompensas creadas.
               </div>
             ) : (
-              rewards.map((reward) => {
+              pagedRewards.map((reward) => {
                 const remainingStock = getRewardRemainingStock(reward, redemptions);
                 return (
                   <article
@@ -904,80 +1083,173 @@ export default function MemberPointsPage() {
               })
             )}
           </div>
+          <div className={TABLE_FOOTER_STYLES}>
+            <span>
+              Mostrando {pagedRewards.length} de {rewards.length} recompensas
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentRewardsPage(Math.max(1, currentRewardsPageSafe - 1))
+                }
+                disabled={currentRewardsPageSafe === 1}
+                className={`${TABLE_PAGER_BUTTON_STYLES} ${
+                  currentRewardsPageSafe === 1
+                    ? TABLE_PAGER_BUTTON_DISABLED_STYLES
+                    : TABLE_PAGER_BUTTON_ENABLED_STYLES
+                }`}
+              >
+                Anterior
+              </button>
+              {rewardsPageNumbers.map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => setCurrentRewardsPage(page)}
+                  className={
+                    page === currentRewardsPageSafe
+                      ? TABLE_PAGER_CURRENT_STYLES
+                      : TABLE_PAGER_NUMBER_STYLES
+                  }
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentRewardsPage(
+                    Math.min(totalRewardsPages, currentRewardsPageSafe + 1)
+                  )
+                }
+                disabled={currentRewardsPageSafe === totalRewardsPages}
+                className={`${TABLE_PAGER_BUTTON_STYLES} ${
+                  currentRewardsPageSafe === totalRewardsPages
+                    ? TABLE_PAGER_BUTTON_DISABLED_STYLES
+                    : TABLE_PAGER_BUTTON_ENABLED_STYLES
+                }`}
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
         </article>
 
-        <article className="rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
-          <div className="border-b border-slate-100 px-6 py-4">
-            <p className="text-lg font-semibold text-slate-900">
-              Historico de canjes
-            </p>
-            <p className="text-sm text-slate-500">
-              Registro de compras hechas por cada socio dentro del marketplace.
-            </p>
+        <article className="self-start overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+            <div>
+              <p className="text-lg font-semibold text-slate-900">
+                Historico de canjes
+              </p>
+              <p className="text-sm text-slate-500">
+                Registro de compras hechas por cada socio dentro del marketplace.
+              </p>
+            </div>
+            <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500 ring-1 ring-inset ring-slate-200">
+              {formatNumber(sortedRedemptions.length, formatLocale)} canjes
+            </span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-[760px] w-full text-left text-sm">
-              <thead className={TABLE_HEAD_STYLES}>
-                <tr>
-                  <SortableHeader
-                    label="Fecha"
-                    active={redemptionsSortState.key === "date"}
-                    direction={redemptionsSortState.direction}
-                    onClick={() =>
-                      setRedemptionsSortState((current) =>
-                        toggleSort(current, "date", "desc")
-                      )
-                    }
-                    className={TABLE_HEAD_CELL_STYLES}
-                  />
-                  <SortableHeader
-                    label="Socio"
-                    active={redemptionsSortState.key === "member"}
-                    direction={redemptionsSortState.direction}
-                    onClick={() =>
-                      setRedemptionsSortState((current) =>
-                        toggleSort(current, "member")
-                      )
-                    }
-                    className={TABLE_HEAD_CELL_STYLES}
-                  />
-                  <SortableHeader
-                    label="Recompensa"
-                    active={redemptionsSortState.key === "reward"}
-                    direction={redemptionsSortState.direction}
-                    onClick={() =>
-                      setRedemptionsSortState((current) =>
-                        toggleSort(current, "reward")
-                      )
-                    }
-                    className={TABLE_HEAD_CELL_STYLES}
-                  />
-                  <SortableHeader
-                    label="Puntos"
-                    active={redemptionsSortState.key === "points"}
-                    direction={redemptionsSortState.direction}
-                    onClick={() =>
-                      setRedemptionsSortState((current) =>
-                        toggleSort(current, "points", "desc")
-                      )
-                    }
-                    className={`${TABLE_HEAD_CELL_STYLES} text-right`}
-                    align="right"
-                  />
-                  <th className={`${TABLE_HEAD_CELL_STYLES} text-right`}>
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className={TABLE_BODY_STYLES}>
-                {sortedRedemptions.length === 0 ? (
+          {sortedRedemptions.length === 0 ? (
+            <div className="px-6 py-8">
+              <div className="flex flex-col items-center rounded-[24px] border border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-white px-6 py-10 text-center">
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+                  <span className="material-symbols-outlined text-[24px]">
+                    local_activity
+                  </span>
+                </span>
+                <p className="mt-4 text-base font-semibold text-slate-900">
+                  Todavia no hay canjes registrados
+                </p>
+                <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
+                  Cuando un socio use sus puntos en el marketplace, aqui veras
+                  la fecha, la recompensa y los puntos gastados sin dejar este
+                  bloque vacio.
+                </p>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openRedemptionModal()}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      add_shopping_cart
+                    </span>
+                    Registrar canje
+                  </button>
+                  <Link
+                    href="/people/members"
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      group
+                    </span>
+                    Ver socios
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-[760px] w-full text-left text-sm">
+                <thead className={TABLE_HEAD_STYLES}>
                   <tr>
-                    <td colSpan={5} className="px-6 py-10 text-sm text-slate-500">
-                      No hay canjes registrados todavia.
-                    </td>
+                    <SortableHeader
+                      label="Fecha"
+                      active={redemptionsSortState.key === "date"}
+                      direction={redemptionsSortState.direction}
+                      onClick={() => {
+                        setCurrentRedemptionsPage(1);
+                        setRedemptionsSortState((current) =>
+                          toggleSort(current, "date", "desc")
+                        );
+                      }}
+                      className={TABLE_HEAD_CELL_STYLES}
+                    />
+                    <SortableHeader
+                      label="Socio"
+                      active={redemptionsSortState.key === "member"}
+                      direction={redemptionsSortState.direction}
+                      onClick={() => {
+                        setCurrentRedemptionsPage(1);
+                        setRedemptionsSortState((current) =>
+                          toggleSort(current, "member")
+                        );
+                      }}
+                      className={TABLE_HEAD_CELL_STYLES}
+                    />
+                    <SortableHeader
+                      label="Recompensa"
+                      active={redemptionsSortState.key === "reward"}
+                      direction={redemptionsSortState.direction}
+                      onClick={() => {
+                        setCurrentRedemptionsPage(1);
+                        setRedemptionsSortState((current) =>
+                          toggleSort(current, "reward")
+                        );
+                      }}
+                      className={TABLE_HEAD_CELL_STYLES}
+                    />
+                    <SortableHeader
+                      label="Puntos"
+                      active={redemptionsSortState.key === "points"}
+                      direction={redemptionsSortState.direction}
+                      onClick={() => {
+                        setCurrentRedemptionsPage(1);
+                        setRedemptionsSortState((current) =>
+                          toggleSort(current, "points", "desc")
+                        );
+                      }}
+                      className={`${TABLE_HEAD_CELL_STYLES} text-right`}
+                      align="right"
+                    />
+                    <th className={`${TABLE_HEAD_CELL_STYLES} text-right`}>
+                      Acciones
+                    </th>
                   </tr>
-                ) : (
-                  sortedRedemptions.map((redemption) => {
+                </thead>
+                <tbody className={TABLE_BODY_STYLES}>
+                  {pagedRedemptions.map((redemption) => {
                     const member = members.find(
                       (item) => item.id === redemption.memberId
                     );
@@ -1016,10 +1288,66 @@ export default function MemberPointsPage() {
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className={TABLE_FOOTER_STYLES}>
+            <span>
+              Mostrando {pagedRedemptions.length} de {sortedRedemptions.length} canjes
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentRedemptionsPage(
+                    Math.max(1, currentRedemptionsPageSafe - 1)
+                  )
+                }
+                disabled={currentRedemptionsPageSafe === 1}
+                className={`${TABLE_PAGER_BUTTON_STYLES} ${
+                  currentRedemptionsPageSafe === 1
+                    ? TABLE_PAGER_BUTTON_DISABLED_STYLES
+                    : TABLE_PAGER_BUTTON_ENABLED_STYLES
+                }`}
+              >
+                Anterior
+              </button>
+              {redemptionsPageNumbers.map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => setCurrentRedemptionsPage(page)}
+                  className={
+                    page === currentRedemptionsPageSafe
+                      ? TABLE_PAGER_CURRENT_STYLES
+                      : TABLE_PAGER_NUMBER_STYLES
+                  }
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentRedemptionsPage(
+                    Math.min(
+                      totalRedemptionsPages,
+                      currentRedemptionsPageSafe + 1
+                    )
+                  )
+                }
+                disabled={currentRedemptionsPageSafe === totalRedemptionsPages}
+                className={`${TABLE_PAGER_BUTTON_STYLES} ${
+                  currentRedemptionsPageSafe === totalRedemptionsPages
+                    ? TABLE_PAGER_BUTTON_DISABLED_STYLES
+                    : TABLE_PAGER_BUTTON_ENABLED_STYLES
+                }`}
+              >
+                Siguiente
+              </button>
+            </div>
           </div>
         </article>
       </section>
@@ -1169,7 +1497,7 @@ export default function MemberPointsPage() {
               Socio
             </label>
             <select
-              value={redemptionForm.memberId}
+              value={selectedRedemptionMemberId}
               onChange={(event) =>
                 setRedemptionForm((current) => ({
                   ...current,

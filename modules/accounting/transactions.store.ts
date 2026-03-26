@@ -12,6 +12,7 @@ import { ensureTransactionAccountingCode } from "@/modules/accounting/accounting
 import {
   deleteAssociationModuleRecord,
   listAssociationModuleRecords,
+  shouldLogAssociationDataError,
   upsertAssociationModuleRecord,
 } from "@/lib/client/association-data-client";
 
@@ -54,7 +55,9 @@ export const useTransactionsStore = create<TransactionsState>(
         });
         return;
       } catch (error) {
-        console.error(error);
+        if (shouldLogAssociationDataError(error)) {
+          console.error(error);
+        }
       }
 
       const all = await db.transactions.toArray();

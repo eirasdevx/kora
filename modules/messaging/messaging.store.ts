@@ -9,6 +9,7 @@ import {
   deleteAssociationModuleRecord,
   listAssociationModuleRecords,
   saveAssociationModuleRecords,
+  shouldLogAssociationDataError,
   upsertAssociationModuleRecord,
 } from "@/lib/client/association-data-client";
 
@@ -121,7 +122,9 @@ export const useMessagingStore = create<MessagingState>()(
           });
           return;
         } catch (error) {
-          console.error(error);
+          if (shouldLogAssociationDataError(error)) {
+            console.error(error);
+          }
         }
 
         set((state) => ({

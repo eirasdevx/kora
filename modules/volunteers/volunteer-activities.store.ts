@@ -13,6 +13,7 @@ import { useNotificationsStore } from "@/core/notifications/notifications.store"
 import {
   deleteAssociationModuleRecord,
   listAssociationModuleRecords,
+  shouldLogAssociationDataError,
   upsertAssociationModuleRecord,
 } from "@/lib/client/association-data-client";
 
@@ -53,7 +54,9 @@ export const useVolunteerActivitiesStore =
         set({ activities: persisted });
         return;
       } catch (error) {
-        console.error(error);
+        if (shouldLogAssociationDataError(error)) {
+          console.error(error);
+        }
       }
 
       if (migratedRecords.length > 0) {

@@ -11,6 +11,7 @@ import { createPasswordDigest } from "@/core/security/passwords";
 import {
   applySessionPayload,
   parseApiResponse,
+  shouldLogClientApiError,
 } from "@/lib/client/session-client";
 
 type Step = "admin" | "association" | "success";
@@ -171,7 +172,9 @@ export default function RegisterPage() {
       setCompanyCode(payload.companyCode);
       setStep("success");
     } catch (error) {
-      console.error(error);
+      if (shouldLogClientApiError(error)) {
+        console.error(error);
+      }
       setFormError(
         error instanceof Error
           ? error.message

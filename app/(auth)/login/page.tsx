@@ -8,6 +8,7 @@ import { useSessionStore } from "@/core/session/session.store";
 import {
   applySessionPayload,
   parseApiResponse,
+  shouldLogClientApiError,
 } from "@/lib/client/session-client";
 
 type LoginCredentials = {
@@ -116,7 +117,9 @@ function LoginPageContent() {
       applySessionPayload(payload);
       router.push("/dashboard");
     } catch (requestError) {
-      console.error(requestError);
+      if (shouldLogClientApiError(requestError)) {
+        console.error(requestError);
+      }
       const message =
         requestError instanceof Error
           ? requestError.message
