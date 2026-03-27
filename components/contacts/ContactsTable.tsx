@@ -105,7 +105,7 @@ export default function ContactsTable({
             className={tableHeadCellStyles}
           />
           <SortableHeader
-            label="Telefono"
+            label="Tel?fono"
             active={sortState.key === "phone"}
             direction={sortState.direction}
             onClick={() => onSortChange("phone")}

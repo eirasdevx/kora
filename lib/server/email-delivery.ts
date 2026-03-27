@@ -23,6 +23,12 @@ export type SendEmailPayload = {
   recipients: RecipientPayload[];
   subject: string;
   htmlMessage: string;
+  attachments?: Array<{
+    filename: string;
+    content: string;
+    contentType?: string;
+    encoding?: "base64" | "utf-8";
+  }>;
   emailProvider?: EmailProvider;
   smtpHost?: string;
   smtpPort?: number;
@@ -44,6 +50,7 @@ export function buildAssociationEmailPayload(input: {
   recipients: RecipientPayload[];
   subject: string;
   htmlMessage: string;
+  attachments?: SendEmailPayload["attachments"];
   globalVariables?: Record<string, string>;
 }): SendEmailPayload {
   const settings = getAssociationMessagingSettings(input.messagingSettings, {
@@ -63,6 +70,7 @@ export function buildAssociationEmailPayload(input: {
     recipients: input.recipients,
     subject: input.subject,
     htmlMessage: input.htmlMessage,
+    attachments: input.attachments,
     emailProvider: settings.emailProvider,
     smtpHost: settings.smtpHost,
     smtpPort: settings.smtpPort,
@@ -166,6 +174,40 @@ const applyTokens = (value: string, replacements: Record<string, string>) =>
     value
   );
 
+type NormalizedAttachment = {
+  filename: string;
+  content: string;
+  contentType: string | undefined;
+  encoding: "base64" | "utf-8";
+};
+
+const normalizeAttachments = (attachments?: SendEmailPayload["attachments"]) => {
+  if (!Array.isArray(attachments)) {
+    return [];
+  }
+
+  return attachments
+    .map((attachment): NormalizedAttachment | null => {
+      const filename = attachment.filename?.trim();
+      const content = attachment.content ?? "";
+      const contentType = attachment.contentType?.trim();
+      const encoding =
+        attachment.encoding === "base64" ? "base64" : "utf-8";
+
+      if (!filename || !content) {
+        return null;
+      }
+
+      return {
+        filename,
+        content,
+        contentType: contentType || undefined,
+        encoding,
+      };
+    })
+    .filter((attachment): attachment is NormalizedAttachment => attachment !== null);
+};
+
 export async function sendEmailBatch(
   payload: SendEmailPayload
 ): Promise<SendEmailResult> {
@@ -175,6 +217,7 @@ export async function sendEmailBatch(
   const normalizedSubject = payload.subject?.trim();
   const normalizedHtml = payload.htmlMessage?.trim();
   const normalizedProvider = normalizeProvider(payload.emailProvider);
+  const normalizedAttachments = normalizeAttachments(payload.attachments);
 
   if (
     !normalizedName ||
@@ -235,15 +278,24 @@ export async function sendEmailBatch(
     };
     const personalizedSubject = applyTokens(normalizedSubject, replacements);
     const personalizedHtml = applyTokens(normalizedHtml, replacements);
+    const mailOptions = {
+      from: `${normalizedName} <${normalizedEmail}>`,
+      to: recipient.email,
+      subject: personalizedSubject,
+      html: personalizedHtml,
+      replyTo: normalizedEmail,
+    };
 
     try {
-      await transporter.sendMail({
-        from: `${normalizedName} <${normalizedEmail}>`,
-        to: recipient.email,
-        subject: personalizedSubject,
-        html: personalizedHtml,
-        replyTo: normalizedEmail,
-      });
+      if (normalizedAttachments.length > 0) {
+        Object.assign(mailOptions, {
+          attachments: normalizedAttachments,
+        });
+      }
+
+      await transporter.sendMail(
+        mailOptions as Parameters<typeof transporter.sendMail>[0]
+      );
       sentCount += 1;
     } catch (error) {
       failedCount += 1;

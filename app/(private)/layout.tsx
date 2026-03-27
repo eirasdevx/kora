@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/shared/Icon";
 import { useSessionStore } from "@/core/session/session.store";
+import AssociationBackupDispatcher from "@/components/AssociationBackupDispatcher";
 import Sidebar from "@/components/Sidebar";
 
 export default function AppLayout({
@@ -29,6 +30,7 @@ export default function AppLayout({
 
   return (
     <div className="min-h-screen bg-background-light lg:pl-72">
+      <AssociationBackupDispatcher />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Contenido principal */}

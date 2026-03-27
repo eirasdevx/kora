@@ -276,7 +276,7 @@ function parseRewardRecord(
       issues.push({
         level: "error",
         row,
-        message: `El stock de "${title}" debe ser un numero entero igual o mayor que 0.`,
+        message: `El stock de "${title}" debe ser un n?mero entero igual o mayor que 0.`,
       });
       return null;
     }
@@ -408,7 +408,7 @@ function parseCsvImport(text: string): ParsedMemberPointRewardsImport {
   const firstLine = lines[0];
 
   if (!firstLine) {
-    throw new Error("El archivo CSV esta vacio.");
+    throw new Error("El archivo CSV est? vac?o.");
   }
 
   const delimiter = detectDelimiter(firstLine);
@@ -509,7 +509,7 @@ export function parseMemberPointRewardsImport(
 ): ParsedMemberPointRewardsImport {
   const normalizedText = stripBom(text).trim();
   if (!normalizedText) {
-    throw new Error("El archivo seleccionado esta vacio.");
+    throw new Error("El archivo seleccionado est? vac?o.");
   }
 
   const normalizedName = fileName?.trim().toLowerCase() ?? "";

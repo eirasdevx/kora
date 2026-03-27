@@ -643,12 +643,12 @@ export default function MemberDetailPageView() {
       `Nivel: ${tier}`,
       `DNI: ${member.dni?.trim() || "-"}`,
       `Email: ${member.email?.trim() || "-"}`,
-      `Telefono principal: ${member.phone?.trim() || "-"}`,
-      `Telefono secundario: ${member.secondaryPhone?.trim() || "-"}`,
-      `Direccion: ${member.address?.trim() || "-"}`,
+      `Tel?fono principal: ${member.phone?.trim() || "-"}`,
+      `Tel?fono secundario: ${member.secondaryPhone?.trim() || "-"}`,
+      `Direcci?n: ${member.address?.trim() || "-"}`,
       `Ciudad: ${member.city?.trim() || "-"}`,
-      `Provincia/Region: ${member.region?.trim() || "-"}`,
-      `Codigo postal: ${member.postalCode?.trim() || "-"}`,
+      `Provincia/Regi?n: ${member.region?.trim() || "-"}`,
+      `C?digo postal: ${member.postalCode?.trim() || "-"}`,
       `Alta como socio: ${memberSince}`,
       `Fecha de nacimiento: ${formatDate(member.birthDate, formatLocale)}`,
       `Plan asignado: ${feePlan.name}`,
@@ -674,7 +674,7 @@ export default function MemberDetailPageView() {
     return [
       "Ficha de socio",
       "",
-      `Asociacion: ${association?.name || "Kora"}`,
+      `Asociaci?n: ${association?.name || "Kora"}`,
       `Emitido: ${formatDateTime(new Date().toISOString(), formatLocale)}`,
       "",
       "Datos generales",
@@ -966,7 +966,7 @@ export default function MemberDetailPageView() {
                   Historial de Pagos Recientes
                 </h2>
                 <p className="text-sm text-gray-500">
-                  Ultimos movimientos de cuota del socio.
+                  ?ltimos movimientos de cuota del socio.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -1025,7 +1025,7 @@ export default function MemberDetailPageView() {
                       className={tableHeadCellStyles}
                     />
                     <th className={`${tableHeadCellStyles} text-right`}>
-                      Accion
+                      Acci?n
                     </th>
                   </tr>
                 </thead>
@@ -1033,7 +1033,7 @@ export default function MemberDetailPageView() {
                   {sortedPaymentHistory.length === 0 ? (
                     <tr>
                       <td colSpan={5} className={tableEmptyCellStyles}>
-                        No hay pagos registrados todavia.
+                        No hay pagos registrados todav?a.
                       </td>
                     </tr>
                   ) : (
@@ -1095,7 +1095,7 @@ export default function MemberDetailPageView() {
                   Marketplace de recompensas
                 </h2>
                 <p className="text-sm text-gray-500">
-                  Catalogo activo de recompensas disponible para este socio.
+                  Cat?logo activo de recompensas disponible para este socio.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -1179,7 +1179,7 @@ export default function MemberDetailPageView() {
                   ) : rewardRows.length === 0 ? (
                     <tr>
                       <td colSpan={5} className={tableEmptyCellStyles}>
-                        No hay recompensas activas publicadas todavia.
+                        No hay recompensas activas publicadas todav?a.
                       </td>
                     </tr>
                   ) : (
@@ -1452,7 +1452,7 @@ export default function MemberDetailPageView() {
 
               {consentDocuments.length === 0 ? (
                 <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-sm text-gray-500">
-                  No hay consentimientos subidos todavia para este socio.
+                  No hay consentimientos subidos todav?a para este socio.
                 </div>
               ) : (
                 <div className="mt-4 space-y-3">

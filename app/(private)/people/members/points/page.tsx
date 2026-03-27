@@ -259,10 +259,10 @@ export default function MemberPointsPage() {
     }
 
     if (contacts.length === 0) {
-      return "No hay datos de socios disponibles en esta sesion. Si la base remota no responde y este navegador no tiene cache local, la tabla quedara vacia hasta recuperar conexion.";
+      return "No hay datos de socios disponibles en esta sesi?n. Si la base remota no responde y este navegador no tiene cach? local, la tabla quedara vac?a hasta recuperar conexi?n.";
     }
 
-    return "Todavia no hay socios registrados.";
+    return "Todav?a no hay socios registrados.";
   }, [contacts.length, memberSearch]);
 
   const sortedMemberRows = useMemo(() => {
@@ -503,7 +503,7 @@ export default function MemberPointsPage() {
       stockValue !== "" &&
       (!Number.isFinite(Number(stockValue)) || Number(stockValue) < 0)
     ) {
-      setError("El stock debe estar vacio o ser un numero valido.");
+      setError("El stock debe estar vac?o o ser un n?mero v?lido.");
       return;
     }
 
@@ -603,7 +603,7 @@ export default function MemberPointsPage() {
     <div className="space-y-6 lg:space-y-8">
       <PageHeader
         title="Marketplace de socios"
-        subtitle="Catalogo de recompensas donde cada socio gasta su propio saldo de puntos generado por voluntariado."
+        subtitle="Cat?logo de recompensas donde cada socio gasta su propio saldo de puntos generado por voluntariado."
         backHref="/people/members"
         backLabel="Volver a Socios"
         actions={
@@ -720,7 +720,7 @@ export default function MemberPointsPage() {
                 {formatNumber(MEMBER_POINTS_PER_HOUR, formatLocale)} puntos.
                 Ejemplo: 4 horas generan{" "}
                 {formatNumber(calculateVolunteerPoints(4), formatLocale)} puntos.
-                No existe una bolsa global de la asociacion: cada socio acumula y
+                No existe una bolsa global de la asociaci?n: cada socio acumula y
                 gasta su propio saldo dentro del marketplace.
               </p>
             </div>
@@ -922,7 +922,7 @@ export default function MemberPointsPage() {
                           {formatNumber(row.availablePoints, formatLocale)} pts
                         </div>
                         <div className="mt-1 text-xs text-slate-500">
-                          Ultimo canje: {formatDate(row.lastRedemptionAt, formatLocale)}
+                          ?ltimo canje: {formatDate(row.lastRedemptionAt, formatLocale)}
                         </div>
                       </td>
                       <td className="px-6 py-5 text-right">
@@ -1159,12 +1159,12 @@ export default function MemberPointsPage() {
                   </span>
                 </span>
                 <p className="mt-4 text-base font-semibold text-slate-900">
-                  Todavia no hay canjes registrados
+                  Todav?a no hay canjes registrados
                 </p>
                 <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
                   Cuando un socio use sus puntos en el marketplace, aqui veras
                   la fecha, la recompensa y los puntos gastados sin dejar este
-                  bloque vacio.
+                  bloque vac?o.
                 </p>
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                   <button

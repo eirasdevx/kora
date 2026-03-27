@@ -605,7 +605,7 @@ export default function MembersPage() {
                 <option value="member:asc">Socio A-Z</option>
                 <option value="member:desc">Socio Z-A</option>
                 <option value="balance:desc">Mayor deuda</option>
-                <option value="lastPayment:desc">Ultimo pago reciente</option>
+                <option value="lastPayment:desc">?ltimo pago reciente</option>
               </select>
             </div>
           </div>
@@ -613,7 +613,7 @@ export default function MembersPage() {
 
         {memberRows.length === 0 ? (
           <div className="px-6 py-10 text-sm text-slate-500">
-            No hay socios registrados todavia.
+            No hay socios registrados todav?a.
           </div>
         ) : filteredMembers.length === 0 ? (
           <div className="px-6 py-10 text-sm text-slate-500">
@@ -665,7 +665,7 @@ export default function MembersPage() {
                     className={TABLE_HEAD_CELL_STYLES}
                   />
                   <SortableHeader
-                    label="Ultimo pago"
+                    label="?ltimo pago"
                     active={sortState.key === "lastPayment"}
                     direction={sortState.direction}
                     onClick={() => {

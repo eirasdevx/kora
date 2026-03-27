@@ -1924,8 +1924,8 @@ export default function MigrationSettingsPage() {
     return (
       <LoadingSpinner
         fullHeight
-        label="Cargando migracion..."
-        description="La configuracion de importacion y exportacion estara disponible enseguida."
+        label="Cargando migraci?n..."
+        description="La configuraci?n de importaci?n y exportaci?n estar? disponible enseguida."
         className="min-h-screen border-0 bg-background-light shadow-none"
       />
     );

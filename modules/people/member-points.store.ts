@@ -93,7 +93,7 @@ const buildDefaultRewards = () => {
       "Pack de merchandising",
       "merchandise",
       180,
-      "Incluye camiseta, libreta y chapa de la asociacion.",
+      "Incluye camiseta, libreta y chapa de la asociaci?n.",
       20
     ),
     buildReward(
@@ -272,7 +272,7 @@ export const useMemberPointsStore = create<MemberPointsState>()(
 
         useNotificationsStore.getState().addNotification({
           category: "members",
-          title: "Importacion de recompensas completada",
+          title: "Importaci?n de recompensas completada",
           description:
             rewardsToImport.length === 1
               ? "Se importo 1 recompensa en el catalogo de puntos."

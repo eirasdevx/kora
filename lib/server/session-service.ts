@@ -119,7 +119,7 @@ const normalizePermissions = (
   };
 };
 
-const mapSecurityEvents = (
+export const mapSecurityEvents = (
   securityEvents: Array<{
     id: string;
     description: string;
@@ -136,7 +136,7 @@ const mapSecurityEvents = (
     timestamp: event.createdAt.toISOString(),
   }));
 
-const mapAssociationProfile = (association: {
+export const mapAssociationProfile = (association: {
   id: string;
   name: string;
   logoUrl: string | null;
@@ -473,6 +473,24 @@ export async function getCurrentSessionContext() {
     session,
     membership,
   };
+}
+
+export async function listCurrentUserSecurityActivity() {
+  const context = await getCurrentSessionContext();
+  if (!context) {
+    throw new Error("No hay una sesión activa.");
+  }
+
+  const securityEvents = await prisma.securityEvent.findMany({
+    where: {
+      associationUserId: context.membership.id,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return mapSecurityEvents(securityEvents);
 }
 
 export async function logoutCurrentSession() {

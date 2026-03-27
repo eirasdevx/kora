@@ -8,6 +8,7 @@ export const ASSOCIATION_DATA_MODULES = [
   "memberPointRewards",
   "memberPointRedemptions",
   "messagingTemplates",
+  "securitySettings",
 ] as const;
 
 export type AssociationDataModule =

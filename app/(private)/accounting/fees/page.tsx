@@ -655,7 +655,7 @@ export default function AccountingFeesPage() {
                         align="right"
                       />
                       <SortableHeader
-                        label="Ultimo cobro"
+                        label="?ltimo cobro"
                         active={sortState.key === "lastCompleted"}
                         direction={sortState.direction}
                         onClick={() => {
