@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomInt } from "crypto";
+import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import {
   clearSessionCookie,
@@ -15,11 +17,16 @@ import {
   toPublicAssociationMessagingSettings,
 } from "@/core/messaging/settings";
 import {
+  createPasswordDigest,
   type PasswordDigest,
   verifyPassword,
 } from "@/core/security/passwords";
 import { verifyTotp } from "@/core/security/totp";
 import { getAssociationMembershipSettings } from "@/core/session/membership-settings";
+import {
+  buildAssociationEmailPayload,
+  sendEmailBatch,
+} from "@/lib/server/email-delivery";
 import type { SessionBootstrapPayload } from "@/core/session/session-payload";
 import type { AssociationProfile } from "@/core/session/session.store";
 import type {
@@ -67,6 +74,7 @@ const ADMIN_PERMISSIONS: UserPermissions = {
 
 const DEFAULT_LANGUAGE = "es";
 const DEFAULT_TIMEZONE = "(GMT+01:00) Madrid";
+const TEMP_PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 const parseJson = <T>(value: unknown, fallback: T) => {
   if (!value || typeof value !== "object") {
@@ -700,6 +708,181 @@ export async function authenticateAssociationUser(input: {
   return { payload };
 }
 
+export async function sendTemporaryPasswordByEmail(input: {
+  email: string;
+  metadata?: ClientMetadata;
+}) {
+  const email = input.email.trim().toLowerCase();
+
+  const memberships = await prisma.associationUser.findMany({
+    where: {
+      deactivatedAt: null,
+      user: {
+        email,
+      },
+    },
+    select: {
+      id: true,
+      userId: true,
+      associationId: true,
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          passwordDigest: true,
+        },
+      },
+      association: {
+        select: {
+          id: true,
+          name: true,
+          companyCode: true,
+          contactEmail: true,
+          messagingSettings: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  if (memberships.length === 0) {
+    return {
+      userFound: false as const,
+      deliveredAssociations: 0,
+    };
+  }
+
+  const user = memberships[0].user;
+  const previousDigest = user.passwordDigest;
+  const associations = Array.from(
+    memberships.reduce<
+      Map<
+        string,
+        {
+          id: string;
+          name: string;
+          companyCode: string;
+          contactEmail: string | null;
+          messagingSettings: unknown;
+        }
+      >
+    >((acc, membership) => {
+      if (!acc.has(membership.associationId)) {
+        acc.set(membership.associationId, {
+          id: membership.association.id,
+          name: membership.association.name,
+          companyCode: membership.association.companyCode,
+          contactEmail: membership.association.contactEmail,
+          messagingSettings: membership.association.messagingSettings,
+        });
+      }
+
+      return acc;
+    }, new Map()).values()
+  ).sort((left, right) => left.name.localeCompare(right.name, "es"));
+
+  const temporaryPassword = createTemporaryPassword();
+  const passwordDigest = await createPasswordDigest(temporaryPassword);
+
+  await prisma.user.update({
+    where: {
+      id: user.id,
+    },
+    data: {
+      passwordDigest,
+    },
+  });
+
+  let deliveredAssociations = 0;
+  const deliveryErrors: string[] = [];
+
+  for (const association of associations) {
+    try {
+      const result = await sendEmailBatch(
+        buildAssociationEmailPayload({
+          associationName: association.name,
+          contactEmail: association.contactEmail,
+          messagingSettings: association.messagingSettings,
+          recipients: [
+            {
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+            },
+          ],
+          subject: `Clave temporal para acceder a ${association.name} en Kora`,
+          htmlMessage: `
+            <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
+              <h2>Clave temporal de acceso</h2>
+              <p>Has solicitado recuperar tu acceso a <strong>${association.name}</strong>.</p>
+              <div style="margin: 16px 0; padding: 16px; border: 1px solid #dbeafe; border-radius: 12px; background: #f8fbff;">
+                <p style="margin: 0 0 8px;"><strong>Asociación:</strong> ${association.name}</p>
+                <p style="margin: 0 0 8px;"><strong>Código de asociación:</strong> ${association.companyCode}</p>
+                <p style="margin: 0 0 8px;"><strong>Usuario:</strong> ${user.email}</p>
+                <p style="margin: 0;"><strong>Clave temporal:</strong> ${temporaryPassword}</p>
+              </div>
+              <p>Inicia sesión con ese correo, el código de la asociación y esta clave temporal.</p>
+              <p>Después de entrar, cambia tu contraseña desde tu perfil.</p>
+              <p style="margin-top: 12px;">Si no solicitaste este acceso, ignora este correo.</p>
+            </div>
+          `,
+        })
+      );
+
+      if (result.sentCount > 0) {
+        deliveredAssociations += 1;
+      }
+
+      if (!result.success && result.errors.length > 0) {
+        deliveryErrors.push(result.errors[0].message);
+      }
+    } catch (error) {
+      deliveryErrors.push(
+        error instanceof Error ? error.message : "No se pudo enviar el correo."
+      );
+    }
+  }
+
+  if (deliveredAssociations === 0) {
+    await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        passwordDigest: previousDigest as Prisma.InputJsonValue,
+      },
+    });
+
+    throw new Error(
+      deliveryErrors[0] ??
+        "No se pudo enviar el correo desde ninguna asociación activa."
+    );
+  }
+
+  await Promise.all(
+    memberships.map((membership) =>
+      prisma.securityEvent.create({
+        data: {
+          associationUserId: membership.id,
+          userId: membership.userId,
+          description: "Envío de clave temporal de acceso",
+          userAgent: input.metadata?.userAgent ?? null,
+          ipAddress: input.metadata?.ipAddress ?? null,
+        },
+      })
+    )
+  );
+
+  return {
+    userFound: true as const,
+    deliveredAssociations,
+  };
+}
+
 export async function requireAdminContext() {
   const context = await getCurrentSessionContext();
   if (!context) {
@@ -717,6 +900,12 @@ const normalizeOptional = (value?: string | null) => {
   const normalized = value?.trim();
   return normalized ? normalized : null;
 };
+
+const createTemporaryPassword = (length = 10) =>
+  Array.from(
+    { length },
+    () => TEMP_PASSWORD_CHARS[randomInt(0, TEMP_PASSWORD_CHARS.length)]
+  ).join("");
 
 async function ensureUniqueUserFields(input: {
   email: string;

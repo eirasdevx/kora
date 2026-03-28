@@ -91,9 +91,12 @@ export async function POST(request: NextRequest) {
       }, new Map()).values()
     ).sort((left, right) => left.name.localeCompare(right.name, "es"));
 
+    let deliveredAssociations = 0;
+    const deliveryErrors: string[] = [];
+
     for (const association of associations) {
       try {
-        await sendEmailBatch(
+        const result = await sendEmailBatch(
           buildAssociationEmailPayload({
             associationName: association.name,
             contactEmail: association.contactEmail,
@@ -113,12 +116,36 @@ export async function POST(request: NextRequest) {
             `,
           })
         );
+
+        if (result.sentCount > 0) {
+          deliveredAssociations += 1;
+        }
+
+        if (!result.success && result.errors.length > 0) {
+          deliveryErrors.push(result.errors[0].message);
+        }
       } catch (deliveryError) {
+        deliveryErrors.push(
+          deliveryError instanceof Error
+            ? deliveryError.message
+            : "No se pudo enviar el correo."
+        );
         console.error(
           `[company-codes] ${association.id}:`,
           deliveryError
         );
       }
+    }
+
+    if (associations.length > 0 && deliveredAssociations === 0) {
+      return NextResponse.json(
+        {
+          error:
+            deliveryErrors[0] ??
+            "No se pudo enviar el correo desde ninguna asociación activa.",
+        },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({

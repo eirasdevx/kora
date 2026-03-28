@@ -315,6 +315,7 @@ async function sendNewUserInviteEmail(input: {
     const payload = (await response.json().catch(() => null)) as
       | {
           success?: boolean;
+          error?: string;
           errors?: Array<{ message?: string }>;
         }
       | null;
@@ -323,8 +324,10 @@ async function sendNewUserInviteEmail(input: {
       return {
         tone: "warning" as const,
         message:
-          payload?.errors?.[0]?.message
-            ? `Usuario creado, pero no se pudo enviar la invitación: ${payload.errors[0].message}`
+          payload?.error || payload?.errors?.[0]?.message
+            ? `Usuario creado, pero no se pudo enviar la invitación: ${
+                payload.error ?? payload.errors?.[0]?.message
+              }`
             : "Usuario creado, pero no se pudo enviar el correo de invitación.",
       };
     }
