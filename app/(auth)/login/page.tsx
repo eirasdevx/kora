@@ -240,25 +240,9 @@ function LoginPageContent() {
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <label className="font-medium text-slate-700">
-                    Contraseña
-                  </label>
-                  <div className="flex flex-wrap items-center justify-end gap-3">
-                    <Link
-                      href="/forgot-password"
-                      className="font-medium text-blue-600 hover:text-blue-700"
-                    >
-                      ¿Olvidaste tu contraseña?
-                    </Link>
-                    <Link
-                      href="/remember-company-code"
-                      className="font-medium text-blue-600 hover:text-blue-700"
-                    >
-                      Recordar códigos
-                    </Link>
-                  </div>
-                </div>
+                <label className="text-sm font-medium text-slate-700">
+                  Contraseña
+                </label>
 
                 <div className="relative">
                   <input
@@ -283,6 +267,15 @@ function LoginPageContent() {
                     <EyeIcon open={showPassword} />
                   </button>
                 </div>
+
+                <div className="flex justify-end">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -300,6 +293,15 @@ function LoginPageContent() {
                   autoCapitalize="characters"
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
+
+                <div className="flex justify-end">
+                  <Link
+                    href="/remember-company-code"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    Recordar códigos
+                  </Link>
+                </div>
               </div>
 
               <label className="flex items-center gap-2 text-sm text-slate-600">
