@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import Modal from "@/components/Modal";
 import PageHeader from "@/components/shared/PageHeader";
@@ -31,6 +31,7 @@ import {
   compareText,
   SortState,
 } from "@/lib/table-sorting";
+import { downloadLinesAsPdf } from "@/modules/accounting/accounting-reports";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
 import {
   DocumentCategory,
@@ -39,12 +40,71 @@ import {
   DocumentType,
 } from "@/modules/documents/document.types";
 
-const filters: Array<DocumentCategory | "Todos"> = [
+type DocumentTheme = "Permisos" | "Normativa" | "Inscripciones" | "Solicitudes";
+type DocumentFilter = "Todos" | DocumentTheme;
+
+type DocumentTemplate = {
+  id: string;
+  theme: DocumentTheme;
+  title: string;
+  description: string;
+  defaultName: string;
+  category: DocumentCategory;
+  location: string;
+  icon: string;
+};
+
+const GENERATED_DOCUMENT_MIME_TYPE = "application/vnd.kora.generated-document";
+
+const filters: DocumentFilter[] = [
   "Todos",
-  "PDF",
-  "Imagenes",
-  "Contratos",
-  "Hojas de Calculo",
+  "Permisos",
+  "Normativa",
+  "Inscripciones",
+  "Solicitudes",
+];
+
+const documentTemplates: DocumentTemplate[] = [
+  {
+    id: "permission",
+    theme: "Permisos",
+    title: "Permiso o autorización",
+    description: "Autorizaciones de imagen, voz, salidas o cesión de datos.",
+    defaultName: "Permiso de imagen y comunicacion",
+    category: "Contratos",
+    location: "/Documentos generados/Permisos",
+    icon: "verified_user",
+  },
+  {
+    id: "statutes",
+    theme: "Normativa",
+    title: "Estatutos o normativa",
+    description: "Estatutos, reglamentos internos y acuerdos de referencia.",
+    defaultName: "Estatutos de la asociación",
+    category: "PDF",
+    location: "/Documentos generados/Normativa",
+    icon: "gavel",
+  },
+  {
+    id: "registration",
+    theme: "Inscripciones",
+    title: "Inscripcion o alta",
+    description: "Fichas de inscripción, formularios de alta y adhesiones.",
+    defaultName: "Ficha de inscripción de socio",
+    category: "Contratos",
+    location: "/Documentos generados/Inscripciones",
+    icon: "how_to_reg",
+  },
+  {
+    id: "exit-request",
+    theme: "Solicitudes",
+    title: "Solicitud de salida",
+    description: "Bajas, renuncias voluntarias y otras solicitudes formales.",
+    defaultName: "Solicitud de salida voluntaria",
+    category: "Contratos",
+    location: "/Documentos generados/Solicitudes",
+    icon: "assignment_turned_in",
+  },
 ];
 
 const securityStyles: Record<DocumentSecurity, string> = {
@@ -53,12 +113,11 @@ const securityStyles: Record<DocumentSecurity, string> = {
   Cifrado: "bg-emerald-50 text-emerald-700",
 };
 
-const categoryStyles: Record<DocumentCategory, string> = {
-  PDF: "text-blue-600 bg-blue-50",
-  Imagenes: "text-purple-600 bg-purple-50",
-  Contratos: "text-orange-600 bg-orange-50",
-  "Hojas de Calculo": "text-emerald-600 bg-emerald-50",
-  Carpetas: "text-slate-600 bg-slate-100",
+const documentThemeStyles: Record<DocumentTheme, string> = {
+  Permisos: "text-blue-600 bg-blue-50",
+  Normativa: "text-violet-600 bg-violet-50",
+  Inscripciones: "text-emerald-700 bg-emerald-50",
+  Solicitudes: "text-amber-700 bg-amber-50",
 };
 
 function cx(...classes: Array<string | undefined | null | false>) {
@@ -132,35 +191,231 @@ function getCategoryFromType(type: DocumentType): DocumentCategory {
   return "PDF";
 }
 
-function buildDocumentFromFile(
-  file: File,
+function normalizeSearchValue(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function getDocumentTheme(doc: DocumentItem): DocumentTheme {
+  const source = normalizeSearchValue(
+    `${doc.name} ${doc.location} ${doc.category} ${doc.mimeType}`
+  );
+
+  if (source.includes("permiso") || source.includes("autoriz")) {
+    return "Permisos";
+  }
+  if (
+    source.includes("estatuto") ||
+    source.includes("reglamento") ||
+    source.includes("norma") ||
+    source.includes("acta")
+  ) {
+    return "Normativa";
+  }
+  if (
+    source.includes("inscrip") ||
+    source.includes("alta") ||
+    source.includes("matricula")
+  ) {
+    return "Inscripciones";
+  }
+  if (
+    source.includes("solicitud") ||
+    source.includes("salida") ||
+    source.includes("baja") ||
+    source.includes("renuncia")
+  ) {
+    return "Solicitudes";
+  }
+
+  return "Normativa";
+}
+
+function isGeneratedDocument(doc: DocumentItem) {
+  return (
+    doc.mimeType === GENERATED_DOCUMENT_MIME_TYPE ||
+    doc.location.startsWith("/Documentos generados")
+  );
+}
+
+function buildGeneratedDocumentFile(content: string) {
+  return new Blob([content], { type: "text/plain;charset=utf-8" });
+}
+
+function getDocumentTemplateById(templateId?: string) {
+  if (!templateId) return null;
+  return (
+    documentTemplates.find((template) => template.id === templateId) ?? null
+  );
+}
+
+function getDocumentTemplate(doc: DocumentItem) {
+  const templateFromId = getDocumentTemplateById(doc.templateId);
+  if (templateFromId) return templateFromId;
+  const theme = getDocumentTheme(doc);
+  return (
+    documentTemplates.find((template) => template.theme === theme) ?? null
+  );
+}
+
+function buildGeneratedDocumentContent(
+  template: DocumentTemplate,
+  name: string
+) {
+  switch (template.id) {
+    case "permission":
+      return [
+        name,
+        "",
+        "Asociacion: ____________________________________________",
+        "Persona autorizante: ___________________________________",
+        "DNI/NIE: _______________________________________________",
+        "Persona autorizada o menor: _____________________________",
+        "",
+        "Autorizaciones concedidas:",
+        "- Uso de imagen en actividades y comunicacion interna.",
+        "- Participacion en salidas, encuentros o eventos organizados.",
+        "- Tratamiento de datos necesarios para la gestion asociativa.",
+        "",
+        "Condiciones:",
+        "- La autorizacion se mantendra vigente hasta revocacion expresa.",
+        "- La asociacion custodiara este documento con acceso restringido.",
+        "",
+        "Fecha: __________________    Firma: _____________________",
+      ].join("\n");
+    case "statutes":
+      return [
+        name,
+        "",
+        "Capitulo 1. Denominacion, fines y domicilio",
+        "- Nombre oficial de la asociacion.",
+        "- Fines sociales, culturales o deportivos.",
+        "- Domicilio social y ambito territorial.",
+        "",
+        "Capitulo 2. Personas asociadas",
+        "- Requisitos de admision.",
+        "- Derechos y deberes de las personas asociadas.",
+        "- Procedimiento de alta, suspension y baja.",
+        "",
+        "Capitulo 3. Organos de gobierno",
+        "- Asamblea general: composicion y competencias.",
+        "- Junta directiva: cargos, funciones y renovacion.",
+        "",
+        "Capitulo 4. Regimen economico",
+        "- Recursos economicos y gestion presupuestaria.",
+        "- Aprobacion de cuentas y control interno.",
+        "",
+        "Aprobado en fecha: _________________________________",
+      ].join("\n");
+    case "registration":
+      return [
+        name,
+        "",
+        "Datos personales",
+        "- Nombre y apellidos: _________________________________",
+        "- DNI/NIE: ___________________________________________",
+        "- Fecha de nacimiento: ________________________________",
+        "- Telefono y email: __________________________________",
+        "",
+        "Datos de vinculacion",
+        "- Fecha de alta: ______________________________________",
+        "- Modalidad de asociacion: ____________________________",
+        "- Observaciones relevantes: ___________________________",
+        "",
+        "Proteccion de datos y comunicaciones",
+        "- Acepta recibir comunicaciones de la asociacion.",
+        "- Autoriza el tratamiento de datos para fines de gestion.",
+        "",
+        "Firma de solicitud: _________________________________",
+      ].join("\n");
+    case "exit-request":
+      return [
+        name,
+        "",
+        "A la atencion de la junta directiva",
+        "",
+        "Datos de la persona solicitante",
+        "- Nombre y apellidos: _________________________________",
+        "- DNI/NIE: ___________________________________________",
+        "- Numero de socio: ___________________________________",
+        "",
+        "Solicitud",
+        "Solicito la baja voluntaria en la asociacion con efectos desde:",
+        "__________________________________________________________",
+        "",
+        "Motivo o observaciones",
+        "__________________________________________________________",
+        "__________________________________________________________",
+        "",
+        "Fecha: __________________    Firma: _____________________",
+      ].join("\n");
+    default:
+      return name;
+  }
+}
+
+function getGeneratedDocumentContent(doc: DocumentItem) {
+  if (doc.content?.trim()) {
+    return doc.content;
+  }
+
+  const template = getDocumentTemplate(doc);
+  if (!template) {
+    return doc.name;
+  }
+
+  return buildGeneratedDocumentContent(template, doc.name);
+}
+
+function getDocumentDownloadName(doc: DocumentItem) {
+  if (/\.[a-z0-9]{2,5}$/i.test(doc.name)) {
+    return doc.name;
+  }
+  return isGeneratedDocument(doc) ? `${doc.name}.pdf` : doc.name;
+}
+
+function renameGeneratedDocumentContent(content: string, name: string) {
+  const lines = content.split(/\r?\n/);
+  if (lines.length === 0) return name;
+  lines[0] = name;
+  return lines.join("\n");
+}
+
+function buildGeneratedDocument(
+  template: DocumentTemplate,
   security: DocumentSecurity,
-  locale: string
+  locale: string,
+  customName?: string
 ): DocumentItem {
   const now = new Date();
   const nowIso = now.toISOString();
-  const type = getTypeFromName(file.name);
-  const category = getCategoryFromType(type);
-  const owner = "Tu usuario";
+  const owner = "Kora";
+  const name = customName?.trim() || template.defaultName;
+  const content = buildGeneratedDocumentContent(template, name);
+  const file = buildGeneratedDocumentFile(content);
 
   return {
     id: crypto.randomUUID(),
-    name: file.name,
-    category,
+    name,
+    category: template.category,
     security,
-    type,
+    type: "doc",
     size: file.size,
-    mimeType: file.type || "application/octet-stream",
-    location: "/Documentos",
+    mimeType: GENERATED_DOCUMENT_MIME_TYPE,
+    location: template.location,
     owner,
     createdAt: nowIso,
     updatedAt: nowIso,
     file,
+    content,
+    templateId: template.id,
     access: ["TU"],
     versions: [
       {
         id: crypto.randomUUID(),
-        label: "v1.0 - Subido",
+        label: "v1.0 - Generado",
         author: owner,
         time: new Intl.DateTimeFormat(locale, {
           hour: "2-digit",
@@ -173,6 +428,7 @@ function buildDocumentFromFile(
 
 function formatSizeLabel(doc: DocumentItem) {
   if (doc.type === "folder") return "Carpeta";
+  if (isGeneratedDocument(doc)) return "Generado";
   return formatBytes(doc.size);
 }
 
@@ -206,25 +462,28 @@ export default function DocumentsPage() {
     documents,
     loadDocuments,
     upsertDocument,
-    upsertDocuments,
     deleteDocument,
   } = useDocumentsStore();
 
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<DocumentCategory | "Todos">("Todos");
+  const [filter, setFilter] = useState<DocumentFilter>("Todos");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedId, setSelectedId] = useState("");
-  const [uploadOpen, setUploadOpen] = useState(false);
+  const [generatorOpen, setGeneratorOpen] = useState(false);
   const [privacy, setPrivacy] = useState<"private" | "public">("private");
   const [activeTab, setActiveTab] = useState<
     "Información" | "Historial" | "Acceso"
   >("Información");
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+  const [contentDraft, setContentDraft] = useState("");
+  const [generatedNameDraft, setGeneratedNameDraft] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState(
+    documentTemplates[0]?.id ?? ""
+  );
   const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [permissionDraft, setPermissionDraft] = useState("");
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<DocumentItem | null>(null);
   const [confirmDeleteFinal, setConfirmDeleteFinal] =
     useState<DocumentItem | null>(null);
@@ -232,8 +491,6 @@ export default function DocumentsPage() {
     key: "updatedAt",
     direction: "desc",
   });
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const pageSize = 5;
 
   useEffect(() => {
@@ -243,20 +500,26 @@ export default function DocumentsPage() {
   const selectDocument = (doc: DocumentItem) => {
     setSelectedId(doc.id);
     setNameDraft(doc.name);
+    setContentDraft(getGeneratedDocumentContent(doc));
     setEditingName(false);
   };
 
   const clearSelectedDocument = () => {
     setSelectedId("");
     setNameDraft("");
+    setContentDraft("");
     setEditingName(false);
   };
 
   const filteredDocuments = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalizeSearchValue(search.trim());
     return documents.filter((doc) => {
-      const matchesSearch = !q || doc.name.toLowerCase().includes(q);
-      const matchesFilter = filter === "Todos" || doc.category === filter;
+      const searchableText = normalizeSearchValue(
+        `${doc.name} ${doc.location} ${getDocumentTheme(doc)}`
+      );
+      const matchesSearch = !q || searchableText.includes(q);
+      const matchesFilter =
+        filter === "Todos" || getDocumentTheme(doc) === filter;
       return matchesSearch && matchesFilter;
     });
   }, [documents, filter, search]);
@@ -309,41 +572,50 @@ export default function DocumentsPage() {
     filteredDocuments.find((doc) => doc.id === selectedId) ?? null;
   const confirmDeleteLabel =
     confirmDelete?.name?.trim() || "este documento";
+  const generatedContentChanged =
+    Boolean(selectedDoc && isGeneratedDocument(selectedDoc)) &&
+    contentDraft !== getGeneratedDocumentContent(selectedDoc);
+  const selectedTemplate =
+    documentTemplates.find((template) => template.id === selectedTemplateId) ??
+    documentTemplates[0];
+  const generatedNamePreview =
+    generatedNameDraft.trim() || selectedTemplate?.defaultName || "";
 
-  const closeUpload = () => {
-    setUploadOpen(false);
-    setPendingFiles([]);
+  const closeGenerator = () => {
+    setGeneratorOpen(false);
+    setGeneratedNameDraft("");
   };
 
-  const handleFilesSelected = async (fileList: FileList | null) => {
-    if (!fileList || fileList.length === 0) return;
-    const files = Array.from(fileList);
+  const handleGenerateDocument = async () => {
+    if (!selectedTemplate) return;
     const security: DocumentSecurity =
       privacy === "private" ? "Privado" : "Compartido";
-    const docs = files.map((file) =>
-      buildDocumentFromFile(file, security, formatLocale)
+    const doc = buildGeneratedDocument(
+      selectedTemplate,
+      security,
+      formatLocale,
+      generatedNameDraft
     );
-    await upsertDocuments(docs);
-    setPendingFiles(files);
-    if (docs[0]) {
-      selectDocument(docs[0]);
-    } else {
-      clearSelectedDocument();
-    }
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    await handleFilesSelected(event.dataTransfer.files);
+    await upsertDocument(doc);
+    selectDocument(doc);
+    closeGenerator();
   };
 
   const handleDownload = (doc?: DocumentItem) => {
-    if (!doc?.file) return;
-    const url = URL.createObjectURL(doc.file);
+    if (!doc) return;
+    if (isGeneratedDocument(doc)) {
+      downloadLinesAsPdf(
+        getDocumentDownloadName(doc),
+        getGeneratedDocumentContent(doc).split(/\r?\n/)
+      );
+      return;
+    }
+    const file = doc.file;
+    if (!file) return;
+    const url = URL.createObjectURL(file);
     const link = document.createElement("a");
     link.href = url;
-    link.download = doc.name;
+    link.download = getDocumentDownloadName(doc);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -361,16 +633,62 @@ export default function DocumentsPage() {
     if (!selectedDoc) return;
     const trimmed = nameDraft.trim();
     if (!trimmed) return;
-    const type = getTypeFromName(trimmed);
-    const category = getCategoryFromType(type);
+    const preserveGenerated = isGeneratedDocument(selectedDoc);
+    const type = preserveGenerated ? selectedDoc.type : getTypeFromName(trimmed);
+    const category = preserveGenerated
+      ? selectedDoc.category
+      : getCategoryFromType(type);
+    const content = preserveGenerated
+      ? renameGeneratedDocumentContent(
+          getGeneratedDocumentContent(selectedDoc),
+          trimmed
+        )
+      : selectedDoc.content;
+    const file = preserveGenerated
+      ? buildGeneratedDocumentFile(content)
+      : selectedDoc.file;
     await upsertDocument({
       ...selectedDoc,
       name: trimmed,
       type,
       category,
+      content,
+      file,
+      size: preserveGenerated && file ? file.size : selectedDoc.size,
       updatedAt: new Date().toISOString(),
     });
+    if (preserveGenerated) {
+      setContentDraft(content);
+    }
     setEditingName(false);
+  };
+
+  const handleSaveContent = async () => {
+    if (!selectedDoc || !isGeneratedDocument(selectedDoc)) return;
+
+    const now = new Date();
+    const file = buildGeneratedDocumentFile(contentDraft);
+    const versionIndex = (selectedDoc.versions?.length ?? 0) + 1;
+
+    await upsertDocument({
+      ...selectedDoc,
+      content: contentDraft,
+      file,
+      size: file.size,
+      updatedAt: now.toISOString(),
+      versions: [
+        {
+          id: crypto.randomUUID(),
+          label: `v${versionIndex}.0 - Contenido actualizado`,
+          author: "Tu usuario",
+          time: new Intl.DateTimeFormat(formatLocale, {
+            hour: "2-digit",
+            minute: "2-digit",
+          }).format(now),
+        },
+        ...(selectedDoc.versions ?? []),
+      ],
+    });
   };
 
   const handleAddPermission = async () => {
@@ -420,14 +738,14 @@ export default function DocumentsPage() {
       <PageHeader
         title="Documentos"
         subtitle={
-          "Biblioteca segura para actas, contratos y hojas de c\u00e1lculo."
+          "Genera permisos, estatutos, inscripciones y solicitudes para la asociación."
         }
         backHref="/resources"
         backLabel="Volver a Recursos"
         actions={
           <button
             type="button"
-            onClick={() => setUploadOpen(true)}
+            onClick={() => setGeneratorOpen(true)}
             className={moduleTopbarButtonStyles.primary}
           >
             <span className={moduleTopbarButtonIconStyles.add}>
@@ -435,7 +753,7 @@ export default function DocumentsPage() {
                 add
               </span>
             </span>
-            Subir documento
+            Generar documento
           </button>
         }
       />
@@ -450,7 +768,7 @@ export default function DocumentsPage() {
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
-                Acceso Rapido - Editados recientemente
+                Generados recientemente
               </h3>
               <button
                 type="button"
@@ -466,7 +784,7 @@ export default function DocumentsPage() {
             </div>
             {quickAccess.length === 0 ? (
               <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-500">
-                Todavía no hay documentos cargados.
+                Aún no has generado permisos, estatutos o solicitudes.
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -492,7 +810,7 @@ export default function DocumentsPage() {
                       <div
                         className={cx(
                           "flex h-16 w-16 items-center justify-center rounded-2xl",
-                          categoryStyles[doc.category]
+                          documentThemeStyles[getDocumentTheme(doc)]
                         )}
                       >
                         <FileIcon type={doc.type} className="text-[32px]" />
@@ -502,7 +820,7 @@ export default function DocumentsPage() {
                           {doc.name}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {formatRelative(doc.updatedAt)} - {formatSizeLabel(doc)}
+                          {getDocumentTheme(doc)} - {formatRelative(doc.updatedAt)}
                         </p>
                       </div>
                     </button>
@@ -516,10 +834,10 @@ export default function DocumentsPage() {
             <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Todos los archivos
+                  Documentos generados
                 </h3>
                 <p className="text-xs text-gray-500">
-                  Gestiona permisos y organiza la documentación clave.
+                  Crea y revisa documentos administrativos listos para usar.
                 </p>
               </div>
               <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
@@ -531,7 +849,7 @@ export default function DocumentsPage() {
                   </span>
                   <input
                     type="text"
-                    placeholder="Buscar documentos, facturas..."
+                    placeholder="Buscar permisos, estatutos, inscripciones..."
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
@@ -637,7 +955,7 @@ export default function DocumentsPage() {
                       <th className={tableHeadCellStyles}>Nombre</th>
                       <th className={tableHeadCellStyles}>Seguridad</th>
                       <th className={tableHeadCellStyles}>Modificado</th>
-                      <th className={tableHeadCellStyles}>Tamaño</th>
+                      <th className={tableHeadCellStyles}>Estado</th>
                       <th className={`${tableHeadCellStyles} text-right`}>
                         Acciones
                       </th>
@@ -672,7 +990,7 @@ export default function DocumentsPage() {
                                 <span
                                   className={cx(
                                     "flex h-9 w-9 items-center justify-center rounded-xl text-sm",
-                                    categoryStyles[doc.category]
+                                    documentThemeStyles[getDocumentTheme(doc)]
                                   )}
                                 >
                                   <FileIcon type={doc.type} className="text-[16px]" />
@@ -682,7 +1000,7 @@ export default function DocumentsPage() {
                                     {doc.name}
                                   </p>
                                   <p className="text-xs text-gray-500">
-                                    {doc.category}
+                                    {getDocumentTheme(doc)}
                                   </p>
                                 </div>
                               </div>
@@ -751,7 +1069,7 @@ export default function DocumentsPage() {
                           <span
                             className={cx(
                               "flex h-10 w-10 items-center justify-center rounded-xl text-sm",
-                              categoryStyles[doc.category]
+                              documentThemeStyles[getDocumentTheme(doc)]
                             )}
                           >
                             <FileIcon type={doc.type} className="text-[20px]" />
@@ -773,7 +1091,7 @@ export default function DocumentsPage() {
                             {doc.name}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {doc.category}
+                            {getDocumentTheme(doc)}
                           </p>
                         </div>
                         <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
@@ -789,7 +1107,7 @@ export default function DocumentsPage() {
 
             <div className={tableFooterStyles}>
               <span>
-                Mostrando {pagedDocuments.length} de {sortedDocuments.length} archivos
+                Mostrando {pagedDocuments.length} de {sortedDocuments.length} documentos
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -847,10 +1165,10 @@ export default function DocumentsPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    Detalles del Archivo
+                    Detalles del documento
                   </h3>
                     <p className="text-xs text-gray-500">
-                      Información, versiones y accesos.
+                      Plantilla, historial y accesos.
                     </p>
                 </div>
                 <button
@@ -877,7 +1195,7 @@ export default function DocumentsPage() {
                       value={nameDraft}
                       onChange={(e) => setNameDraft(e.target.value)}
                       className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                      placeholder="Nombre del archivo"
+                      placeholder="Nombre del documento"
                     />
                     <div className="flex gap-2">
                       <button
@@ -954,13 +1272,13 @@ export default function DocumentsPage() {
                       </p>
                       <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <dt className="text-xs text-gray-400">Tipo</dt>
+                          <dt className="text-xs text-gray-400">Familia</dt>
                           <dd className="font-semibold text-gray-700">
-                            {selectedDoc.category}
+                            {getDocumentTheme(selectedDoc)}
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-xs text-gray-400">Tamaño</dt>
+                          <dt className="text-xs text-gray-400">Estado</dt>
                           <dd className="font-semibold text-gray-700">
                             {formatSizeLabel(selectedDoc)}
                           </dd>
@@ -980,6 +1298,48 @@ export default function DocumentsPage() {
                       </dl>
                     </div>
 
+                    {isGeneratedDocument(selectedDoc) ? (
+                      <div>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-semibold uppercase text-gray-400">
+                            Contenido editable
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setContentDraft(getGeneratedDocumentContent(selectedDoc))
+                            }
+                            className="text-xs font-semibold text-gray-500"
+                          >
+                            Restaurar base
+                          </button>
+                        </div>
+                        <textarea
+                          value={contentDraft}
+                          onChange={(event) => setContentDraft(event.target.value)}
+                          className="mt-3 min-h-[260px] w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                        />
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <p className="text-xs text-gray-500">
+                            Edita el texto y guarda una nueva versión del documento.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleSaveContent}
+                            disabled={!generatedContentChanged}
+                            className={cx(
+                              "rounded-xl px-4 py-2 text-sm font-semibold shadow-sm",
+                              generatedContentChanged
+                                ? "bg-primary text-white"
+                                : "cursor-not-allowed border border-gray-200 bg-gray-100 text-gray-400"
+                            )}
+                          >
+                            Guardar contenido
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+
                     <div>
                       <p className="text-xs font-semibold uppercase text-gray-400">
                         Versiones recientes
@@ -998,7 +1358,7 @@ export default function DocumentsPage() {
                                   {version.label}
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                  Subido por {version.author} - {version.time}
+                                  {isGeneratedDocument(selectedDoc) ? "Generado" : "Subido"} por {version.author} - {version.time}
                                 </p>
                               </div>
                             </div>
@@ -1042,7 +1402,9 @@ export default function DocumentsPage() {
                 {activeTab === "Historial" && (
                   <div className="mt-4 space-y-3 text-sm text-gray-600">
                       <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                        <p className="font-semibold text-gray-700">Última actividad</p>
+                        <p className="font-semibold text-gray-700">
+                          {isGeneratedDocument(selectedDoc) ? "Última generación" : "Última actividad"}
+                        </p>
                       <p className="mt-1 text-xs text-gray-500">
                         {formatDate(selectedDoc.updatedAt, formatLocale)} - {selectedDoc.owner}
                       </p>
@@ -1067,7 +1429,7 @@ export default function DocumentsPage() {
                       </p>
                     </div>
                     <button className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow">
-                      Compartir enlace seguro
+                      Compartir documento
                     </button>
                   </div>
                 )}
@@ -1076,11 +1438,13 @@ export default function DocumentsPage() {
                   <button
                     className={cx(
                       "flex-1 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600",
-                      !selectedDoc.file && "cursor-not-allowed opacity-50"
+                      !selectedDoc.file &&
+                        !isGeneratedDocument(selectedDoc) &&
+                        "cursor-not-allowed opacity-50"
                     )}
                     type="button"
                     onClick={() => handleDownload(selectedDoc)}
-                    disabled={!selectedDoc.file}
+                    disabled={!selectedDoc.file && !isGeneratedDocument(selectedDoc)}
                   >
                     Descargar
                   </button>
@@ -1158,38 +1522,55 @@ export default function DocumentsPage() {
       </Modal>
 
       <Modal
-        isOpen={uploadOpen}
-        onClose={closeUpload}
+        isOpen={generatorOpen}
+        onClose={closeGenerator}
         size="lg"
-        title="Subir Archivo"
+        title="Generar documento"
       >
         <div className="space-y-6">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => handleFilesSelected(e.target.files)}
-          />
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => fileInputRef.current?.click()}
-            onDrop={handleDrop}
-            onDragOver={(event) => event.preventDefault()}
-            className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-6 py-8 text-center"
-          >
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <span className="material-symbols-outlined text-[24px]">
-                cloud_upload
-              </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+              Tipo de documento
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {documentTemplates.map((template) => {
+                const active = template.id === selectedTemplateId;
+                return (
+                  <button
+                    key={template.id}
+                    type="button"
+                    onClick={() => setSelectedTemplateId(template.id)}
+                    className={cx(
+                      "rounded-2xl border p-4 text-left transition",
+                      active
+                        ? "border-primary/40 bg-primary/5"
+                        : "border-gray-200 bg-white hover:border-primary/30"
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span
+                        className={cx(
+                          "flex h-10 w-10 items-center justify-center rounded-xl",
+                          documentThemeStyles[template.theme]
+                        )}
+                      >
+                        <span className="material-symbols-outlined text-[18px]">
+                          {template.icon}
+                        </span>
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {template.title}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {template.description}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            <p className="mt-4 text-sm font-semibold text-gray-900">
-              Arrastra tus archivos aquí o haz clic para buscar
-            </p>
-            <p className="mt-2 text-xs text-gray-500">
-              Soporta PDF, JPG, PNG, DOCX, XLSX (Max. 50MB)
-            </p>
           </div>
 
           <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1201,10 +1582,10 @@ export default function DocumentsPage() {
               </span>
               <div>
                 <p className="text-sm font-semibold text-gray-900">
-                  Privacidad del archivo
+                  Visibilidad del documento
                 </p>
                 <p className="text-xs text-gray-500">
-                  Determina quién puede ver estos documentos.
+                  Define quién puede consultar este documento generado.
                 </p>
               </div>
             </div>
@@ -1238,58 +1619,50 @@ export default function DocumentsPage() {
 
           <div className="space-y-3">
             <p className="text-xs font-semibold text-gray-500">
-              ARCHIVOS SELECCIONADOS ({pendingFiles.length})
+              NOMBRE DEL DOCUMENTO
             </p>
-            {pendingFiles.length === 0 ? (
-              <div className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-500">
-                Aún no hay archivos seleccionados.
-              </div>
-            ) : (
-              pendingFiles.map((file) => (
-                <div
-                  key={file.name}
-                  className="rounded-2xl border border-gray-200 bg-white p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                      <FileIcon
-                        type={getTypeFromName(file.name)}
-                        className="text-[20px]"
-                      />
-                    </span>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatBytes(file.size)} - listo
-                      </p>
-                    </div>
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                      <span className="material-symbols-outlined text-[16px]">
-                        check
-                      </span>
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
+            <input
+              value={generatedNameDraft}
+              onChange={(event) => setGeneratedNameDraft(event.target.value)}
+              placeholder={selectedTemplate?.defaultName ?? "Nombre del documento"}
+              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+            />
+            <p className="text-xs text-gray-500">
+              Ejemplos: permiso de imagen, estatutos, ficha de inscripción o solicitud de salida.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+              Vista previa
+            </p>
+            <div className="mt-3 space-y-2">
+              <p className="text-sm font-semibold text-gray-900">
+                {generatedNamePreview}
+              </p>
+              <p className="text-xs text-gray-500">
+                {selectedTemplate?.theme} · {privacy === "private" ? "Privado" : "Compartido"}
+              </p>
+              <p className="text-xs text-gray-500">
+                {selectedTemplate?.description}
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             <button
               type="button"
-              onClick={closeUpload}
+              onClick={closeGenerator}
               className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-600"
             >
               Cerrar
             </button>
             <button
               type="button"
-              onClick={closeUpload}
+              onClick={handleGenerateDocument}
               className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow"
             >
-              Finalizar Carga
+              Generar documento
             </button>
           </div>
         </div>

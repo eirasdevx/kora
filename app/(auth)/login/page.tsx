@@ -197,7 +197,7 @@ function LoginPageContent() {
 
             <div className="max-w-md space-y-6">
               <h1 className="text-4xl font-semibold leading-tight">
-                Gestiona tu asociación con elegancia.
+                Gestiona tu asociación con facilidad.
               </h1>
               <p className="text-base text-white/80">
                 Centraliza finanzas, recursos, eventos y mensajería en una sola

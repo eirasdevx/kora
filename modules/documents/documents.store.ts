@@ -28,6 +28,27 @@ interface DocumentsState {
 const isAuthenticated = () =>
   useSessionStore.getState().mode === "authenticated";
 
+const isGeneratedDocument = (doc: DocumentItem) =>
+  doc.mimeType === "application/vnd.kora.generated-document" ||
+  doc.location.startsWith("/Documentos generados");
+
+const buildGeneratedDocumentBlob = (content: string) =>
+  new Blob([content], { type: "text/plain;charset=utf-8" });
+
+const hydrateGeneratedDocument = (doc: DocumentItem): DocumentItem => {
+  if (!isGeneratedDocument(doc) || doc.file || !doc.content) {
+    return doc;
+  }
+
+  const file = buildGeneratedDocumentBlob(doc.content);
+
+  return {
+    ...doc,
+    file,
+    size: file.size,
+  };
+};
+
 export const useDocumentsStore = create<DocumentsState>((set, get) => ({
   documents: [],
 
@@ -50,11 +71,11 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
           return item;
         }
 
-        return {
+        return hydrateGeneratedDocument({
           ...cachedItem,
           ...item,
           file: item.file ?? cachedItem.file,
-        };
+        });
       });
 
       if (mergedDocuments.length > 0 || migratedRecords.length > 0) {
@@ -70,14 +91,14 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
     }
 
     if (migratedRecords.length > 0) {
-      await db.documents.bulkPut(scopedRecords);
+      await db.documents.bulkPut(scopedRecords.map(hydrateGeneratedDocument));
     }
 
-    set({ documents: scopedRecords });
+    set({ documents: scopedRecords.map(hydrateGeneratedDocument) });
   },
 
   upsertDocument: async (doc) => {
-    const scopedDoc = withActiveAssociation(doc);
+    const scopedDoc = hydrateGeneratedDocument(withActiveAssociation(doc));
     const exists = get().documents.some((item) => item.id === scopedDoc.id);
     if (!isAuthenticated()) {
       set((state) => {
@@ -92,10 +113,22 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
       });
       useNotificationsStore.getState().addNotification({
         category: "documents",
-        title: exists ? "Documento actualizado" : "Documento agregado",
+        title: exists
+          ? "Documento actualizado"
+          : isGeneratedDocument(scopedDoc)
+            ? "Documento generado"
+            : "Documento agregado",
         description: doc.name
-          ? `Se ${exists ? "actualizó" : "agregó"} ${doc.name}.`
-          : "Se guardó un documento.",
+          ? `Se ${
+              exists
+                ? "actualizó"
+                : isGeneratedDocument(scopedDoc)
+                  ? "generó"
+                  : "agregó"
+            } ${doc.name}.`
+          : isGeneratedDocument(scopedDoc)
+            ? "Se generó un documento."
+            : "Se guardó un documento.",
         href: "/documents",
         actionLabel: "Ver documento",
         icon: "description",
@@ -117,10 +150,22 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
     });
     useNotificationsStore.getState().addNotification({
       category: "documents",
-      title: exists ? "Documento actualizado" : "Documento agregado",
+      title: exists
+        ? "Documento actualizado"
+        : isGeneratedDocument(scopedDoc)
+          ? "Documento generado"
+          : "Documento agregado",
       description: doc.name
-        ? `Se ${exists ? "actualizó" : "agregó"} ${doc.name}.`
-        : "Se guardó un documento.",
+        ? `Se ${
+            exists
+              ? "actualizó"
+              : isGeneratedDocument(scopedDoc)
+                ? "generó"
+                : "agregó"
+          } ${doc.name}.`
+        : isGeneratedDocument(scopedDoc)
+          ? "Se generó un documento."
+          : "Se guardó un documento.",
       href: "/documents",
       actionLabel: "Ver documento",
       icon: "description",
@@ -130,7 +175,9 @@ export const useDocumentsStore = create<DocumentsState>((set, get) => ({
 
   upsertDocuments: async (docs) => {
     if (docs.length === 0) return;
-    const scopedDocs = docs.map((doc) => withActiveAssociation(doc));
+    const scopedDocs = docs.map((doc) =>
+      hydrateGeneratedDocument(withActiveAssociation(doc))
+    );
     if (!isAuthenticated()) {
       set((state) => {
         const map = new Map(

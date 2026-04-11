@@ -9,7 +9,7 @@ import { useSessionStore } from "@/core/session/session.store";
 const RESOURCES_MODULE_TITLE = "Recursos";
 const RESOURCES_PAGE_TITLE = "Centro de recursos";
 const RESOURCES_MODULE_DESCRIPTION =
-  "Inventario, préstamos y documentación clave.";
+  "Inventario, préstamos y generación documental.";
 
 type ResourcesLayoutProps = {
   children: React.ReactNode;
@@ -42,7 +42,7 @@ export default function ResourcesLayout({
             Recursos no disponible en modo invitado
           </h2>
           <p className="mt-2 text-sm text-slate-500">
-            Inicia sesión para gestionar inventario, préstamos y documentación.
+            Inicia sesión para gestionar inventario, préstamos y documentos generados.
           </p>
         </div>
       </div>

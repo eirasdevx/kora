@@ -1229,6 +1229,8 @@ function normalizeDocument(value: unknown): DocumentItem | null {
       safeString(obj.updatedAt).trim() ||
       safeString(obj.createdAt).trim() ||
       nowIso(),
+    content: safeString(obj.content).trim() || undefined,
+    templateId: safeString(obj.templateId).trim() || undefined,
     access: splitList(obj.access),
     versions: versions.length ? versions : undefined,
   };

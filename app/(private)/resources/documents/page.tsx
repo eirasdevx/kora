@@ -6,7 +6,7 @@ export default function ResourcesDocumentsPage() {
   return (
     <ClientRedirect
       to="/documents"
-      label="Redirigiendo a documentos..."
+      label="Redirigiendo al generador documental..."
     />
   );
 }

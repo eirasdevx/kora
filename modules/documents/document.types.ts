@@ -37,6 +37,8 @@ export type DocumentItem = {
   createdAt: string;
   updatedAt: string;
   file?: Blob;
+  content?: string;
+  templateId?: string;
   access?: string[];
   versions?: DocumentVersion[];
 };

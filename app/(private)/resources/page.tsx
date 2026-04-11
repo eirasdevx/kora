@@ -26,7 +26,7 @@ const ITEM_STATUS_STYLES: Record<InventoryStatus, string> = {
 const RESOURCES_MODULE_TITLE = "Recursos";
 const RESOURCES_PAGE_TITLE = "Centro de recursos";
 const RESOURCES_MODULE_DESCRIPTION =
-  "Inventario, pr\u00e9stamos y documentaci\u00f3n clave.";
+  "Inventario, préstamos y generación documental.";
 
 function resolveItemStatus(item: InventoryItem): InventoryStatus {
   if (item.status) return item.status;
@@ -82,7 +82,7 @@ export default function ResourcesPage() {
     return { total, borrowed };
   }, [items]);
 
-  const documentsUploadedThisMonth = documents.filter((doc) =>
+  const documentsCreatedThisMonth = documents.filter((doc) =>
     isOnOrAfter(doc.createdAt, startOfMonth)
   ).length;
 
@@ -144,9 +144,9 @@ export default function ResourcesPage() {
           className="border-slate-200/80 bg-white/90 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.35)] backdrop-blur"
         />
         <StatCard
-          title="Documentos totales"
-          value={`${formatNumber(documents.length, formatLocale)} archivos`}
-          meta={`+${formatNumber(documentsUploadedThisMonth, formatLocale)} subidos este mes`}
+          title="Documentos generados"
+          value={`${formatNumber(documents.length, formatLocale)} documentos`}
+          meta={`+${formatNumber(documentsCreatedThisMonth, formatLocale)} creados este mes`}
           href="/resources/documents"
           icon="description"
           accentClassName="bg-blue-50 text-blue-600"
@@ -228,10 +228,10 @@ export default function ResourcesPage() {
                   description
                 </span>
               </span>
-              Documentos
+              Generador documental
             </span>
             <span className="flex items-center gap-1 text-xs font-semibold text-gray-400 transition group-hover:text-primary">
-              {formatNumber(documents.length, formatLocale)} archivos
+              {formatNumber(documents.length, formatLocale)} documentos
               <span className="material-symbols-outlined text-[16px] transition group-hover:translate-x-0.5">
                 arrow_forward
               </span>
@@ -241,7 +241,7 @@ export default function ResourcesPage() {
           <div className="rounded-3xl border border-slate-200/70 bg-white/90 px-5 py-4 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-                Documentos recientes
+                Generados recientemente
               </p>
               <span className="text-xs font-semibold text-gray-400">
                 {formatNumber(recentDocuments.length, formatLocale)}
@@ -250,7 +250,7 @@ export default function ResourcesPage() {
             <div className="mt-3 space-y-2">
               {recentDocuments.length === 0 ? (
                 <p className="text-sm text-gray-500">
-                  No hay documentos recientes.
+                  Genera permisos, estatutos, inscripciones o solicitudes de salida.
                 </p>
               ) : (
                 recentDocuments.map((doc) => (
@@ -263,7 +263,7 @@ export default function ResourcesPage() {
                         {doc.name}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {doc.category} ·{" "}
+                        Documento generado ·{" "}
                         {formatDate(
                           doc.updatedAt ?? doc.createdAt,
                           formatLocale
