@@ -36,6 +36,8 @@ import type {
 import type {
   DocumentCategory,
   DocumentItem,
+  DocumentLayout,
+  DocumentMargins,
   DocumentSecurity,
   DocumentType,
 } from "@/modules/documents/document.types";
@@ -671,6 +673,62 @@ function parseBoolean(value: unknown): boolean | undefined {
   return undefined;
 }
 
+function normalizeDocumentMarginsValue(
+  value: unknown
+): DocumentMargins | undefined {
+  if (!value || typeof value !== "object") return undefined;
+
+  const raw = value as Record<string, unknown>;
+  const top = parseNumber(raw.top);
+  const right = parseNumber(raw.right);
+  const bottom = parseNumber(raw.bottom);
+  const left = parseNumber(raw.left);
+
+  if (
+    top === undefined &&
+    right === undefined &&
+    bottom === undefined &&
+    left === undefined
+  ) {
+    return undefined;
+  }
+
+  return {
+    top: Math.max(0, Math.min(80, Math.round(top ?? 18))),
+    right: Math.max(0, Math.min(80, Math.round(right ?? 18))),
+    bottom: Math.max(0, Math.min(80, Math.round(bottom ?? 18))),
+    left: Math.max(0, Math.min(80, Math.round(left ?? 18))),
+  };
+}
+
+function normalizeDocumentLayoutValue(
+  value: unknown
+): DocumentLayout | undefined {
+  if (!value || typeof value !== "object") return undefined;
+
+  const raw = value as Record<string, unknown>;
+  const header = normalizeOptionalText(raw.header);
+  const footer = normalizeOptionalText(raw.footer);
+  const includeAssociationLogo = parseBoolean(raw.includeAssociationLogo);
+  const margins = normalizeDocumentMarginsValue(raw.margins);
+
+  if (
+    !header &&
+    !footer &&
+    includeAssociationLogo === undefined &&
+    !margins
+  ) {
+    return undefined;
+  }
+
+  return {
+    header,
+    footer,
+    includeAssociationLogo,
+    margins,
+  };
+}
+
 function normalizeRepresentativeEntry(
   value: unknown
 ): AssociationRepresentative | null {
@@ -1231,6 +1289,7 @@ function normalizeDocument(value: unknown): DocumentItem | null {
       nowIso(),
     content: safeString(obj.content).trim() || undefined,
     templateId: safeString(obj.templateId).trim() || undefined,
+    layout: normalizeDocumentLayoutValue(obj.layout),
     access: splitList(obj.access),
     versions: versions.length ? versions : undefined,
   };

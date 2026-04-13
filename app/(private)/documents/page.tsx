@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 import Modal from "@/components/Modal";
 import PageHeader from "@/components/shared/PageHeader";
@@ -24,6 +25,7 @@ import {
   tableWrapperStyles,
 } from "@/components/shared/tableStyles";
 import { useLocale } from "@/core/i18n/use-locale";
+import { useSessionStore } from "@/core/session/session.store";
 import {
   applySortDirection,
   compareDate,
@@ -31,8 +33,16 @@ import {
   compareText,
   SortState,
 } from "@/lib/table-sorting";
-import { downloadLinesAsPdf } from "@/modules/accounting/accounting-reports";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
+import {
+  GENERATED_DOCUMENT_MIME_TYPE,
+  buildGeneratedDocumentFile,
+  buildGeneratedDocumentHtml,
+  downloadGeneratedDocumentHtml,
+  extractGeneratedDocumentBody,
+  getGeneratedDocumentFilename,
+  isGeneratedDocument,
+} from "@/modules/documents/generated-document-layout";
 import {
   DocumentCategory,
   DocumentItem,
@@ -54,7 +64,10 @@ type DocumentTemplate = {
   icon: string;
 };
 
-const GENERATED_DOCUMENT_MIME_TYPE = "application/vnd.kora.generated-document";
+type DocumentTemplateCatalogItem = DocumentTemplate & {
+  highlights: string[];
+  previewLines: string[];
+};
 
 const filters: DocumentFilter[] = [
   "Todos",
@@ -63,6 +76,35 @@ const filters: DocumentFilter[] = [
   "Inscripciones",
   "Solicitudes",
 ];
+
+const documentThemes: DocumentTheme[] = [
+  "Permisos",
+  "Normativa",
+  "Inscripciones",
+  "Solicitudes",
+];
+
+const documentThemeMeta: Record<
+  DocumentTheme,
+  { description: string; accent: string }
+> = {
+  Permisos: {
+    description: "Autorizaciones, consentimientos y cesiones para actividades.",
+    accent: "text-blue-600",
+  },
+  Normativa: {
+    description: "Estatutos, reglamentos internos y actas de referencia.",
+    accent: "text-violet-600",
+  },
+  Inscripciones: {
+    description: "Altas, adhesiones y formularios de registro editables.",
+    accent: "text-emerald-700",
+  },
+  Solicitudes: {
+    description: "Bajas, reembolsos, prestamos y peticiones formales.",
+    accent: "text-amber-700",
+  },
+};
 
 const documentTemplates: DocumentTemplate[] = [
   {
@@ -106,6 +148,266 @@ const documentTemplates: DocumentTemplate[] = [
     icon: "assignment_turned_in",
   },
 ];
+
+const documentTemplateCatalog: DocumentTemplateCatalogItem[] = [
+  {
+    id: "permission",
+    theme: "Permisos",
+    title: "Permiso de imagen y comunicacion",
+    description:
+      "Autorizacion para uso de imagen, voz y difusion en canales de la asociacion.",
+    defaultName: "Permiso de imagen y comunicacion",
+    category: "Contratos",
+    location: "/Documentos generados/Permisos",
+    icon: "verified_user",
+    highlights: [
+      "Datos de la persona autorizante y de la persona participante.",
+      "Bloque de usos permitidos y condiciones de revocacion.",
+      "Espacio para fecha y firma.",
+    ],
+    previewLines: [
+      "Asociacion y persona autorizante",
+      "Usos de imagen, voz y comunicacion",
+      "Condiciones y firma",
+    ],
+  },
+  {
+    id: "outing-authorization",
+    theme: "Permisos",
+    title: "Autorizacion para salidas",
+    description:
+      "Permiso para excursiones, encuentros o actividades fuera de sede.",
+    defaultName: "Autorizacion para salida organizada",
+    category: "Contratos",
+    location: "/Documentos generados/Permisos",
+    icon: "route",
+    highlights: [
+      "Datos de contacto, actividad y fechas.",
+      "Autorizacion expresa para desplazamiento y participacion.",
+      "Apartado para necesidades medicas o alimentarias.",
+    ],
+    previewLines: [
+      "Datos del responsable y del participante",
+      "Actividad, horarios y desplazamiento",
+      "Necesidades especiales y firma",
+    ],
+  },
+  {
+    id: "data-consent",
+    theme: "Permisos",
+    title: "Consentimiento de proteccion de datos",
+    description:
+      "Documento base para recabar consentimiento informado de tratamiento de datos.",
+    defaultName: "Consentimiento de proteccion de datos",
+    category: "Contratos",
+    location: "/Documentos generados/Permisos",
+    icon: "policy",
+    highlights: [
+      "Finalidades del tratamiento y base legitimadora.",
+      "Cesiones previstas y plazo de conservacion.",
+      "Derechos ARCO y canal de contacto.",
+    ],
+    previewLines: [
+      "Responsable y finalidades del tratamiento",
+      "Cesiones, conservacion y derechos",
+      "Aceptacion y firma",
+    ],
+  },
+  {
+    id: "statutes",
+    theme: "Normativa",
+    title: "Estatutos de la asociacion",
+    description:
+      "Base estatutaria con estructura de fines, organos y regimen economico.",
+    defaultName: "Estatutos de la asociacion",
+    category: "PDF",
+    location: "/Documentos generados/Normativa",
+    icon: "gavel",
+    highlights: [
+      "Capitulos de identidad, socios, organos y economia.",
+      "Documento base para revision legal y aprobacion.",
+      "Formato listo para adaptar a la asociacion.",
+    ],
+    previewLines: [
+      "Capitulo 1. Denominacion y fines",
+      "Capitulo 2. Personas asociadas",
+      "Capitulo 3. Organos de gobierno",
+    ],
+  },
+  {
+    id: "internal-regulation",
+    theme: "Normativa",
+    title: "Reglamento interno",
+    description:
+      "Normas operativas de funcionamiento, convivencia y uso de recursos.",
+    defaultName: "Reglamento interno de funcionamiento",
+    category: "PDF",
+    location: "/Documentos generados/Normativa",
+    icon: "menu_book",
+    highlights: [
+      "Normas de organizacion, uso de espacios y conducta.",
+      "Responsables, incidencias y regimen disciplinario.",
+      "Revision periodica y fecha de aprobacion.",
+    ],
+    previewLines: [
+      "Objetivo y ambito de aplicacion",
+      "Normas de funcionamiento y convivencia",
+      "Incidencias y aprobacion",
+    ],
+  },
+  {
+    id: "meeting-minutes",
+    theme: "Normativa",
+    title: "Acta de reunion",
+    description:
+      "Plantilla para reuniones de junta, asamblea o equipos de trabajo.",
+    defaultName: "Acta de reunion de junta",
+    category: "PDF",
+    location: "/Documentos generados/Normativa",
+    icon: "fact_check",
+    highlights: [
+      "Asistentes, orden del dia y acuerdos.",
+      "Registro de tareas, responsables y fechas.",
+      "Cierre con firmas de validacion.",
+    ],
+    previewLines: [
+      "Convocatoria y asistentes",
+      "Puntos tratados y acuerdos",
+      "Tareas y firmas",
+    ],
+  },
+  {
+    id: "registration",
+    theme: "Inscripciones",
+    title: "Alta de socio",
+    description:
+      "Ficha de alta con datos personales, modalidad y proteccion de datos.",
+    defaultName: "Ficha de inscripcion de socio",
+    category: "Contratos",
+    location: "/Documentos generados/Inscripciones",
+    icon: "how_to_reg",
+    highlights: [
+      "Datos personales y vias de contacto.",
+      "Modalidad de asociacion y observaciones.",
+      "Aceptacion de comunicaciones y firma.",
+    ],
+    previewLines: [
+      "Datos personales",
+      "Datos de vinculacion",
+      "Proteccion de datos y firma",
+    ],
+  },
+  {
+    id: "volunteer-registration",
+    theme: "Inscripciones",
+    title: "Alta de voluntariado",
+    description:
+      "Formulario base para incorporar personas voluntarias y registrar disponibilidad.",
+    defaultName: "Ficha de alta de voluntariado",
+    category: "Contratos",
+    location: "/Documentos generados/Inscripciones",
+    icon: "diversity_3",
+    highlights: [
+      "Disponibilidad, areas de apoyo y competencias.",
+      "Contacto de emergencia y observaciones de salud.",
+      "Compromiso de participacion y firma.",
+    ],
+    previewLines: [
+      "Datos de la persona voluntaria",
+      "Disponibilidad y areas de apoyo",
+      "Compromiso, emergencias y firma",
+    ],
+  },
+  {
+    id: "event-registration",
+    theme: "Inscripciones",
+    title: "Inscripcion a actividad o evento",
+    description:
+      "Registro de participantes para talleres, encuentros o jornadas.",
+    defaultName: "Inscripcion a actividad",
+    category: "Contratos",
+    location: "/Documentos generados/Inscripciones",
+    icon: "event_available",
+    highlights: [
+      "Datos del participante y actividad seleccionada.",
+      "Coste, forma de pago y requerimientos especiales.",
+      "Consentimientos y confirmacion de plaza.",
+    ],
+    previewLines: [
+      "Datos del participante",
+      "Actividad, coste y necesidades",
+      "Consentimientos y firma",
+    ],
+  },
+  {
+    id: "exit-request",
+    theme: "Solicitudes",
+    title: "Solicitud de baja voluntaria",
+    description:
+      "Peticion formal para tramitar una baja o renuncia de la asociacion.",
+    defaultName: "Solicitud de salida voluntaria",
+    category: "Contratos",
+    location: "/Documentos generados/Solicitudes",
+    icon: "assignment_turned_in",
+    highlights: [
+      "Identificacion de la persona solicitante.",
+      "Fecha efectiva de baja y motivo.",
+      "Cierre formal con firma.",
+    ],
+    previewLines: [
+      "Datos de la persona solicitante",
+      "Solicitud y fecha efectiva",
+      "Motivo y firma",
+    ],
+  },
+  {
+    id: "expense-request",
+    theme: "Solicitudes",
+    title: "Solicitud de reembolso",
+    description:
+      "Documento para pedir devolucion de gastos vinculados a actividades.",
+    defaultName: "Solicitud de reembolso de gastos",
+    category: "Contratos",
+    location: "/Documentos generados/Solicitudes",
+    icon: "receipt_long",
+    highlights: [
+      "Detalle del gasto, fecha e importe.",
+      "Cuenta de abono y justificantes adjuntos.",
+      "Validacion interna y firma.",
+    ],
+    previewLines: [
+      "Datos del solicitante",
+      "Detalle del gasto y justificantes",
+      "Cuenta de abono y aprobacion",
+    ],
+  },
+  {
+    id: "material-loan",
+    theme: "Solicitudes",
+    title: "Solicitud de prestamo de material",
+    description:
+      "Peticion para retirada temporal de equipos, llaves o recursos.",
+    defaultName: "Solicitud de prestamo de material",
+    category: "Contratos",
+    location: "/Documentos generados/Solicitudes",
+    icon: "inventory_2",
+    highlights: [
+      "Material solicitado, fechas de recogida y devolucion.",
+      "Estado de entrega y persona responsable.",
+      "Condiciones de uso y devolucion.",
+    ],
+    previewLines: [
+      "Solicitante y material",
+      "Fechas y estado de entrega",
+      "Condiciones y firma",
+    ],
+  },
+];
+
+const allDocumentTemplates: DocumentTemplateCatalogItem[] =
+  documentTemplateCatalog.length > 0
+    ? documentTemplateCatalog
+    : (documentTemplates as DocumentTemplateCatalogItem[]);
 
 const securityStyles: Record<DocumentSecurity, string> = {
   Privado: "bg-blue-50 text-blue-600",
@@ -233,21 +535,11 @@ function getDocumentTheme(doc: DocumentItem): DocumentTheme {
   return "Normativa";
 }
 
-function isGeneratedDocument(doc: DocumentItem) {
-  return (
-    doc.mimeType === GENERATED_DOCUMENT_MIME_TYPE ||
-    doc.location.startsWith("/Documentos generados")
-  );
-}
-
-function buildGeneratedDocumentFile(content: string) {
-  return new Blob([content], { type: "text/plain;charset=utf-8" });
-}
-
 function getDocumentTemplateById(templateId?: string) {
   if (!templateId) return null;
   return (
-    documentTemplates.find((template) => template.id === templateId) ?? null
+    allDocumentTemplates.find((template) => template.id === templateId) ??
+    null
   );
 }
 
@@ -256,7 +548,8 @@ function getDocumentTemplate(doc: DocumentItem) {
   if (templateFromId) return templateFromId;
   const theme = getDocumentTheme(doc);
   return (
-    documentTemplates.find((template) => template.theme === theme) ?? null
+    allDocumentTemplates.find((template) => template.theme === theme) ??
+    null
   );
 }
 
@@ -285,6 +578,50 @@ function buildGeneratedDocumentContent(
         "",
         "Fecha: __________________    Firma: _____________________",
       ].join("\n");
+    case "outing-authorization":
+      return [
+        name,
+        "",
+        "Persona autorizante",
+        "- Nombre y apellidos: _________________________________",
+        "- DNI/NIE: ___________________________________________",
+        "- Telefono de contacto: ______________________________",
+        "",
+        "Persona participante",
+        "- Nombre y apellidos: _________________________________",
+        "- Fecha de nacimiento: ________________________________",
+        "- Actividad o salida autorizada: ______________________",
+        "",
+        "Autorizacion",
+        "- Autorizo la participacion en la actividad indicada.",
+        "- Declaro haber recibido informacion sobre horarios, desplazamiento y responsables.",
+        "- Necesidades medicas o alimentarias relevantes: _________________________________.",
+        "",
+        "Fecha: __________________    Firma: _____________________",
+      ].join("\n");
+    case "data-consent":
+      return [
+        name,
+        "",
+        "Responsable del tratamiento",
+        "- Asociacion responsable: _____________________________",
+        "- Persona de contacto: ________________________________",
+        "- Email de contacto: __________________________________",
+        "",
+        "Finalidades del tratamiento",
+        "- Gestion administrativa y relacional con la asociacion.",
+        "- Envio de comunicaciones informativas y operativas.",
+        "- Gestion de participacion en actividades y eventos.",
+        "",
+        "Derechos de la persona interesada",
+        "- Acceso, rectificacion, supresion y oposicion.",
+        "- Limitacion del tratamiento y portabilidad cuando proceda.",
+        "",
+        "Aceptacion",
+        "He leido la informacion y presto mi consentimiento expreso.",
+        "",
+        "Fecha: __________________    Firma: _____________________",
+      ].join("\n");
     case "statutes":
       return [
         name,
@@ -309,6 +646,50 @@ function buildGeneratedDocumentContent(
         "",
         "Aprobado en fecha: _________________________________",
       ].join("\n");
+    case "internal-regulation":
+      return [
+        name,
+        "",
+        "1. Objeto y ambito",
+        "- Finalidad del reglamento y personas a las que aplica.",
+        "- Espacios, actividades y recursos incluidos.",
+        "",
+        "2. Normas de funcionamiento",
+        "- Uso responsable de instalaciones, materiales y canales internos.",
+        "- Pautas de convivencia, asistencia y participacion.",
+        "",
+        "3. Gestion de incidencias",
+        "- Comunicacion y registro de incidencias.",
+        "- Medidas correctoras y seguimiento.",
+        "",
+        "4. Revision",
+        "- Fecha de aprobacion y calendario de revision.",
+        "",
+        "Aprobado por: _________________________________",
+      ].join("\n");
+    case "meeting-minutes":
+      return [
+        name,
+        "",
+        "Datos de la reunion",
+        "- Fecha y hora: ______________________________________",
+        "- Lugar o modalidad: _________________________________",
+        "- Persona que convoca: _______________________________",
+        "",
+        "Asistentes",
+        "- _________________________________________________",
+        "- _________________________________________________",
+        "",
+        "Orden del dia",
+        "- Punto 1: __________________________________________",
+        "- Punto 2: __________________________________________",
+        "",
+        "Acuerdos y tareas",
+        "- Acuerdo: __________________________________________",
+        "- Responsable y fecha: _______________________________",
+        "",
+        "Firma de validacion: ________________________________",
+      ].join("\n");
     case "registration":
       return [
         name,
@@ -330,6 +711,52 @@ function buildGeneratedDocumentContent(
         "",
         "Firma de solicitud: _________________________________",
       ].join("\n");
+    case "volunteer-registration":
+      return [
+        name,
+        "",
+        "Datos de la persona voluntaria",
+        "- Nombre y apellidos: _________________________________",
+        "- DNI/NIE: ___________________________________________",
+        "- Telefono y email: __________________________________",
+        "",
+        "Disponibilidad",
+        "- Dias y franjas horarias: ____________________________",
+        "- Areas de apoyo de interes: __________________________",
+        "- Competencias o experiencia previa: __________________",
+        "",
+        "Informacion adicional",
+        "- Contacto de emergencia: _____________________________",
+        "- Observaciones de salud o accesibilidad: _____________",
+        "",
+        "Compromiso y firma",
+        "Declaro conocer las normas basicas de colaboracion voluntaria.",
+        "",
+        "Fecha: __________________    Firma: _____________________",
+      ].join("\n");
+    case "event-registration":
+      return [
+        name,
+        "",
+        "Datos del participante",
+        "- Nombre y apellidos: _________________________________",
+        "- DNI/NIE: ___________________________________________",
+        "- Telefono y email: __________________________________",
+        "",
+        "Actividad",
+        "- Nombre de la actividad: _____________________________",
+        "- Fecha y horario: ___________________________________",
+        "- Coste o cuota: _____________________________________",
+        "",
+        "Necesidades especiales",
+        "- Alimentacion, movilidad o salud: ____________________",
+        "",
+        "Consentimientos",
+        "- Acepto las condiciones de participacion.",
+        "- Autorizo el tratamiento de datos para la gestion del evento.",
+        "",
+        "Firma de confirmacion: _______________________________",
+      ].join("\n");
     case "exit-request":
       return [
         name,
@@ -350,6 +777,51 @@ function buildGeneratedDocumentContent(
         "__________________________________________________________",
         "",
         "Fecha: __________________    Firma: _____________________",
+      ].join("\n");
+    case "expense-request":
+      return [
+        name,
+        "",
+        "Datos de la persona solicitante",
+        "- Nombre y apellidos: _________________________________",
+        "- Area o proyecto: ___________________________________",
+        "- Email y telefono: __________________________________",
+        "",
+        "Detalle del gasto",
+        "- Fecha del gasto: ____________________________________",
+        "- Concepto: ___________________________________________",
+        "- Importe total: ______________________________________",
+        "",
+        "Abono solicitado",
+        "- Cuenta bancaria o metodo de pago: ___________________",
+        "- Justificantes adjuntos: _____________________________",
+        "",
+        "Revision interna",
+        "- Responsable que valida: _____________________________",
+        "- Observaciones: ______________________________________",
+        "",
+        "Firma: ______________________________________________",
+      ].join("\n");
+    case "material-loan":
+      return [
+        name,
+        "",
+        "Datos de la solicitud",
+        "- Persona solicitante: ________________________________",
+        "- Area o actividad: __________________________________",
+        "- Telefono de contacto: ______________________________",
+        "",
+        "Material solicitado",
+        "- Descripcion del material: ___________________________",
+        "- Fecha de recogida: __________________________________",
+        "- Fecha de devolucion: ________________________________",
+        "",
+        "Estado y condiciones",
+        "- Estado de entrega: __________________________________",
+        "- Observaciones de uso: _______________________________",
+        "- Compromiso de devolucion en plazo y buen estado.",
+        "",
+        "Firma de entrega: ____________________  Firma de devolucion: ____________________",
       ].join("\n");
     default:
       return name;
@@ -373,7 +845,7 @@ function getDocumentDownloadName(doc: DocumentItem) {
   if (/\.[a-z0-9]{2,5}$/i.test(doc.name)) {
     return doc.name;
   }
-  return isGeneratedDocument(doc) ? `${doc.name}.pdf` : doc.name;
+  return doc.name;
 }
 
 function renameGeneratedDocumentContent(content: string, name: string) {
@@ -458,6 +930,7 @@ function FileIcon({
 
 export default function DocumentsPage() {
   const { formatLocale } = useLocale();
+  const association = useSessionStore((state) => state.association);
   const {
     documents,
     loadDocuments,
@@ -477,10 +950,9 @@ export default function DocumentsPage() {
   >("Información");
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
-  const [contentDraft, setContentDraft] = useState("");
   const [generatedNameDraft, setGeneratedNameDraft] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState(
-    documentTemplates[0]?.id ?? ""
+    allDocumentTemplates[0]?.id ?? ""
   );
   const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [permissionDraft, setPermissionDraft] = useState("");
@@ -500,14 +972,12 @@ export default function DocumentsPage() {
   const selectDocument = (doc: DocumentItem) => {
     setSelectedId(doc.id);
     setNameDraft(doc.name);
-    setContentDraft(getGeneratedDocumentContent(doc));
     setEditingName(false);
   };
 
   const clearSelectedDocument = () => {
     setSelectedId("");
     setNameDraft("");
-    setContentDraft("");
     setEditingName(false);
   };
 
@@ -572,12 +1042,23 @@ export default function DocumentsPage() {
     filteredDocuments.find((doc) => doc.id === selectedId) ?? null;
   const confirmDeleteLabel =
     confirmDelete?.name?.trim() || "este documento";
-  const generatedContentChanged =
-    Boolean(selectedDoc && isGeneratedDocument(selectedDoc)) &&
-    contentDraft !== getGeneratedDocumentContent(selectedDoc);
   const selectedTemplate =
-    documentTemplates.find((template) => template.id === selectedTemplateId) ??
-    documentTemplates[0];
+    allDocumentTemplates.find(
+      (template) => template.id === selectedTemplateId
+    ) ?? allDocumentTemplates[0];
+  const templatesByTheme = useMemo(
+    () =>
+      documentThemes.map((theme) => ({
+        theme,
+        templates: allDocumentTemplates.filter(
+          (template) => template.theme === theme
+        ),
+      })),
+    []
+  );
+  const selectedThemeMeta = selectedTemplate
+    ? documentThemeMeta[selectedTemplate.theme]
+    : null;
   const generatedNamePreview =
     generatedNameDraft.trim() || selectedTemplate?.defaultName || "";
 
@@ -604,9 +1085,17 @@ export default function DocumentsPage() {
   const handleDownload = (doc?: DocumentItem) => {
     if (!doc) return;
     if (isGeneratedDocument(doc)) {
-      downloadLinesAsPdf(
-        getDocumentDownloadName(doc),
-        getGeneratedDocumentContent(doc).split(/\r?\n/)
+      downloadGeneratedDocumentHtml(
+        getGeneratedDocumentFilename(doc.name, "html"),
+        buildGeneratedDocumentHtml({
+          name: doc.name,
+          body: extractGeneratedDocumentBody(
+            getGeneratedDocumentContent(doc),
+            doc.name
+          ),
+          layout: doc.layout,
+          associationLogoUrl: association?.logoUrl,
+        })
       );
       return;
     }
@@ -645,7 +1134,7 @@ export default function DocumentsPage() {
         )
       : selectedDoc.content;
     const file = preserveGenerated
-      ? buildGeneratedDocumentFile(content)
+      ? buildGeneratedDocumentFile(content ?? trimmed)
       : selectedDoc.file;
     await upsertDocument({
       ...selectedDoc,
@@ -657,38 +1146,7 @@ export default function DocumentsPage() {
       size: preserveGenerated && file ? file.size : selectedDoc.size,
       updatedAt: new Date().toISOString(),
     });
-    if (preserveGenerated) {
-      setContentDraft(content);
-    }
     setEditingName(false);
-  };
-
-  const handleSaveContent = async () => {
-    if (!selectedDoc || !isGeneratedDocument(selectedDoc)) return;
-
-    const now = new Date();
-    const file = buildGeneratedDocumentFile(contentDraft);
-    const versionIndex = (selectedDoc.versions?.length ?? 0) + 1;
-
-    await upsertDocument({
-      ...selectedDoc,
-      content: contentDraft,
-      file,
-      size: file.size,
-      updatedAt: now.toISOString(),
-      versions: [
-        {
-          id: crypto.randomUUID(),
-          label: `v${versionIndex}.0 - Contenido actualizado`,
-          author: "Tu usuario",
-          time: new Intl.DateTimeFormat(formatLocale, {
-            hour: "2-digit",
-            minute: "2-digit",
-          }).format(now),
-        },
-        ...(selectedDoc.versions ?? []),
-      ],
-    });
   };
 
   const handleAddPermission = async () => {
@@ -738,7 +1196,7 @@ export default function DocumentsPage() {
       <PageHeader
         title="Documentos"
         subtitle={
-          "Genera permisos, estatutos, inscripciones y solicitudes para la asociación."
+          "Genera permisos, reglamentos, actas, altas y solicitudes para la asociacion."
         }
         backHref="/resources"
         backLabel="Volver a Recursos"
@@ -1298,48 +1756,6 @@ export default function DocumentsPage() {
                       </dl>
                     </div>
 
-                    {isGeneratedDocument(selectedDoc) ? (
-                      <div>
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-xs font-semibold uppercase text-gray-400">
-                            Contenido editable
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setContentDraft(getGeneratedDocumentContent(selectedDoc))
-                            }
-                            className="text-xs font-semibold text-gray-500"
-                          >
-                            Restaurar base
-                          </button>
-                        </div>
-                        <textarea
-                          value={contentDraft}
-                          onChange={(event) => setContentDraft(event.target.value)}
-                          className="mt-3 min-h-[260px] w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                        />
-                        <div className="mt-3 flex items-center justify-between gap-3">
-                          <p className="text-xs text-gray-500">
-                            Edita el texto y guarda una nueva versión del documento.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={handleSaveContent}
-                            disabled={!generatedContentChanged}
-                            className={cx(
-                              "rounded-xl px-4 py-2 text-sm font-semibold shadow-sm",
-                              generatedContentChanged
-                                ? "bg-primary text-white"
-                                : "cursor-not-allowed border border-gray-200 bg-gray-100 text-gray-400"
-                            )}
-                          >
-                            Guardar contenido
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
-
                     <div>
                       <p className="text-xs font-semibold uppercase text-gray-400">
                         Versiones recientes
@@ -1434,7 +1850,15 @@ export default function DocumentsPage() {
                   </div>
                 )}
 
-                <div className="mt-6 flex gap-3">
+                <div className="mt-6 flex flex-wrap gap-3">
+                  {isGeneratedDocument(selectedDoc) ? (
+                    <Link
+                      href={`/documents/${selectedDoc.id}/edit`}
+                      className="flex-1 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2 text-center text-sm font-semibold text-primary"
+                    >
+                      Editar
+                    </Link>
+                  ) : null}
                   <button
                     className={cx(
                       "flex-1 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600",
@@ -1524,16 +1948,68 @@ export default function DocumentsPage() {
       <Modal
         isOpen={generatorOpen}
         onClose={closeGenerator}
-        size="lg"
+        size="xl"
         title="Generar documento"
       >
         <div className="space-y-6">
+          <section className="rounded-lg border border-slate-200 bg-[linear-gradient(135deg,rgba(239,246,255,0.92),rgba(255,255,255,0.96))] p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/70">
+                  Biblioteca documental
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold text-slate-950">
+                  Crea un borrador editable desde una plantilla
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Elige una plantilla, define la visibilidad y genera un
+                  documento base para editarlo despues dentro de Kora.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
+                  {allDocumentTemplates.length} plantillas
+                </span>
+                <span
+                  className={cx(
+                    "inline-flex items-center rounded-md bg-white px-3 py-1.5 text-xs font-semibold shadow-sm",
+                    selectedThemeMeta?.accent ?? "text-slate-600"
+                  )}
+                >
+                  {selectedTemplate?.theme}
+                </span>
+                <span className="inline-flex items-center rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
+                  Editable en Kora
+                </span>
+              </div>
+            </div>
+          </section>
+
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
-              Tipo de documento
-            </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {documentTemplates.map((template) => {
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
+                  Plantillas disponibles
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Selecciona una familia y luego el documento base que quieres
+                  generar.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {templatesByTheme.map(({ theme, templates }) => (
+                  <span
+                    key={theme}
+                    className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500"
+                  >
+                    {theme}: {templates.length}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {allDocumentTemplates.map((template) => {
                 const active = template.id === selectedTemplateId;
                 return (
                   <button
@@ -1541,16 +2017,16 @@ export default function DocumentsPage() {
                     type="button"
                     onClick={() => setSelectedTemplateId(template.id)}
                     className={cx(
-                      "rounded-2xl border p-4 text-left transition",
+                      "rounded-lg border p-4 text-left transition",
                       active
-                        ? "border-primary/40 bg-primary/5"
+                        ? "border-primary/40 bg-primary/5 shadow-sm"
                         : "border-gray-200 bg-white hover:border-primary/30"
                     )}
                   >
                     <div className="flex items-start gap-3">
                       <span
                         className={cx(
-                          "flex h-10 w-10 items-center justify-center rounded-xl",
+                          "flex h-10 w-10 items-center justify-center rounded-lg",
                           documentThemeStyles[template.theme]
                         )}
                       >
@@ -1558,12 +2034,22 @@ export default function DocumentsPage() {
                           {template.icon}
                         </span>
                       </span>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {template.title}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-gray-900">
+                            {template.title}
+                          </p>
+                          {active ? (
+                            <span className="inline-flex items-center rounded-md bg-primary px-2 py-0.5 text-[11px] font-semibold text-white">
+                              Activa
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-xs leading-5 text-gray-500">
                           {template.description}
+                        </p>
+                        <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          {template.theme}
                         </p>
                       </div>
                     </div>
@@ -1628,7 +2114,7 @@ export default function DocumentsPage() {
               className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
             />
             <p className="text-xs text-gray-500">
-              Ejemplos: permiso de imagen, estatutos, ficha de inscripción o solicitud de salida.
+              Ejemplos: acta de reunion, reglamento interno, alta de voluntariado o solicitud de reembolso.
             </p>
           </div>
 
@@ -1646,6 +2132,48 @@ export default function DocumentsPage() {
               <p className="text-xs text-gray-500">
                 {selectedTemplate?.description}
               </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                La plantilla incluye
+              </p>
+              <div className="mt-4 space-y-3">
+                {selectedTemplate?.highlights.map((item) => (
+                  <div
+                    key={item}
+                    className="flex items-start gap-2 text-sm text-slate-600"
+                  >
+                    <span className="mt-0.5 text-primary">
+                      <span className="material-symbols-outlined text-[16px]">
+                        check_circle
+                      </span>
+                    </span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                Estructura del borrador
+              </p>
+              <div className="mt-4 space-y-3">
+                {selectedTemplate?.previewLines.map((line, index) => (
+                  <div
+                    key={`${line}-${index}`}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Bloque {index + 1}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-700">{line}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

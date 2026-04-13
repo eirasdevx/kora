@@ -23,6 +23,20 @@ export type DocumentVersion = {
   time: string;
 };
 
+export type DocumentMargins = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+export type DocumentLayout = {
+  header?: string;
+  footer?: string;
+  includeAssociationLogo?: boolean;
+  margins?: DocumentMargins;
+};
+
 export type DocumentItem = {
   id: string;
   associationId?: string;
@@ -39,6 +53,7 @@ export type DocumentItem = {
   file?: Blob;
   content?: string;
   templateId?: string;
+  layout?: DocumentLayout;
   access?: string[];
   versions?: DocumentVersion[];
 };
