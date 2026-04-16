@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  LOCALE_HTML_LANG,
+  type LocaleCode,
+  resolveLocale,
+} from "@/core/i18n/locale";
 import type { SessionBootstrapPayload } from "@/core/session/session-payload";
 import { useSessionStore } from "@/core/session/session.store";
 import {
@@ -17,6 +22,312 @@ type LoginCredentials = {
   companyCode: string;
 };
 
+type LoginCopy = {
+  languageLabel: string;
+  heroTitle: string;
+  heroDescription: string;
+  legalNotice: string;
+  loginTitle: string;
+  loginDescription: string;
+  identifierLabel: string;
+  identifierPlaceholder: string;
+  passwordLabel: string;
+  passwordPlaceholder: string;
+  hidePassword: string;
+  showPassword: string;
+  forgotPassword: string;
+  companyCodeLabel: string;
+  companyCodePlaceholder: string;
+  rememberCodes: string;
+  rememberSession: string;
+  requiredFieldsError: string;
+  loginFallbackError: string;
+  submitIdle: string;
+  submitPending: string;
+  guestLogin: string;
+  registerPrompt: string;
+  registerLink: string;
+  twoFactorTitle: string;
+  twoFactorDescription: string;
+  twoFactorLabel: string;
+  twoFactorPlaceholder: string;
+  twoFactorRequiredError: string;
+  twoFactorCancel: string;
+  twoFactorSubmitIdle: string;
+  twoFactorSubmitPending: string;
+};
+
+const PUBLIC_LANGUAGE_STORAGE_KEY = "kora-public-language";
+
+const LANGUAGE_OPTIONS: Array<{ value: LocaleCode; label: string }> = [
+  { value: "es", label: "Español (España)" },
+  { value: "es-419", label: "Español (Latam)" },
+  { value: "gl", label: "Galego" },
+  { value: "eu", label: "Euskara" },
+  { value: "ca", label: "Català" },
+  { value: "va", label: "Valencià" },
+  { value: "en", label: "English (US)" },
+];
+
+const LOGIN_COPY: Record<LocaleCode, LoginCopy> = {
+  es: {
+    languageLabel: "Idioma",
+    heroTitle: "Gestiona tu asociación con facilidad.",
+    heroDescription:
+      "Centraliza finanzas, recursos, eventos y mensajería en una sola plataforma intuitiva diseñada para el crecimiento comunitario.",
+    legalNotice: "Todos los derechos reservados.",
+    loginTitle: "Bienvenido a Kora",
+    loginDescription:
+      "Ingresa tu DNI o correo, contraseña y el código de empresa.",
+    identifierLabel: "DNI o correo electrónico",
+    identifierPlaceholder: "DNI o correo",
+    passwordLabel: "Contraseña",
+    passwordPlaceholder: "********",
+    hidePassword: "Ocultar contraseña",
+    showPassword: "Mostrar contraseña",
+    forgotPassword: "¿Olvidaste tu contraseña?",
+    companyCodeLabel: "Código de empresa",
+    companyCodePlaceholder: "KORA-0000-0000",
+    rememberCodes: "Recordar códigos",
+    rememberSession: "Mantener sesión iniciada",
+    requiredFieldsError: "Completa usuario, contraseña y código de empresa.",
+    loginFallbackError: "No se pudo iniciar sesión.",
+    submitIdle: "Iniciar sesión",
+    submitPending: "Validando...",
+    guestLogin: "Iniciar sesión como invitado",
+    registerPrompt: "¿No tienes una cuenta?",
+    registerLink: "Registrar administrador",
+    twoFactorTitle: "Verificación en dos pasos",
+    twoFactorDescription: "Introduce el código de tu app para continuar.",
+    twoFactorLabel: "Código de verificación",
+    twoFactorPlaceholder: "123456",
+    twoFactorRequiredError: "Introduce el código de verificación.",
+    twoFactorCancel: "Cancelar",
+    twoFactorSubmitIdle: "Verificar",
+    twoFactorSubmitPending: "Verificando...",
+  },
+  "es-419": {
+    languageLabel: "Idioma",
+    heroTitle: "Gestiona tu asociación con facilidad.",
+    heroDescription:
+      "Centraliza finanzas, recursos, eventos y mensajería en una sola plataforma intuitiva diseñada para el crecimiento comunitario.",
+    legalNotice: "Todos los derechos reservados.",
+    loginTitle: "Bienvenido a Kora",
+    loginDescription:
+      "Ingresa tu DNI o correo, contraseña y el código de empresa.",
+    identifierLabel: "DNI o correo electrónico",
+    identifierPlaceholder: "DNI o correo",
+    passwordLabel: "Contraseña",
+    passwordPlaceholder: "********",
+    hidePassword: "Ocultar contraseña",
+    showPassword: "Mostrar contraseña",
+    forgotPassword: "¿Olvidaste tu contraseña?",
+    companyCodeLabel: "Código de empresa",
+    companyCodePlaceholder: "KORA-0000-0000",
+    rememberCodes: "Recordar códigos",
+    rememberSession: "Mantener sesión iniciada",
+    requiredFieldsError: "Completa usuario, contraseña y código de empresa.",
+    loginFallbackError: "No se pudo iniciar sesión.",
+    submitIdle: "Iniciar sesión",
+    submitPending: "Validando...",
+    guestLogin: "Iniciar sesión como invitado",
+    registerPrompt: "¿No tienes una cuenta?",
+    registerLink: "Registrar administrador",
+    twoFactorTitle: "Verificación en dos pasos",
+    twoFactorDescription: "Ingresa el código de tu app para continuar.",
+    twoFactorLabel: "Código de verificación",
+    twoFactorPlaceholder: "123456",
+    twoFactorRequiredError: "Ingresa el código de verificación.",
+    twoFactorCancel: "Cancelar",
+    twoFactorSubmitIdle: "Verificar",
+    twoFactorSubmitPending: "Verificando...",
+  },
+  gl: {
+    languageLabel: "Idioma",
+    heroTitle: "Xestiona a túa asociación con facilidade.",
+    heroDescription:
+      "Centraliza finanzas, recursos, eventos e mensaxería nunha soa plataforma intuitiva deseñada para o crecemento comunitario.",
+    legalNotice: "Todos os dereitos reservados.",
+    loginTitle: "Benvido a Kora",
+    loginDescription:
+      "Introduce o teu DNI ou correo, contrasinal e o código da entidade.",
+    identifierLabel: "DNI ou correo electrónico",
+    identifierPlaceholder: "DNI ou correo",
+    passwordLabel: "Contrasinal",
+    passwordPlaceholder: "********",
+    hidePassword: "Agochar contrasinal",
+    showPassword: "Mostrar contrasinal",
+    forgotPassword: "Esqueciches o contrasinal?",
+    companyCodeLabel: "Código da entidade",
+    companyCodePlaceholder: "KORA-0000-0000",
+    rememberCodes: "Lembrar códigos",
+    rememberSession: "Manter a sesión iniciada",
+    requiredFieldsError:
+      "Completa usuario, contrasinal e código da entidade.",
+    loginFallbackError: "Non se puido iniciar sesión.",
+    submitIdle: "Iniciar sesión",
+    submitPending: "Validando...",
+    guestLogin: "Entrar como convidado",
+    registerPrompt: "Non tes conta?",
+    registerLink: "Rexistrar administrador",
+    twoFactorTitle: "Verificación en dous pasos",
+    twoFactorDescription: "Introduce o código da túa app para continuar.",
+    twoFactorLabel: "Código de verificación",
+    twoFactorPlaceholder: "123456",
+    twoFactorRequiredError: "Introduce o código de verificación.",
+    twoFactorCancel: "Cancelar",
+    twoFactorSubmitIdle: "Verificar",
+    twoFactorSubmitPending: "Verificando...",
+  },
+  eu: {
+    languageLabel: "Hizkuntza",
+    heroTitle: "Kudeatu zure elkartea erraztasunez.",
+    heroDescription:
+      "Finantzak, baliabideak, ekitaldiak eta mezularitza plataforma intuitibo bakar batean zentralizatu, komunitatearen hazkunderako diseinatuta.",
+    legalNotice: "Eskubide guztiak erreserbatuta.",
+    loginTitle: "Ongi etorri Korara",
+    loginDescription:
+      "Sartu zure NANa edo posta elektronikoa, pasahitza eta enpresaren kodea.",
+    identifierLabel: "NANa edo posta elektronikoa",
+    identifierPlaceholder: "NANa edo posta",
+    passwordLabel: "Pasahitza",
+    passwordPlaceholder: "********",
+    hidePassword: "Ezkutatu pasahitza",
+    showPassword: "Erakutsi pasahitza",
+    forgotPassword: "Pasahitza ahaztu duzu?",
+    companyCodeLabel: "Enpresaren kodea",
+    companyCodePlaceholder: "KORA-0000-0000",
+    rememberCodes: "Gogoratu kodeak",
+    rememberSession: "Mantendu saioa hasita",
+    requiredFieldsError:
+      "Bete erabiltzailea, pasahitza eta enpresaren kodea.",
+    loginFallbackError: "Ezin izan da saioa hasi.",
+    submitIdle: "Hasi saioa",
+    submitPending: "Balidatzen...",
+    guestLogin: "Hasi saioa gonbidatu gisa",
+    registerPrompt: "Ez duzu konturik?",
+    registerLink: "Erregistratu administratzailea",
+    twoFactorTitle: "Bi urratseko egiaztapena",
+    twoFactorDescription: "Sartu zure aplikazioko kodea jarraitzeko.",
+    twoFactorLabel: "Egiaztapen kodea",
+    twoFactorPlaceholder: "123456",
+    twoFactorRequiredError: "Sartu egiaztapen kodea.",
+    twoFactorCancel: "Utzi",
+    twoFactorSubmitIdle: "Egiaztatu",
+    twoFactorSubmitPending: "Egiaztatzen...",
+  },
+  ca: {
+    languageLabel: "Idioma",
+    heroTitle: "Gestiona la teva associació amb facilitat.",
+    heroDescription:
+      "Centralitza finances, recursos, esdeveniments i missatgeria en una sola plataforma intuïtiva pensada per al creixement comunitari.",
+    legalNotice: "Tots els drets reservats.",
+    loginTitle: "Benvingut a Kora",
+    loginDescription:
+      "Introdueix el teu DNI o correu, la contrasenya i el codi d'empresa.",
+    identifierLabel: "DNI o correu electrònic",
+    identifierPlaceholder: "DNI o correu",
+    passwordLabel: "Contrasenya",
+    passwordPlaceholder: "********",
+    hidePassword: "Amaga la contrasenya",
+    showPassword: "Mostra la contrasenya",
+    forgotPassword: "Has oblidat la contrasenya?",
+    companyCodeLabel: "Codi d'empresa",
+    companyCodePlaceholder: "KORA-0000-0000",
+    rememberCodes: "Recorda codis",
+    rememberSession: "Mantén la sessió iniciada",
+    requiredFieldsError:
+      "Completa l'usuari, la contrasenya i el codi d'empresa.",
+    loginFallbackError: "No s'ha pogut iniciar la sessió.",
+    submitIdle: "Inicia sessió",
+    submitPending: "Validant...",
+    guestLogin: "Inicia sessió com a convidat",
+    registerPrompt: "No tens un compte?",
+    registerLink: "Registrar administrador",
+    twoFactorTitle: "Verificació en dos passos",
+    twoFactorDescription: "Introdueix el codi de l'app per continuar.",
+    twoFactorLabel: "Codi de verificació",
+    twoFactorPlaceholder: "123456",
+    twoFactorRequiredError: "Introdueix el codi de verificació.",
+    twoFactorCancel: "Cancel·la",
+    twoFactorSubmitIdle: "Verifica",
+    twoFactorSubmitPending: "Verificant...",
+  },
+  va: {
+    languageLabel: "Idioma",
+    heroTitle: "Gestiona la teua associació amb facilitat.",
+    heroDescription:
+      "Centralitza finances, recursos, esdeveniments i missatgeria en una sola plataforma intuïtiva pensada per al creixement comunitari.",
+    legalNotice: "Tots els drets reservats.",
+    loginTitle: "Benvingut a Kora",
+    loginDescription:
+      "Introdueix el teu DNI o correu, la contrasenya i el codi d'empresa.",
+    identifierLabel: "DNI o correu electrònic",
+    identifierPlaceholder: "DNI o correu",
+    passwordLabel: "Contrasenya",
+    passwordPlaceholder: "********",
+    hidePassword: "Amaga la contrasenya",
+    showPassword: "Mostra la contrasenya",
+    forgotPassword: "Has oblidat la contrasenya?",
+    companyCodeLabel: "Codi d'empresa",
+    companyCodePlaceholder: "KORA-0000-0000",
+    rememberCodes: "Recorda codis",
+    rememberSession: "Mantín la sessió iniciada",
+    requiredFieldsError:
+      "Completa l'usuari, la contrasenya i el codi d'empresa.",
+    loginFallbackError: "No s'ha pogut iniciar la sessió.",
+    submitIdle: "Inicia sessió",
+    submitPending: "Validant...",
+    guestLogin: "Inicia sessió com a convidat",
+    registerPrompt: "No tens un compte?",
+    registerLink: "Registrar administrador",
+    twoFactorTitle: "Verificació en dos passos",
+    twoFactorDescription: "Introdueix el codi de l'app per continuar.",
+    twoFactorLabel: "Codi de verificació",
+    twoFactorPlaceholder: "123456",
+    twoFactorRequiredError: "Introdueix el codi de verificació.",
+    twoFactorCancel: "Cancel·la",
+    twoFactorSubmitIdle: "Verifica",
+    twoFactorSubmitPending: "Verificant...",
+  },
+  en: {
+    languageLabel: "Language",
+    heroTitle: "Manage your association with ease.",
+    heroDescription:
+      "Centralize finances, resources, events, and messaging in one intuitive platform built for community growth.",
+    legalNotice: "All rights reserved.",
+    loginTitle: "Welcome to Kora",
+    loginDescription:
+      "Enter your ID or email, password, and company code.",
+    identifierLabel: "ID or email address",
+    identifierPlaceholder: "ID or email",
+    passwordLabel: "Password",
+    passwordPlaceholder: "********",
+    hidePassword: "Hide password",
+    showPassword: "Show password",
+    forgotPassword: "Forgot your password?",
+    companyCodeLabel: "Company code",
+    companyCodePlaceholder: "KORA-0000-0000",
+    rememberCodes: "Remember codes",
+    rememberSession: "Keep me signed in",
+    requiredFieldsError: "Complete username, password, and company code.",
+    loginFallbackError: "Could not sign in.",
+    submitIdle: "Sign in",
+    submitPending: "Validating...",
+    guestLogin: "Continue as guest",
+    registerPrompt: "Don't have an account?",
+    registerLink: "Register administrator",
+    twoFactorTitle: "Two-step verification",
+    twoFactorDescription: "Enter the code from your app to continue.",
+    twoFactorLabel: "Verification code",
+    twoFactorPlaceholder: "123456",
+    twoFactorRequiredError: "Enter the verification code.",
+    twoFactorCancel: "Cancel",
+    twoFactorSubmitIdle: "Verify",
+    twoFactorSubmitPending: "Verifying...",
+  },
+};
+
 const normalizeLoginCredentials = (
   credentials: Partial<LoginCredentials>
 ): LoginCredentials => ({
@@ -24,7 +335,6 @@ const normalizeLoginCredentials = (
   password: credentials.password ?? "",
   companyCode: credentials.companyCode?.trim().toUpperCase() ?? "",
 });
-
 
 function EyeIcon({ open }: { open: boolean }) {
   return (
@@ -45,12 +355,15 @@ function LoginPageContent() {
   const [password, setPassword] = useState("");
   const [companyCode, setCompanyCode] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [locale, setLocale] = useState<LocaleCode>("es");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberSession, setRememberSession] = useState(false);
   const [pendingTwoFactor, setPendingTwoFactor] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
+
+  const copy = LOGIN_COPY[locale];
 
   useEffect(() => {
     if (!hydrated || !mode) {
@@ -73,6 +386,26 @@ function LoginPageContent() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const storedLocale = window.localStorage.getItem(PUBLIC_LANGUAGE_STORAGE_KEY);
+    if (storedLocale) {
+      setLocale(resolveLocale(storedLocale));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(PUBLIC_LANGUAGE_STORAGE_KEY, locale);
+    document.documentElement.lang = LOCALE_HTML_LANG[locale];
+  }, [locale]);
+
   const submitLogin = async (
     credentials: LoginCredentials,
     verificationCode?: string
@@ -86,7 +419,7 @@ function LoginPageContent() {
       !credentials.password ||
       !credentials.companyCode
     ) {
-      setError("Completa usuario, contraseña y código de empresa.");
+      setError(copy.requiredFieldsError);
       return;
     }
 
@@ -120,10 +453,11 @@ function LoginPageContent() {
       if (shouldLogClientApiError(requestError)) {
         console.error(requestError);
       }
+
       const message =
         requestError instanceof Error
           ? requestError.message
-          : "No se pudo iniciar sesión.";
+          : copy.loginFallbackError;
 
       if (pendingTwoFactor || verificationCode) {
         setTwoFactorError(message);
@@ -158,7 +492,7 @@ function LoginPageContent() {
     event.preventDefault();
 
     if (!twoFactorCode.trim()) {
-      setTwoFactorError("Introduce el código de verificación.");
+      setTwoFactorError(copy.twoFactorRequiredError);
       return;
     }
 
@@ -197,43 +531,71 @@ function LoginPageContent() {
 
             <div className="max-w-md space-y-6">
               <h1 className="text-4xl font-semibold leading-tight">
-                Gestiona tu asociación con facilidad.
+                {copy.heroTitle}
               </h1>
-              <p className="text-base text-white/80">
-                Centraliza finanzas, recursos, eventos y mensajería en una sola
-                plataforma intuitiva diseñada para el crecimiento comunitario.
-              </p>
+              <p className="text-base text-white/80">{copy.heroDescription}</p>
             </div>
 
             <p className="text-xs text-white/60">
-              © {new Date().getFullYear()} Kora Platform. Todos los derechos
-              reservados.
+              © {new Date().getFullYear()} Kora Platform. {copy.legalNotice}
             </p>
           </div>
         </section>
 
         <section className="flex items-center justify-center px-6 py-12">
           <div className="w-full max-w-md space-y-8">
+            <div className="flex justify-end">
+              <div className="relative w-full max-w-[220px]">
+                <label htmlFor="login-language" className="sr-only">
+                  {copy.languageLabel}
+                </label>
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <span className="material-symbols-outlined text-[18px]">
+                    translate
+                  </span>
+                </span>
+                <select
+                  id="login-language"
+                  value={locale}
+                  onChange={(event) => {
+                    setLocale(resolveLocale(event.target.value));
+                    setError(null);
+                    setTwoFactorError(null);
+                  }}
+                  className="w-full appearance-none rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                >
+                  {LANGUAGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <span className="material-symbols-outlined text-[18px]">
+                    expand_more
+                  </span>
+                </span>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <h2 className="text-3xl font-semibold text-slate-900">
-                Bienvenido a Kora
+                {copy.loginTitle}
               </h2>
-              <p className="text-sm text-slate-500">
-                Ingresa tu DNI o correo, contraseña y el código de empresa.
-              </p>
+              <p className="text-sm text-slate-500">{copy.loginDescription}</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  DNI o correo electrónico
+                  {copy.identifierLabel}
                 </label>
                 <input
                   name="identifier"
                   type="text"
                   value={identifier}
                   onChange={(event) => setIdentifier(event.target.value)}
-                  placeholder="DNI o correo"
+                  placeholder={copy.identifierPlaceholder}
                   autoComplete="username"
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
@@ -241,7 +603,7 @@ function LoginPageContent() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Contraseña
+                  {copy.passwordLabel}
                 </label>
 
                 <div className="relative">
@@ -250,7 +612,7 @@ function LoginPageContent() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="********"
+                    placeholder={copy.passwordPlaceholder}
                     autoComplete="current-password"
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
@@ -259,9 +621,7 @@ function LoginPageContent() {
                     onClick={() => setShowPassword((previous) => !previous)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     aria-label={
-                      showPassword
-                        ? "Ocultar contraseña"
-                        : "Mostrar contraseña"
+                      showPassword ? copy.hidePassword : copy.showPassword
                     }
                   >
                     <EyeIcon open={showPassword} />
@@ -273,14 +633,14 @@ function LoginPageContent() {
                     href="/forgot-password"
                     className="text-sm font-medium text-blue-600 hover:text-blue-700"
                   >
-                    ¿Olvidaste tu contraseña?
+                    {copy.forgotPassword}
                   </Link>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Código de empresa
+                  {copy.companyCodeLabel}
                 </label>
                 <input
                   name="companyCode"
@@ -289,7 +649,7 @@ function LoginPageContent() {
                   onChange={(event) =>
                     setCompanyCode(event.target.value.toUpperCase())
                   }
-                  placeholder="KORA-0000-0000"
+                  placeholder={copy.companyCodePlaceholder}
                   autoCapitalize="characters"
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
@@ -299,7 +659,7 @@ function LoginPageContent() {
                     href="/remember-company-code"
                     className="text-sm font-medium text-blue-600 hover:text-blue-700"
                   >
-                    Recordar códigos
+                    {copy.rememberCodes}
                   </Link>
                 </div>
               </div>
@@ -311,7 +671,7 @@ function LoginPageContent() {
                   onChange={(event) => setRememberSession(event.target.checked)}
                   className="h-4 w-4 rounded border-slate-300 text-blue-600"
                 />
-                Mantener sesión iniciada
+                {copy.rememberSession}
               </label>
 
               {error ? (
@@ -325,7 +685,7 @@ function LoginPageContent() {
                 disabled={submitting}
                 className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
               >
-                {submitting ? "Validando..." : "Iniciar sesión"}
+                {submitting ? copy.submitPending : copy.submitIdle}
               </button>
             </form>
 
@@ -337,16 +697,16 @@ function LoginPageContent() {
               }}
               className="w-full rounded-xl border border-dashed border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:border-slate-300"
             >
-              Iniciar sesión como invitado
+              {copy.guestLogin}
             </button>
 
             <p className="text-center text-sm text-slate-500">
-              ¿No tienes una cuenta?{" "}
+              {copy.registerPrompt}{" "}
               <Link
                 href="/register"
                 className="font-semibold text-blue-600 hover:text-blue-700"
               >
-                Registrar administrador
+                {copy.registerLink}
               </Link>
             </p>
           </div>
@@ -358,17 +718,17 @@ function LoginPageContent() {
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <div className="space-y-1">
               <h3 className="text-lg font-semibold text-slate-900">
-                Verificación en dos pasos
+                {copy.twoFactorTitle}
               </h3>
               <p className="text-sm text-slate-500">
-                Introduce el código de tu app para continuar.
+                {copy.twoFactorDescription}
               </p>
             </div>
 
             <form onSubmit={handleTwoFactorSubmit} className="mt-5 space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Código de verificación
+                  {copy.twoFactorLabel}
                 </label>
                 <input
                   value={twoFactorCode}
@@ -376,7 +736,7 @@ function LoginPageContent() {
                     setTwoFactorCode(event.target.value.replace(/\D/g, ""));
                     setTwoFactorError(null);
                   }}
-                  placeholder="123456"
+                  placeholder={copy.twoFactorPlaceholder}
                   inputMode="numeric"
                   maxLength={6}
                   autoComplete="one-time-code"
@@ -400,14 +760,16 @@ function LoginPageContent() {
                   }}
                   className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
                 >
-                  Cancelar
+                  {copy.twoFactorCancel}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
                   className="flex-1 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
                 >
-                  {submitting ? "Verificando..." : "Verificar"}
+                  {submitting
+                    ? copy.twoFactorSubmitPending
+                    : copy.twoFactorSubmitIdle}
                 </button>
               </div>
             </form>

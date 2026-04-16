@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Fragment,
   useEffect,
   useMemo,
   useRef,
@@ -10,6 +9,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import GeneratedDocumentPreview from "@/components/documents/GeneratedDocumentPreview";
 import BackLink from "@/components/shared/BackLink";
 import Icon from "@/components/shared/Icon";
 import { useLocale } from "@/core/i18n/use-locale";
@@ -17,6 +17,7 @@ import { useSessionStore } from "@/core/session/session.store";
 import { downloadLinesAsPdf } from "@/modules/accounting/accounting-reports";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
 import {
+  GENERATED_DOCUMENT_TOKENS,
   buildGeneratedDocumentFile,
   buildGeneratedDocumentHtml,
   buildGeneratedDocumentLines,
@@ -27,6 +28,8 @@ import {
   getGeneratedDocumentFilename,
   isGeneratedDocument,
   normalizeDocumentMargins,
+  resolveGeneratedDocumentText,
+  type GeneratedDocumentTokenContext,
 } from "@/modules/documents/generated-document-layout";
 import {
   DocumentItem,
@@ -35,17 +38,7 @@ import {
 
 type DraftTarget = "header" | "body" | "footer";
 
-type PreviewBlock =
-  | { type: "paragraph"; text: string }
-  | { type: "list"; items: string[] };
-
-const quickTokens = [
-  "{{nombre_asociacion}}",
-  "{{fecha_actual}}",
-  "{{responsable}}",
-  "{{correo_contacto}}",
-  "{{telefono_contacto}}",
-];
+const quickTokens = GENERATED_DOCUMENT_TOKENS;
 
 const navAnchors = [
   { href: "#editor-sidebar", label: "Editor" },
@@ -70,16 +63,6 @@ function formatDateTime(value: string, locale: string) {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(date);
-}
-
-function formatLongDate(value: string, locale: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
   }).format(date);
 }
 
@@ -110,67 +93,6 @@ function createLayoutDraft(
   };
 }
 
-function getPreviewPadding(margins: DocumentMargins) {
-  return {
-    paddingTop: `${28 + margins.top * 2}px`,
-    paddingRight: `${28 + margins.right * 2}px`,
-    paddingBottom: `${28 + margins.bottom * 2}px`,
-    paddingLeft: `${28 + margins.left * 2}px`,
-  };
-}
-
-function getPreviewBlocks(value: string) {
-  return value
-    .split(/\n{2,}/)
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .map<PreviewBlock>((entry) => {
-      const lines = entry
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean);
-
-      if (lines.length > 0 && lines.every((line) => /^[-*]\s+/.test(line))) {
-        return {
-          type: "list",
-          items: lines.map((line) => line.replace(/^[-*]\s+/, "")),
-        };
-      }
-
-      return {
-        type: "paragraph",
-        text: entry,
-      };
-    });
-}
-
-function renderTokenPieces(text: string) {
-  return text
-    .split(/(\{\{[^}]+\}\})/g)
-    .filter(Boolean)
-    .map((part, index) =>
-      /^\{\{[^}]+\}\}$/.test(part) ? (
-        <span
-          key={`${part}-${index}`}
-          className="rounded-md bg-blue-50 px-1.5 py-0.5 font-semibold text-primary"
-        >
-          {part}
-        </span>
-      ) : (
-        <span key={`${part}-${index}`}>{part}</span>
-      )
-    );
-}
-
-function renderFormattedText(text: string) {
-  return text.split("\n").map((line, index, lines) => (
-    <Fragment key={`${line}-${index}`}>
-      {renderTokenPieces(line)}
-      {index < lines.length - 1 ? <br /> : null}
-    </Fragment>
-  ));
-}
-
 const inputBaseStyles =
   "mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10";
 
@@ -184,6 +106,7 @@ export default function DocumentEditPage() {
   const params = useParams<{ id: string }>();
   const { formatLocale } = useLocale();
   const association = useSessionStore((state) => state.association);
+  const admin = useSessionStore((state) => state.admin);
   const { documents, loadDocuments, upsertDocument } = useDocumentsStore();
 
   const headerRef = useRef<HTMLTextAreaElement | null>(null);
@@ -203,6 +126,14 @@ export default function DocumentEditPage() {
     bottom: 18,
     left: 18,
   });
+  const tokenContext = useMemo<GeneratedDocumentTokenContext>(
+    () => ({
+      association,
+      admin,
+      locale: formatLocale,
+    }),
+    [admin, association, formatLocale]
+  );
 
   useEffect(() => {
     void loadDocuments().finally(() => setHasLoaded(true));
@@ -263,18 +194,9 @@ export default function DocumentEditPage() {
       !areMarginsEqual(normalizedMargins, savedLayout.margins)
     : false;
 
-  const previewBlocks = useMemo(
-    () => getPreviewBlocks(normalizedBodyDraft),
-    [normalizedBodyDraft]
-  );
-
   const topVersion = documentItem?.versions?.[0];
   const versionCount = documentItem?.versions?.length ?? 0;
   const statusLabel = hasChanges ? "Borrador" : "Guardado";
-  const documentDateLabel = formatLongDate(
-    documentItem?.updatedAt ?? new Date().toISOString(),
-    formatLocale
-  );
 
   const handleMarginChange =
     (side: keyof DocumentMargins) =>
@@ -302,6 +224,7 @@ export default function DocumentEditPage() {
         body: normalizedBodyDraft,
         layout: nextLayout,
         associationLogoUrl: association?.logoUrl,
+        tokenContext,
       })
     );
   };
@@ -317,6 +240,7 @@ export default function DocumentEditPage() {
         body: normalizedBodyDraft,
         layout: nextLayout,
         associationLogoUrl: association?.logoUrl,
+        tokenContext,
       })
     );
   };
@@ -332,6 +256,11 @@ export default function DocumentEditPage() {
     const file = buildGeneratedDocumentFile(nextContent);
     const now = new Date();
     const versionIndex = (documentItem.versions?.length ?? 0) + 1;
+    const versionAuthor =
+      resolveGeneratedDocumentText("{{responsable}}", {
+        ...tokenContext,
+        date: now.toISOString(),
+      }) || "Tu usuario";
 
     setIsSaving(true);
     try {
@@ -347,7 +276,7 @@ export default function DocumentEditPage() {
           {
             id: crypto.randomUUID(),
             label: `v${versionIndex}.0 - Documento actualizado`,
-            author: "Tu usuario",
+            author: versionAuthor,
             time: new Intl.DateTimeFormat(formatLocale, {
               hour: "2-digit",
               minute: "2-digit",
@@ -757,142 +686,16 @@ export default function DocumentEditPage() {
               </div>
             </div>
 
-            <div id="document-preview" className="mt-6 overflow-x-auto">
-              <div className="mx-auto max-w-[980px]">
-                <article className="bg-white shadow-[0_24px_60px_-28px_rgba(15,23,42,0.28)]">
-                  <div style={getPreviewPadding(normalizedMargins)}>
-                    <header className="flex items-start justify-between gap-8 border-b border-slate-200 pb-8">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                          Cabecera
-                        </p>
-                        <div className="mt-3 text-sm leading-6 text-slate-500">
-                          {normalizedHeaderDraft ? (
-                            <p className="whitespace-pre-line">
-                              {renderFormattedText(normalizedHeaderDraft)}
-                            </p>
-                          ) : (
-                            <p className="text-slate-400">
-                              Agrega una cabecera para contextualizar el
-                              documento.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50">
-                        {includeLogo && association?.logoUrl ? (
-                          <img
-                            src={association.logoUrl}
-                            alt={association?.name || "Logo de la asociacion"}
-                            className="max-h-20 w-auto object-contain"
-                          />
-                        ) : (
-                          <div className="px-4 text-center">
-                            <Icon
-                              name="image"
-                              className="mx-auto text-[28px] text-slate-300"
-                            />
-                            <p className="mt-2 text-xs text-slate-400">
-                              Logo de Kora
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </header>
-
-                    <div className="mt-10 flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-6">
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                          Documento
-                        </p>
-                        <h2 className="mt-2 break-words text-3xl font-semibold leading-tight text-slate-900 sm:text-4xl">
-                          {nameDraft.trim() || "Titulo del documento"}
-                        </h2>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-slate-500">
-                          Fecha
-                        </p>
-                        <p className="mt-2 text-2xl font-medium text-slate-400">
-                          {documentDateLabel}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-8 space-y-5 text-[17px] leading-8 text-slate-700">
-                      {previewBlocks.length > 0 ? (
-                        previewBlocks.map((block, index) =>
-                          block.type === "list" ? (
-                            <ul
-                              key={`list-${index}`}
-                              className="list-disc space-y-2 pl-6"
-                            >
-                              {block.items.map((item, itemIndex) => (
-                                <li key={`${item}-${itemIndex}`}>
-                                  {renderFormattedText(item)}
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p key={`paragraph-${index}`} className="whitespace-pre-line">
-                              {renderFormattedText(block.text)}
-                            </p>
-                          )
-                        )
-                      ) : (
-                        <p className="text-slate-400">
-                          Completa el cuerpo del documento para ver la
-                          maquetacion.
-                        </p>
-                      )}
-                    </div>
-
-                    <section className="mt-10 border border-slate-200 bg-slate-50 px-5 py-5">
-                      <div className="grid gap-5 sm:grid-cols-3">
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                            Seguridad
-                          </p>
-                          <p className="mt-2 text-xl font-semibold text-slate-900">
-                            {documentItem.security}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                            Ubicacion
-                          </p>
-                          <p className="mt-2 text-sm font-semibold text-slate-700">
-                            {documentItem.location}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                            Version
-                          </p>
-                          <p className="mt-2 text-sm font-semibold text-slate-700">
-                            {topVersion?.label || "Sin historial"}
-                          </p>
-                        </div>
-                      </div>
-                    </section>
-
-                    {normalizedFooterDraft ? (
-                      <footer className="mt-10 border-t border-slate-200 pt-6">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                          Pie de pagina
-                        </p>
-                        <div className="mt-3 text-sm leading-6 text-slate-500">
-                          <p className="whitespace-pre-line">
-                            {renderFormattedText(normalizedFooterDraft)}
-                          </p>
-                        </div>
-                      </footer>
-                    ) : null}
-                  </div>
-                </article>
-              </div>
+            <div id="document-preview" className="mt-6">
+              <GeneratedDocumentPreview
+                title={nameDraft.trim() || documentItem.name}
+                body={normalizedBodyDraft}
+                layout={nextLayout}
+                associationLogoUrl={association?.logoUrl}
+                tokenContext={tokenContext}
+                heightClassName="h-[720px] sm:h-[960px] xl:h-[1100px]"
+                ariaLabel="Vista previa exacta del documento generado"
+              />
             </div>
 
             <div

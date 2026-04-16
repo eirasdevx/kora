@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import Modal from "@/components/Modal";
+import GeneratedDocumentPreview from "@/components/documents/GeneratedDocumentPreview";
 import PageHeader from "@/components/shared/PageHeader";
 import {
   moduleTopbarButtonIconStyles,
@@ -35,6 +36,7 @@ import {
 } from "@/lib/table-sorting";
 import { useDocumentsStore } from "@/modules/documents/documents.store";
 import {
+  DEFAULT_DOCUMENT_MARGINS,
   GENERATED_DOCUMENT_MIME_TYPE,
   buildGeneratedDocumentFile,
   buildGeneratedDocumentHtml,
@@ -42,10 +44,13 @@ import {
   extractGeneratedDocumentBody,
   getGeneratedDocumentFilename,
   isGeneratedDocument,
+  resolveGeneratedDocumentText,
+  type GeneratedDocumentTokenContext,
 } from "@/modules/documents/generated-document-layout";
 import {
   DocumentCategory,
   DocumentItem,
+  DocumentLayout,
   DocumentSecurity,
   DocumentType,
 } from "@/modules/documents/document.types";
@@ -553,6 +558,35 @@ function getDocumentTemplate(doc: DocumentItem) {
   );
 }
 
+function buildGeneratedDocumentLayout(
+  tokenContext?: GeneratedDocumentTokenContext
+): DocumentLayout {
+  const header = resolveGeneratedDocumentText(
+    [
+      "{{nombre_asociacion}}",
+      "{{direccion_asociacion}}",
+      "{{correo_contacto}}",
+      "{{telefono_contacto}}",
+    ].join("\n"),
+    tokenContext
+  );
+  const footer = resolveGeneratedDocumentText(
+    [
+      "Documento generado el {{fecha_actual}}",
+      "Responsable: {{responsable}}",
+      "{{correo_contacto}}",
+    ].join("\n"),
+    tokenContext
+  );
+
+  return {
+    header: header || undefined,
+    footer: footer || undefined,
+    includeAssociationLogo: Boolean(tokenContext?.association?.logoUrl),
+    margins: DEFAULT_DOCUMENT_MARGINS,
+  };
+}
+
 function buildGeneratedDocumentContent(
   template: DocumentTemplate,
   name: string
@@ -562,7 +596,8 @@ function buildGeneratedDocumentContent(
       return [
         name,
         "",
-        "Asociacion: ____________________________________________",
+        "Asociacion: {{nombre_asociacion}}",
+        "Responsable: {{responsable}}",
         "Persona autorizante: ___________________________________",
         "DNI/NIE: _______________________________________________",
         "Persona autorizada o menor: _____________________________",
@@ -574,9 +609,9 @@ function buildGeneratedDocumentContent(
         "",
         "Condiciones:",
         "- La autorizacion se mantendra vigente hasta revocacion expresa.",
-        "- La asociacion custodiara este documento con acceso restringido.",
+        "- {{nombre_asociacion}} custodiara este documento con acceso restringido.",
         "",
-        "Fecha: __________________    Firma: _____________________",
+        "Fecha: {{fecha_actual}}    Firma: _____________________",
       ].join("\n");
     case "outing-authorization":
       return [
@@ -597,16 +632,16 @@ function buildGeneratedDocumentContent(
         "- Declaro haber recibido informacion sobre horarios, desplazamiento y responsables.",
         "- Necesidades medicas o alimentarias relevantes: _________________________________.",
         "",
-        "Fecha: __________________    Firma: _____________________",
+        "Fecha: {{fecha_actual}}    Firma: _____________________",
       ].join("\n");
     case "data-consent":
       return [
         name,
         "",
         "Responsable del tratamiento",
-        "- Asociacion responsable: _____________________________",
-        "- Persona de contacto: ________________________________",
-        "- Email de contacto: __________________________________",
+        "- Asociacion responsable: {{nombre_asociacion}}",
+        "- Persona de contacto: {{responsable}}",
+        "- Email de contacto: {{correo_contacto}}",
         "",
         "Finalidades del tratamiento",
         "- Gestion administrativa y relacional con la asociacion.",
@@ -620,16 +655,16 @@ function buildGeneratedDocumentContent(
         "Aceptacion",
         "He leido la informacion y presto mi consentimiento expreso.",
         "",
-        "Fecha: __________________    Firma: _____________________",
+        "Fecha: {{fecha_actual}}    Firma: _____________________",
       ].join("\n");
     case "statutes":
       return [
         name,
         "",
         "Capitulo 1. Denominacion, fines y domicilio",
-        "- Nombre oficial de la asociacion.",
+        "- Nombre oficial: {{nombre_asociacion}}.",
         "- Fines sociales, culturales o deportivos.",
-        "- Domicilio social y ambito territorial.",
+        "- Domicilio social y ambito territorial: {{direccion_asociacion}}.",
         "",
         "Capitulo 2. Personas asociadas",
         "- Requisitos de admision.",
@@ -644,7 +679,7 @@ function buildGeneratedDocumentContent(
         "- Recursos economicos y gestion presupuestaria.",
         "- Aprobacion de cuentas y control interno.",
         "",
-        "Aprobado en fecha: _________________________________",
+        "Aprobado en fecha: {{fecha_actual}}",
       ].join("\n");
     case "internal-regulation":
       return [
@@ -665,7 +700,7 @@ function buildGeneratedDocumentContent(
         "4. Revision",
         "- Fecha de aprobacion y calendario de revision.",
         "",
-        "Aprobado por: _________________________________",
+        "Aprobado por: {{responsable}}",
       ].join("\n");
     case "meeting-minutes":
       return [
@@ -688,7 +723,7 @@ function buildGeneratedDocumentContent(
         "- Acuerdo: __________________________________________",
         "- Responsable y fecha: _______________________________",
         "",
-        "Firma de validacion: ________________________________",
+        "Firma de validacion: {{responsable}}",
       ].join("\n");
     case "registration":
       return [
@@ -709,7 +744,7 @@ function buildGeneratedDocumentContent(
         "- Acepta recibir comunicaciones de la asociacion.",
         "- Autoriza el tratamiento de datos para fines de gestion.",
         "",
-        "Firma de solicitud: _________________________________",
+        "Fecha: {{fecha_actual}}    Firma de solicitud: _________________________________",
       ].join("\n");
     case "volunteer-registration":
       return [
@@ -732,7 +767,7 @@ function buildGeneratedDocumentContent(
         "Compromiso y firma",
         "Declaro conocer las normas basicas de colaboracion voluntaria.",
         "",
-        "Fecha: __________________    Firma: _____________________",
+        "Fecha: {{fecha_actual}}    Firma: _____________________",
       ].join("\n");
     case "event-registration":
       return [
@@ -755,13 +790,13 @@ function buildGeneratedDocumentContent(
         "- Acepto las condiciones de participacion.",
         "- Autorizo el tratamiento de datos para la gestion del evento.",
         "",
-        "Firma de confirmacion: _______________________________",
+        "Fecha: {{fecha_actual}}    Firma de confirmacion: _______________________________",
       ].join("\n");
     case "exit-request":
       return [
         name,
         "",
-        "A la atencion de la junta directiva",
+        "A la atencion de la junta directiva de {{nombre_asociacion}}",
         "",
         "Datos de la persona solicitante",
         "- Nombre y apellidos: _________________________________",
@@ -776,7 +811,7 @@ function buildGeneratedDocumentContent(
         "__________________________________________________________",
         "__________________________________________________________",
         "",
-        "Fecha: __________________    Firma: _____________________",
+        "Fecha: {{fecha_actual}}    Firma: _____________________",
       ].join("\n");
     case "expense-request":
       return [
@@ -797,10 +832,10 @@ function buildGeneratedDocumentContent(
         "- Justificantes adjuntos: _____________________________",
         "",
         "Revision interna",
-        "- Responsable que valida: _____________________________",
+        "- Responsable que valida: {{responsable}}",
         "- Observaciones: ______________________________________",
         "",
-        "Firma: ______________________________________________",
+        "Fecha: {{fecha_actual}}    Firma: ______________________________________________",
       ].join("\n");
     case "material-loan":
       return [
@@ -821,6 +856,7 @@ function buildGeneratedDocumentContent(
         "- Observaciones de uso: _______________________________",
         "- Compromiso de devolucion en plazo y buen estado.",
         "",
+        "Fecha: {{fecha_actual}}",
         "Firma de entrega: ____________________  Firma de devolucion: ____________________",
       ].join("\n");
     default:
@@ -859,14 +895,26 @@ function buildGeneratedDocument(
   template: DocumentTemplate,
   security: DocumentSecurity,
   locale: string,
-  customName?: string
+  customName?: string,
+  tokenContext?: GeneratedDocumentTokenContext
 ): DocumentItem {
   const now = new Date();
   const nowIso = now.toISOString();
-  const owner = "Kora";
+  const effectiveTokenContext: GeneratedDocumentTokenContext = {
+    ...tokenContext,
+    locale: tokenContext?.locale || locale,
+    date: tokenContext?.date ?? nowIso,
+  };
+  const owner =
+    resolveGeneratedDocumentText("{{responsable}}", effectiveTokenContext) ||
+    "Kora";
   const name = customName?.trim() || template.defaultName;
-  const content = buildGeneratedDocumentContent(template, name);
+  const content = resolveGeneratedDocumentText(
+    buildGeneratedDocumentContent(template, name),
+    effectiveTokenContext
+  );
   const file = buildGeneratedDocumentFile(content);
+  const layout = buildGeneratedDocumentLayout(effectiveTokenContext);
 
   return {
     id: crypto.randomUUID(),
@@ -883,11 +931,12 @@ function buildGeneratedDocument(
     file,
     content,
     templateId: template.id,
+    layout,
     access: ["TU"],
     versions: [
       {
         id: crypto.randomUUID(),
-        label: "v1.0 - Generado",
+        label: "v1.0 - Generado desde plantilla",
         author: owner,
         time: new Intl.DateTimeFormat(locale, {
           hour: "2-digit",
@@ -931,6 +980,7 @@ function FileIcon({
 export default function DocumentsPage() {
   const { formatLocale } = useLocale();
   const association = useSessionStore((state) => state.association);
+  const admin = useSessionStore((state) => state.admin);
   const {
     documents,
     loadDocuments,
@@ -964,6 +1014,14 @@ export default function DocumentsPage() {
     direction: "desc",
   });
   const pageSize = 5;
+  const tokenContext = useMemo<GeneratedDocumentTokenContext>(
+    () => ({
+      association,
+      admin,
+      locale: formatLocale,
+    }),
+    [admin, association, formatLocale]
+  );
 
   useEffect(() => {
     loadDocuments();
@@ -1061,6 +1119,17 @@ export default function DocumentsPage() {
     : null;
   const generatedNamePreview =
     generatedNameDraft.trim() || selectedTemplate?.defaultName || "";
+  const generatedPreviewLayout = useMemo(
+    () => buildGeneratedDocumentLayout(tokenContext),
+    [tokenContext]
+  );
+  const generatedPreviewBody = useMemo(() => {
+    if (!selectedTemplate) return "";
+    return extractGeneratedDocumentBody(
+      buildGeneratedDocumentContent(selectedTemplate, generatedNamePreview),
+      generatedNamePreview
+    );
+  }, [generatedNamePreview, selectedTemplate]);
 
   const closeGenerator = () => {
     setGeneratorOpen(false);
@@ -1075,7 +1144,8 @@ export default function DocumentsPage() {
       selectedTemplate,
       security,
       formatLocale,
-      generatedNameDraft
+      generatedNameDraft,
+      tokenContext
     );
     await upsertDocument(doc);
     selectDocument(doc);
@@ -1095,6 +1165,7 @@ export default function DocumentsPage() {
           ),
           layout: doc.layout,
           associationLogoUrl: association?.logoUrl,
+          tokenContext,
         })
       );
       return;
@@ -2133,6 +2204,16 @@ export default function DocumentsPage() {
                 {selectedTemplate?.description}
               </p>
             </div>
+            <GeneratedDocumentPreview
+              title={generatedNamePreview}
+              body={generatedPreviewBody}
+              layout={generatedPreviewLayout}
+              associationLogoUrl={association?.logoUrl}
+              tokenContext={tokenContext}
+              className="mt-4"
+              heightClassName="h-[540px] sm:h-[700px]"
+              ariaLabel="Vista previa del documento antes de generarlo"
+            />
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
