@@ -34,6 +34,7 @@ type AssociationPayload = {
   address?: string;
   membershipSettings?: unknown;
   messagingSettings?: Partial<AssociationMessagingSettings>;
+  membersAppSettings?: unknown;
   representatives?: Array<{
     id: string;
     role: string;

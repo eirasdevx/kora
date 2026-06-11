@@ -1,6 +1,6 @@
 {
-  "name": "Kora",
-  "short_name": "Kora",
+  "name": "Kora Association Management",
+  "short_name": "Kora Admin",
   "description": "Plataforma de gestión para asociaciones",
   "start_url": "/",
   "scope": "/",

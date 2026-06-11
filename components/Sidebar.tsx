@@ -165,10 +165,10 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               </span>
               <div>
                 <p className="font-heading text-lg font-extrabold text-slate-900">
-                  Kora
+                  Kora AM
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
-                  Gestión de asociaciones
+                  Association Management
                 </p>
               </div>
             </div>

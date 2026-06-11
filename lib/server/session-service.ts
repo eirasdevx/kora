@@ -23,6 +23,7 @@ import {
 } from "@/core/security/passwords";
 import { verifyTotp } from "@/core/security/totp";
 import { getAssociationMembershipSettings } from "@/core/session/membership-settings";
+import { normalizeMembersAppSettings } from "@/core/session/members-app-settings";
 import {
   buildAssociationEmailPayload,
   sendEmailBatch,
@@ -155,6 +156,7 @@ export const mapAssociationProfile = (association: {
   addressLine1: string | null;
   membershipSettings: unknown;
   messagingSettings: unknown;
+  membersAppSettings: unknown;
   representatives: Array<{
     id: string;
     roleTitle: string | null;
@@ -179,6 +181,9 @@ export const mapAssociationProfile = (association: {
       senderName: association.name,
       emailAddress: association.contactEmail ?? undefined,
     }
+  ),
+  membersAppSettings: normalizeMembersAppSettings(
+    association.membersAppSettings
   ),
   representatives:
     association.representatives.length > 0
@@ -1273,6 +1278,7 @@ export async function updateCurrentAssociation(input: {
   address?: string;
   membershipSettings?: unknown;
   messagingSettings?: Partial<AssociationMessagingSettings>;
+  membersAppSettings?: unknown;
   representatives?: Array<{
     id: string;
     role: string;
@@ -1321,6 +1327,12 @@ export async function updateCurrentAssociation(input: {
       context.membership.association.messagingSettings,
       input.messagingSettings
     );
+  }
+  if (input.membersAppSettings !== undefined) {
+    data.membersAppSettings = normalizeMembersAppSettings({
+      ...normalizeMembersAppSettings(input.membersAppSettings),
+      updatedAt: new Date().toISOString(),
+    });
   }
   if (input.representatives !== undefined) {
     data.representatives = {

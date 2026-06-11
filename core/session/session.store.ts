@@ -12,6 +12,10 @@ import {
   type AssociationMembershipSettings,
   getAssociationMembershipSettings,
 } from "@/core/session/membership-settings";
+import {
+  type MembersAppSettings,
+  normalizeMembersAppSettings,
+} from "@/core/session/members-app-settings";
 
 const COMPANY_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -61,6 +65,7 @@ export type AssociationProfile = {
   membershipSettings?: AssociationMembershipSettings;
   accountingSettings?: AssociationAccountingSettings;
   messagingSettings?: PublicAssociationMessagingSettings;
+  membersAppSettings?: MembersAppSettings;
 };
 
 export type AssociationEntry = {
@@ -78,6 +83,9 @@ const normalizeAssociationProfile = (
     ...association,
     membershipSettings: getAssociationMembershipSettings(association),
     accountingSettings: getAssociationAccountingSettings(association),
+    membersAppSettings: normalizeMembersAppSettings(
+      association.membersAppSettings
+    ),
   };
 };
 

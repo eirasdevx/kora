@@ -25,6 +25,14 @@ const cards = [
     icon: "apartment",
   },
   {
+    title: "Kora Members",
+    description:
+      "Configura que datos propios podran ver o actualizar los socios en la app de miembros.",
+    href: "/settings/members-app",
+    tone: "bg-teal-50 text-teal-600",
+    icon: "badge",
+  },
+  {
     title: "Gestión de usuarios",
     description:
       "Administra los accesos del equipo, define roles, permisos y monitoriza la actividad.",
@@ -213,7 +221,7 @@ export default function SettingsPage() {
 
       <footer className="flex flex-col gap-4 border-t border-gray-200 pt-6 text-sm text-gray-500 md:flex-row md:items-center md:justify-between">
         <span>
-          © {new Date().getFullYear()} Kora Association Management Suite. Todos
+          © {new Date().getFullYear()} Kora Association Management. Todos
           los derechos reservados.
         </span>
         <div className="flex gap-6">

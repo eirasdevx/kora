@@ -8,15 +8,15 @@ import SessionBootstrap from "@/components/SessionBootstrap";
 
 export const metadata: Metadata = {
   title: {
-    default: "Kora",
-    template: "%s | Kora",
+    default: "Kora Association Management",
+    template: "%s | Kora Association Management",
   },
   description: "Plataforma de gestión para asociaciones",
-  applicationName: "Kora",
+  applicationName: "Kora Association Management",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Kora",
+    title: "Kora Association Management",
     statusBarStyle: "default",
   },
   icons: {
